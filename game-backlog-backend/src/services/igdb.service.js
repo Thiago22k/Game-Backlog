@@ -74,6 +74,7 @@ const getGameById = async (gameId) => {
           storyline, 
           first_release_date, 
           rating, 
+          rating_count,
           platforms.name, 
           genres.name, 
           screenshots.url,
@@ -268,7 +269,8 @@ const exploreGames = async (filters = {}) => {
         sortClause = 'sort total_rating_count desc';
         break;
       case 'rating':
-        conditions.push('rating > 0');
+        conditions.push('rating > 80');
+        conditions.push('rating_count > 10');
         sortClause = 'sort rating desc';
         break;
       case 'recent':
@@ -336,14 +338,41 @@ const getGenres = async () => {
   }
 };
 
-// Obtener lista de plataformas disponibles
+// Obtener plataformas principales
 const getPlatforms = async () => {
   try {
     const token = await getAccessToken();
 
+    // IDs de plataformas principales (curadas manualmente)
+    const mainPlatformIds = [
+      6,    // PC (Windows)
+      14,   // Mac
+      3,    // Linux
+      167,  // PlayStation 5
+      48,   // PlayStation 4
+      9,    // PlayStation 3
+      169,  // Xbox Series X|S
+      49,   // Xbox One
+      12,   // Xbox 360
+      130,  // Nintendo Switch
+      41,   // Wii U
+      5,    // Wii
+      37,   // Nintendo 3DS
+      159,  // Nintendo DS
+      34,   // Android
+      39,   // iOS
+      170,  // Google Stadia
+      471,  // Meta Quest 2
+      163,  // SteamVR
+    ];
+
     const response = await axios.post(
       'https://api.igdb.com/v4/platforms',
-      'fields name; where category = 1; limit 50; sort name asc;',
+      `
+        fields name;
+        where id = (${mainPlatformIds.join(',')});
+        sort name asc;
+      `,
       {
         headers: {
           'Client-ID': process.env.IGDB_CLIENT_ID,

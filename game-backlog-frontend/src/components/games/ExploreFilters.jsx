@@ -27,30 +27,30 @@ const ExploreFilters = ({
 
   return (
     <div className="bg-white rounded-lg shadow p-6 sticky top-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtros</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
 
-      {/* Rango de tiempo */}
+      {/* Time range */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          📅 Fecha de lanzamiento
+          📅 Release Date
         </label>
         <select
           value={selectedTimeRange || ''}
           onChange={(e) => setSelectedTimeRange(e.target.value || null)}
           className="block w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
         >
-          <option value="">Cualquier fecha</option>
-          <option value="last_month">Último mes</option>
-          <option value="last_year">Último año</option>
-          <option value="last_5_years">Últimos 5 años</option>
-          <option value="upcoming">Próximos lanzamientos</option>
+          <option value="">Any date</option>
+          <option value="last_month">Last month</option>
+          <option value="last_year">Last year</option>
+          <option value="last_5_years">Last 5 years</option>
+          <option value="upcoming">Upcoming releases</option>
         </select>
       </div>
 
-      {/* Géneros */}
+      {/* Genres */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          🎮 Géneros
+          🎮 Genres
         </label>
         <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded p-2">
           {availableGenres.map(genre => (
@@ -67,10 +67,10 @@ const ExploreFilters = ({
         </div>
       </div>
 
-      {/* Plataformas */}
+      {/* Platforms */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          💻 Plataformas
+          💻 Platforms
         </label>
         <div className="max-h-48 overflow-y-auto space-y-2 border border-gray-200 rounded p-2">
           {availablePlatforms.map(platform => (
@@ -87,12 +87,12 @@ const ExploreFilters = ({
         </div>
       </div>
 
-      {/* Botón limpiar */}
+      {/* Clear button */}
       <button
         onClick={onClear}
         className="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300 text-sm font-medium"
       >
-        Limpiar filtros
+        Clear filters
       </button>
     </div>
   );
