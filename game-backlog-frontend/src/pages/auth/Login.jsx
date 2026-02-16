@@ -23,19 +23,26 @@ const Login = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
 
-    const result = await login(formData.identifier, formData.password);
+  const result = await login(formData.identifier, formData.password);
 
-    if (result.success) {
-      navigate('/');
+  if (result.success) {
+    // Verificar si hay una redirección guardada
+    const redirect = localStorage.getItem('redirectAfterLogin');
+    if (redirect) {
+      localStorage.removeItem('redirectAfterLogin');
+      navigate(redirect);
     } else {
-      setError(result.error);
+      navigate('/');
     }
+  } else {
+    setError(result.error);
+  }
 
-    setIsLoading(false);
+  setIsLoading(false);
   };
 
   return (

@@ -217,6 +217,117 @@ const deleteUserGame = async (req, res) => {
   }
 };
 
+// Obtener juegos populares
+const getPopularGames = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const games = await igdbService.getPopularGames(limit);
+
+    res.json({
+      total: games.length,
+      games
+    });
+
+  } catch (error) {
+    console.error('Error en getPopularGames:', error);
+    res.status(500).json({
+      error: 'Error al obtener juegos populares'
+    });
+  }
+};
+
+// Obtener juegos recientes
+const getRecentGames = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const games = await igdbService.getRecentGames(limit);
+
+    res.json({
+      total: games.length,
+      games
+    });
+
+  } catch (error) {
+    console.error('Error en getRecentGames:', error);
+    res.status(500).json({
+      error: 'Error al obtener juegos recientes'
+    });
+  }
+};
+
+// Obtener juegos más esperados
+const getMostAnticipated = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const games = await igdbService.getMostAnticipated(limit);
+
+    res.json({
+      total: games.length,
+      games
+    });
+
+  } catch (error) {
+    console.error('Error en getMostAnticipated:', error);
+    res.status(500).json({
+      error: 'Error al obtener juegos más esperados'
+    });
+  }
+};
+
+// Explorar juegos con filtros
+const exploreGames = async (req, res) => {
+  try {
+    const filters = {
+      sort: req.query.sort || 'relevance',
+      timeRange: req.query.timeRange || null, // ← Cambio aquí
+      genres: req.query.genres ? req.query.genres.split(',').map(Number) : [],
+      platforms: req.query.platforms ? req.query.platforms.split(',').map(Number) : [],
+      limit: parseInt(req.query.limit) || 20,
+      offset: parseInt(req.query.offset) || 0,
+    };
+
+    const games = await igdbService.exploreGames(filters);
+
+    res.json({
+      total: games.length,
+      games,
+      filters
+    });
+
+  } catch (error) {
+    console.error('Error en exploreGames:', error);
+    res.status(500).json({
+      error: 'Error al explorar juegos'
+    });
+  }
+};
+
+// Obtener géneros
+const getGenres = async (req, res) => {
+  try {
+    const genres = await igdbService.getGenres();
+    res.json({ genres });
+  } catch (error) {
+    console.error('Error en getGenres:', error);
+    res.status(500).json({
+      error: 'Error al obtener géneros'
+    });
+  }
+};
+
+// Obtener plataformas
+const getPlatforms = async (req, res) => {
+  try {
+    const platforms = await igdbService.getPlatforms();
+    res.json({ platforms });
+  } catch (error) {
+    console.error('Error en getPlatforms:', error);
+    res.status(500).json({
+      error: 'Error al obtener plataformas'
+    });
+  }
+};
+
 module.exports = {
   searchGames,
   getGameDetails,
@@ -224,4 +335,10 @@ module.exports = {
   getUserGames,
   updateUserGame,
   deleteUserGame,
+  getPopularGames,
+  getRecentGames,
+  getMostAnticipated,
+  exploreGames,   // ← Nuevo
+  getGenres,      // ← Nuevo
+  getPlatforms,   // ← Nuevo
 };

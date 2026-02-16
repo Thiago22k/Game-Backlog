@@ -23,6 +23,15 @@ const Navbar = () => {
 
           {/* Menú derecho */}
           <div className="flex items-center space-x-4">
+            {/* Explorar - SIEMPRE VISIBLE */}
+            <Link
+              to="/explore"
+              className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+            >
+              Explorar
+            </Link>
+
+            {/* Menú según autenticación */}
             {isAuthenticated ? (
               <>
                 <Link

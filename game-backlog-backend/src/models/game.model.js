@@ -38,40 +38,43 @@ const Game = {
   },
 
   // Actualizar estado y/o calificación
-  async updateGame(userId, igdbGameId, status, rating) {
-    const updates = [];
-    const values = [userId, igdbGameId];
-    let valueIndex = 3;
+async updateGame(userId, igdbGameId, status, rating) {
+  const updates = [];
+  const values = [userId, igdbGameId];
+  let valueIndex = 3;
 
-    if (status !== undefined) {
-      updates.push(`status = $${valueIndex}`);
-      values.push(status);
-      valueIndex++;
+  if (status !== undefined) {
+    updates.push(`status = $${valueIndex}`);
+    values.push(status);
+    valueIndex++;
 
-      // Si cambia a completed, actualizar completed_at
-      if (status === 'completed') {
-        updates.push(`completed_at = CURRENT_TIMESTAMP`);
-      }
+    // Si cambia a completed, actualizar completed_at
+    if (status === 'completed') {
+      updates.push(`completed_at = CURRENT_TIMESTAMP`);
+    } else {
+      // Si cambia a otro status, LIMPIAR completed_at
+      updates.push(`completed_at = NULL`); // ← Nuevo
     }
+  }
 
-    if (rating !== undefined) {
-      updates.push(`rating = $${valueIndex}`);
-      values.push(rating);
-      valueIndex++;
-    }
+  if (rating !== undefined) {
+    updates.push(`rating = $${valueIndex}`);
+    values.push(rating);
+    valueIndex++;
+  }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
+  updates.push('updated_at = CURRENT_TIMESTAMP');
 
-    const query = `
-      UPDATE user_games 
-      SET ${updates.join(', ')}
-      WHERE user_id = $1 AND igdb_game_id = $2
-      RETURNING *
-    `;
+  const query = `
+    UPDATE user_games 
+    SET ${updates.join(', ')}
+    WHERE user_id = $1 AND igdb_game_id = $2
+    RETURNING *
+  `;
 
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  },
+  const result = await pool.query(query, values);
+  return result.rows[0];
+},
 
   // Eliminar juego de la lista del usuario
   async deleteGame(userId, igdbGameId) {
