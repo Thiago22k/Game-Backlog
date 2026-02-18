@@ -43,6 +43,7 @@ const Profile = () => {
 
     if (result.success) {
       setEditSuccess('Juego actualizado exitosamente');
+      console.log(result.success)
       // Recargar lista
       await getUserGames();
       setTimeout(() => {

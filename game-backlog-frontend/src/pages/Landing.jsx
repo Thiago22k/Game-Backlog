@@ -9,9 +9,10 @@ import GameGrid from '../components/games/GameGrid';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import { useGames } from '../hooks/useGames';
 
+
 const Landing = () => {
   const { isAuthenticated } = useAuth();
-  const { addGame, updateGame, userGames } = useGames();
+  const { addGame, updateGame, userGames, getUserGames } = useGames();
   const [popularGames, setPopularGames] = useState([]);
   const [bestOfYearGames, setBestOfYearGames] = useState([]);
   const [anticipatedGames, setAnticipatedGames] = useState([]);
@@ -23,21 +24,22 @@ const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
   const existingGame = userGames.find(g => g.igdb_game_id === gameId);
 
   if (existingGame) {
+    // CORRECCIÓN: Cambiamos existingGame.id por gameId (o existingGame.igdb_game_id)
     const result = await updateGame(
-      existingGame.id, 
+      gameId, // <--- Este debe ser el ID de IGDB (el largo)
       newStatus, 
       currentRating >= 1 && currentRating <= 5 ? currentRating : existingGame.rating
     );
     
     if (result.success) {
       console.log('Status updated successfully');
-      // Refrescar la lista de juegos
-      window.location.reload(); // Temporal: fuerza recarga
     } else {
       console.error('Error updating status:', result.error);
       alert('Error updating status');
     }
   } else if (newStatus !== null) {
+    // addGame ya estaba bien porque usaba gameId, 
+    // pero lo dejamos limpio por consistencia
     const result = await addGame(
       gameId, 
       newStatus, 
@@ -46,8 +48,6 @@ const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
     
     if (result.success) {
       console.log('Game added successfully');
-      // Refrescar la lista de juegos
-      window.location.reload(); // Temporal: fuerza recarga
     } else {
       console.error('Error adding game:', result.error);
       alert('Error adding game');
@@ -61,15 +61,11 @@ const handleRatingChange = async (gameId, rating) => {
   const existingGame = userGames.find(g => g.igdb_game_id === gameId);
 
   if (existingGame) {
-    const result = await updateGame(existingGame.id, existingGame.status, rating);
+    // CAMBIO: Enviamos gameId (que es el de IGDB) o existingGame.igdb_game_id
+    const result = await updateGame(existingGame.igdb_game_id, existingGame.status, rating);
     
     if (result.success) {
-      console.log('Rating updated successfully');
-      // No hacer reload aquí, solo actualizar visualmente
-      // El reload lo hace handleStatusChange si fue necesario
-    } else {
-      console.error('Error updating rating:', result.error);
-      alert('Error updating rating');
+      // ... éxito
     }
   }
 };
@@ -86,27 +82,32 @@ const handleRatingChange = async (gameId, rating) => {
     backgroundImages[Math.floor(Math.random() * backgroundImages.length)]
   );
 
-  useEffect(() => {
-  const fetchGames = async () => {
-    try {
-      const [popularRes, bestOfYearRes, anticipatedRes] = await Promise.all([
-        axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=10`),
-        axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=10`), // ← Cambio aquí
-        axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=10`)
-      ]);
+useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        // Cargar juegos del usuario si está autenticado
+        if (isAuthenticated) {
+          await getUserGames(); // ← Agregar esto
+        }
+        
+        const [popularRes, bestOfYearRes, anticipatedRes] = await Promise.all([
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=10`),
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=10`),
+          axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=10`)
+        ]);
 
-      setPopularGames(popularRes.data.games);
-      setBestOfYearGames(bestOfYearRes.data.games); // ← Cambio aquí
-      setAnticipatedGames(anticipatedRes.data.games);
-    } catch (error) {
-      console.error('Error loading games:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setPopularGames(popularRes.data.games);
+        setBestOfYearGames(bestOfYearRes.data.games);
+        setAnticipatedGames(anticipatedRes.data.games);
+      } catch (error) {
+        console.error('Error loading games:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchGames();
-}, []);
+    fetchGames();
+  }, [isAuthenticated]);
 
   return (
     <div className="min-h-screen bg-primary-navy">
