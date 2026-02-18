@@ -290,21 +290,21 @@ const exploreGames = async (filters = {}) => {
     const whereClause = conditions.join(' & ');
 
     const response = await axios.post(
-      'https://api.igdb.com/v4/games',
-      `
-        fields name, cover.url, rating, first_release_date, genres.name, platforms.name, aggregated_rating;
-        where ${whereClause};
-        ${sortClause};
-        limit ${limit};
-        offset ${offset};
-      `,
-      {
-        headers: {
-          'Client-ID': process.env.IGDB_CLIENT_ID,
-          'Authorization': `Bearer ${token}`,
-        },
-      }
-    );
+  'https://api.igdb.com/v4/games',
+  `
+    fields name, cover.url, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url;
+    where ${whereClause};
+    ${sortClause};
+    limit ${limit};
+    offset ${offset};
+  `,
+  {
+    headers: {
+      'Client-ID': process.env.IGDB_CLIENT_ID,
+      'Authorization': `Bearer ${token}`,
+    },
+  }
+);
 
     return response.data;
 

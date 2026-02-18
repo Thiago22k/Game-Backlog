@@ -47,46 +47,53 @@ export const useGames = () => {
   };
 
   // Agregar juego a la lista del usuario
-  const addGame = async (igdbGameId, status = 'completed', rating = null) => {
-    setLoading(true);
-    setError(null);
+const addGame = async (igdbGameId, status = 'completed', rating = null) => {
+  setLoading(true);
+  setError(null);
 
-    try {
-      const response = await axios.post(ENDPOINTS.GAMES.USER_GAMES, {
-        igdb_game_id: igdbGameId,
-        status,
-        rating,
-      });
-      return { success: true, data: response.data.game };
-    } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Error al agregar juego';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    const body = { igdb_game_id: igdbGameId, status };
+    if (rating) body.rating = rating;
+
+    const response = await axios.post(ENDPOINTS.GAMES.USER_GAMES, body);
+    
+    // Después de agregar, refrescar la lista
+    await fetchUserGames(); // ← Agregar esto
+    
+    return { success: true, data: response.data.game };
+  } catch (err) {
+    const errorMsg = err.response?.data?.error || 'Error al agregar juego';
+    setError(errorMsg);
+    return { success: false, error: errorMsg };
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Actualizar juego del usuario
-  const updateGame = async (igdbGameId, status = null, rating = null) => {
-    setLoading(true);
-    setError(null);
+const updateGame = async (userGameId, status = null, rating = null) => {  // ← Cambio aquí
+  setLoading(true);
+  setError(null);
 
-    try {
-      const body = {};
-      if (status !== null) body.status = status;
-      if (rating !== null) body.rating = rating;
+  try {
+    const body = {};
+    if (status !== null) body.status = status;
+    if (rating !== null) body.rating = rating;
 
-      const response = await axios.put(`${ENDPOINTS.GAMES.USER_GAMES}/${igdbGameId}`, body);
-      return { success: true, data: response.data.game };
-    } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Error al actualizar juego';
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
-    }
-  };
+    const response = await axios.put(`${ENDPOINTS.GAMES.USER_GAMES}/${userGameId}`, body);  // ← Ahora usa userGameId
+    
+    // Después de actualizar, refrescar la lista
+    await fetchUserGames(); // ← Agregar esto
+    
+    return { success: true, data: response.data.game };
+  } catch (err) {
+    const errorMsg = err.response?.data?.error || 'Error al actualizar juego';
+    setError(errorMsg);
+    return { success: false, error: errorMsg };
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Eliminar juego del usuario
   const deleteGame = async (igdbGameId) => {

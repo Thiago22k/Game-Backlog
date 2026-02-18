@@ -11,18 +11,18 @@ const GameGrid = ({ games, title, viewAllLink, showReleaseDate = false }) => {
   return (
     <div className="py-12">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+        <h2 className="text-2xl font-bold text-primary-yellow">{title}</h2>
         {viewAllLink && (
           <button
             onClick={() => navigate(viewAllLink)}
-            className="text-blue-600 hover:text-blue-700 font-medium"
+            className="text-primary-yellow hover:text-opacity-80 font-medium transition-all"
           >
-            Ver todos →
+            View All →
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
         {games.map((game) => (
           <div
             key={game.id}
@@ -39,16 +39,16 @@ const GameGrid = ({ games, title, viewAllLink, showReleaseDate = false }) => {
                 }}
               />
               {game.rating && (
-                <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm font-bold">
+                <div className="absolute top-2 right-2 bg-black bg-opacity-75 text-primary-yellow px-2 py-1 rounded text-sm font-bold">
                   {Math.round(game.rating)}
                 </div>
               )}
             </div>
-            <h3 className="mt-3 font-medium text-gray-900 truncate" title={game.name}>
+            <h3 className="mt-3 font-semibold text-white truncate" title={game.name}>
               {game.name}
             </h3>
             {showReleaseDate && game.first_release_date && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-400">
                 {formatReleaseDate(game.first_release_date)}
               </p>
             )}
