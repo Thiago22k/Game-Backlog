@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, X, User, LogOut } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../assets/logo.svg?react';
 import SearchModal from './SearchModal';
@@ -12,6 +12,24 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+
+    if (profileDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [profileDropdownOpen]);
 
   // Detectar si estamos en páginas de autenticación
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
@@ -60,12 +78,12 @@ const Navbar = () => {
                     Explore
                   </Link>
                   <Link
-                    to="/playlists"
+                    to="/collections"
                     className={`text-text-secondary text-base font-medium pb-1 transition-all cursor-not-allowed opacity-50`}
                     onClick={(e) => e.preventDefault()}
                     title="Coming soon"
                   >
-                    Playlist
+                    Collections
                   </Link>
                 </div>
 
@@ -90,7 +108,7 @@ const Navbar = () => {
 
                   {isAuthenticated ? (
                     /* Profile dropdown */
-                    <div className="relative">
+                    <div className="relative" ref={dropdownRef}>
                       <button
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                         className="flex items-center space-x-2 text-white hover:text-gray-300 transition-all"
@@ -101,31 +119,31 @@ const Navbar = () => {
                       </button>
 
                       {profileDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-[200]">
-                          <Link
-                            to="/profile"
-                            className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            My Profile
-                          </Link>
-                          <Link
-                            to="/settings"
-                            className="block px-4 py-2 text-sm text-gray-800 hover:bg-gray-100"
-                            onClick={() => setProfileDropdownOpen(false)}
-                          >
-                            Settings
-                          </Link>
-                          <hr className="my-2" />
-                          <button
-                            onClick={handleLogout}
-                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center space-x-2"
-                          >
-                            <LogOut size={16} />
-                            <span>Log Out</span>
-                          </button>
-                        </div>
-                      )}
+  <div className="absolute right-0 mt-2 w-48 bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg py-2 z-[200]">
+    <Link
+      to="/profile"
+      className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
+      onClick={() => setProfileDropdownOpen(false)}
+    >
+      My Profile
+    </Link>
+    <Link
+      to="/settings"
+      className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
+      onClick={() => setProfileDropdownOpen(false)}
+    >
+      Settings
+    </Link>
+    <hr className="my-2 border-gray-700" />
+    <button
+      onClick={handleLogout}
+      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-primary-navy hover:text-red-300 transition-colors flex items-center space-x-2"
+    >
+      <LogOut size={16} />
+      <span>Log Out</span>
+    </button>
+  </div>
+)}
                     </div>
                   ) : (
                     /* Get Started button */

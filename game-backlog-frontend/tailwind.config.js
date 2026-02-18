@@ -6,6 +6,11 @@ export default {
   ],
   theme: {
     extend: {
+
+      fontFamily: {
+        sans: ['Radio Canada', 'Ubuntu', 'sans-serif'], // ← Agregar aquí
+      },
+
       colors: {
         primary: {
           navy: '#1a2332',

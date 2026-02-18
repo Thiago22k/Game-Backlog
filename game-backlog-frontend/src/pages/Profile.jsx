@@ -1,212 +1,396 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Clock, Gamepad2, Search, Trophy, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
 import Navbar from '../components/layout/Navbar';
-import GameCard from '../components/games/GameCard';
+import InteractiveGameCard from '../components/games/InteractiveGameCard';
+import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 
 const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { games, loading, getUserGames, updateGame, deleteGame } = useGames();
+  const { games, loading, getUserGames, updateGame, deleteGame, addGame } = useGames();
 
-  // Modal de edición
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedGame, setSelectedGame] = useState(null);
-  const [editStatus, setEditStatus] = useState('');
-  const [editRating, setEditRating] = useState(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState('');
-  const [editSuccess, setEditSuccess] = useState('');
+  // Estados para filtros y búsqueda
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [ratingFilter, setRatingFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
 
   // Cargar juegos al montar el componente
   useEffect(() => {
     getUserGames();
   }, []);
 
-  // Abrir modal de edición
-  const handleEditClick = (game) => {
-    setSelectedGame(game);
-    setEditStatus(game.status);
-    setEditRating(game.rating);
-    setShowEditModal(true);
-    setEditError('');
-    setEditSuccess('');
+  // Separar juegos en wishlist (próximos) y el resto
+  const separateGames = () => {
+    const now = new Date();
+    const wishlistComingSoon = [];
+    const myGames = [];
+
+    games.forEach(game => {
+      const releaseDate = game.game_details?.first_release_date 
+        ? new Date(game.game_details.first_release_date * 1000)
+        : null;
+
+      // Si es wishlist Y (no tiene fecha O la fecha es futura)
+      if (game.status === 'wishlist' && (!releaseDate || releaseDate > now)) {
+        wishlistComingSoon.push(game);
+      } else {
+        myGames.push(game);
+      }
+    });
+
+    return { wishlistComingSoon, myGames };
   };
 
-  // Guardar cambios
-  const handleSaveEdit = async () => {
-    setEditLoading(true);
-    setEditError('');
+  const { wishlistComingSoon, myGames } = separateGames();
 
-    const result = await updateGame(selectedGame.igdb_game_id, editStatus, editRating);
+  // Aplicar búsqueda
+  const applySearch = (gamesList) => {
+    if (!searchQuery.trim()) return gamesList;
 
-    if (result.success) {
-      setEditSuccess('Juego actualizado exitosamente');
-      console.log(result.success)
-      // Recargar lista
-      await getUserGames();
-      setTimeout(() => {
-        setShowEditModal(false);
-        setEditSuccess('');
-      }, 1500);
-    } else {
-      setEditError(result.error);
+    return gamesList.filter(game => 
+      game.game_details?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  // Aplicar filtros (solo para My Games)
+  const applyFilters = (gamesList) => {
+    let filtered = [...gamesList];
+
+    // Filtro por estado
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(game => game.status === statusFilter);
     }
 
-    setEditLoading(false);
+    // Filtro por calificación
+    if (ratingFilter !== 'all') {
+      const targetRating = parseInt(ratingFilter);
+      filtered = filtered.filter(game => game.rating === targetRating);
+    }
+
+    return filtered;
   };
 
-  // Eliminar juego
-  const handleDeleteClick = async (game) => {
-    const confirmDelete = window.confirm(`¿Estás seguro de eliminar "${game.game_details?.name || 'este juego'}" de tu lista?`);
+  // Aplicar ordenamiento
+  const applySort = (gamesList) => {
+    const sorted = [...gamesList];
+
+    switch (sortBy) {
+      case 'name':
+        return sorted.sort((a, b) => 
+          (a.game_details?.name || '').localeCompare(b.game_details?.name || '')
+        );
+      case 'rating-high':
+        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'rating-low':
+        return sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+      case 'recent':
+      default:
+        return sorted.sort((a, b) => 
+          new Date(b.created_at) - new Date(a.created_at)
+        );
+    }
+  };
+
+  // Procesar juegos
+  const filteredWishlist = applySearch(wishlistComingSoon);
+  const processedMyGames = applySort(applyFilters(applySearch(myGames)));
+
+  // Calcular estadísticas
+  const stats = {
+    total: games.length,
+    completed: games.filter(g => g.status === 'completed').length,
+    avgRating: games.filter(g => g.rating).length > 0
+      ? (games.reduce((sum, g) => sum + (g.rating || 0), 0) / games.filter(g => g.rating).length).toFixed(1)
+      : 0,
+  };
+
+  // Handlers para InteractiveGameCard
+  const handleStatusChange = async (gameId, newStatus) => {
+    const game = games.find(g => g.igdb_game_id === gameId);
     
-    if (confirmDelete) {
-      const result = await deleteGame(game.igdb_game_id);
+    if (newStatus === null && game) {
+      const result = await deleteGame(gameId);
       
       if (result.success) {
-        // La lista se actualiza automáticamente en el hook
+        toast.success('Game removed from your list');
       } else {
-        alert('Error al eliminar el juego');
+        toast.error('Error removing game');
+      }
+    } else if (game) {
+      const result = await updateGame(gameId, newStatus, game.rating);
+      
+      if (result.success) {
+        toast.success('Status updated');
+      } else {
+        toast.error('Error updating status');
       }
     }
   };
 
+  const handleRatingChange = async (gameId, rating) => {
+    const game = games.find(g => g.igdb_game_id === gameId);
+    
+    if (game) {
+      const result = await updateGame(gameId, game.status, rating);
+      
+      if (result.success) {
+        toast.success(`Rating saved: ${rating} ⭐`);
+      } else {
+        toast.error('Error saving rating');
+      }
+    }
+  };
+
+  const handleWishlistToggle = async (gameId, newStatus) => {
+    if (newStatus === null) {
+      const result = await deleteGame(gameId);
+      
+      if (result.success) {
+        toast.success('Removed from wishlist');
+      } else {
+        toast.error('Error removing from wishlist');
+      }
+    } else {
+      const result = await addGame(gameId, 'wishlist');
+      
+      if (result.success) {
+        toast.success('Added to wishlist');
+      } else {
+        toast.error('Error adding to wishlist');
+      }
+    }
+  };
+
+  // Mapear juegos para las cards
+  const mapGameForCard = (game) => {
+    return {
+      id: game.igdb_game_id,
+      name: game.game_details?.name || 'Unknown',
+      cover: game.game_details?.cover,
+      artworks: game.game_details?.artworks,
+      screenshots: game.game_details?.screenshots,
+      genres: game.game_details?.genres,
+      first_release_date: game.game_details?.first_release_date,
+      rating: game.game_details?.rating,
+      status: game.status,
+      user_rating: game.rating,
+    };
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-primary-navy">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Bienvenido, {user?.username}
-              </h2>
-              <p className="text-gray-600 mt-1">
-                {games.length} juego(s) en tu lista
-              </p>
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Header con Stats */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <div>
+            <h2 className="text-3xl font-bold text-white">
+              Welcome back, {user?.username}
+            </h2>
+            
+            {/* Stats */}
+            <div className="flex items-center gap-4 mt-2 text-sm">
+              <span className="text-gray-400">
+                {stats.total} game{stats.total !== 1 ? 's' : ''}
+              </span>
+              <span className="text-gray-600">•</span>
+              <span className="flex items-center gap-1 text-green-400">
+                <Trophy size={14} />
+                {stats.completed} completed
+              </span>
+              {stats.avgRating > 0 && (
+                <>
+                  <span className="text-gray-600">•</span>
+                  <span className="flex items-center gap-1 text-primary-yellow">
+                    <Star size={14} fill="currentColor" />
+                    {stats.avgRating} avg
+                  </span>
+                </>
+              )}
             </div>
+          </div>
+          
+          <button
+            onClick={() => navigate('/settings')}
+            className="px-6 py-2 bg-primary-yellow text-primary-navy-dark rounded-lg hover:opacity-90 font-semibold transition-all"
+          >
+            Settings
+          </button>
+        </div>
+
+        {/* Barra de búsqueda */}
+        <div className="mb-8">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search your games..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
+            />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
+          </div>
+        ) : games.length === 0 ? (
+          <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
+            <p className="text-gray-400 mb-4">
+              You don't have any games in your collection yet.
+            </p>
             <button
-              onClick={() => navigate('/settings')}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              onClick={() => navigate('/explore')}
+              className="bg-primary-yellow text-primary-navy-dark px-6 py-2 rounded-lg hover:opacity-90 font-semibold transition-all"
             >
-              Configuración
+              Explore Games
             </button>
           </div>
+        ) : (
+          <>
+            {/* Wishlist - Coming Soon */}
+            {filteredWishlist.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-center mb-6">
+                  <Clock className="text-primary-yellow mr-2" size={24} />
+                  <h3 className="text-2xl font-bold text-white">
+                    My Wishlist (Coming Soon)
+                  </h3>
+                  <span className="ml-3 text-gray-400">
+                    {filteredWishlist.length} game{filteredWishlist.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
 
-          {/* Lista de juegos */}
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-gray-600">Cargando tus juegos...</p>
-            </div>
-          ) : games.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <p className="text-gray-600 mb-4">
-                No tienes juegos en tu lista aún.
-              </p>
-              <button
-                onClick={() => navigate('/explore')}
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 font-medium"
-              >
-                Explorar juegos
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {games.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  onEdit={handleEditClick}
-                  onDelete={handleDeleteClick}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  {filteredWishlist.map((game) => (
+                    <AnticipatedGameCard
+                      key={game.id}
+                      game={mapGameForCard(game)}
+                      interactive={true}
+                      onWishlistToggle={handleWishlistToggle}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* My Games con filtros */}
+            {myGames.length > 0 && (
+              <section>
+                <div className="flex items-center mb-6">
+                  <Gamepad2 className="text-primary-yellow mr-2" size={24} />
+                  <h3 className="text-2xl font-bold text-white">
+                    My Games
+                  </h3>
+                  <span className="ml-3 text-gray-400">
+                    {processedMyGames.length} / {myGames.length} game{myGames.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                {/* Filtros */}
+                <div className="mb-6 space-y-4">
+                  {/* Filtro por estado */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-gray-400 text-sm self-center mr-2">Status:</span>
+                    {[
+                      { value: 'all', label: 'All' },
+                      { value: 'completed', label: 'Completed' },
+                      { value: 'playing', label: 'Playing' },
+                      { value: 'wishlist', label: 'Wishlist' },
+                      { value: 'dropped', label: 'Dropped' },
+                    ].map(status => (
+                      <button
+                        key={status.value}
+                        onClick={() => setStatusFilter(status.value)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                          statusFilter === status.value
+                            ? 'bg-primary-yellow text-primary-navy-dark'
+                            : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
+                        }`}
+                      >
+                        {status.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Filtro por rating y ordenamiento */}
+                  <div className="flex flex-wrap gap-4">
+                    {/* Rating filter */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Rating:</span>
+                      <select
+                        value={ratingFilter}
+                        onChange={(e) => setRatingFilter(e.target.value)}
+                        className="bg-primary-navy-dark border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-yellow"
+                      >
+                        <option value="all">All</option>
+                        <option value="5">⭐⭐⭐⭐⭐(5)</option>
+                        <option value="4">⭐⭐⭐⭐ (4)</option>
+                        <option value="3">⭐⭐⭐ (3)</option>
+                        <option value="2">⭐⭐ (2)</option>
+                        <option value="1">⭐ (1)</option>
+                      </select>
+                    </div>
+
+                    {/* Sort by */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Sort by:</span>
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-primary-navy-dark border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-yellow"
+                      >
+                        <option value="recent">Recently Added</option>
+                        <option value="name">Name (A-Z)</option>
+                        <option value="rating-high">Rating (High-Low)</option>
+                        <option value="rating-low">Rating (Low-High)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid de juegos */}
+                {processedMyGames.length === 0 ? (
+                  <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
+                    <p className="text-gray-400">
+                      No games match your filters.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {processedMyGames.map((game) => (
+                      <InteractiveGameCard
+                        key={game.id}
+                        game={mapGameForCard(game)}
+                        interactive={true}
+                        onStatusChange={handleStatusChange}
+                        onRatingChange={handleRatingChange}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Mensaje si la búsqueda no encuentra nada */}
+            {searchQuery && filteredWishlist.length === 0 && processedMyGames.length === 0 && (
+              <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
+                <p className="text-gray-400">
+                  No games found for "{searchQuery}"
+                </p>
+              </div>
+            )}
+          </>
+        )}
       </main>
-
-      {/* Modal de edición */}
-      {showEditModal && selectedGame && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Editar "{selectedGame.game_details?.name || 'juego'}"
-            </h3>
-
-            {/* Seleccionar status */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
-              <select
-                value={editStatus}
-                onChange={(e) => setEditStatus(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="completed">Completado</option>
-                <option value="playing">Jugando</option>
-                <option value="wishlist">Lista de deseos</option>
-                <option value="dropped">Abandonado</option>
-              </select>
-            </div>
-
-            {/* Seleccionar rating */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Calificación
-              </label>
-              <select
-                value={editRating || ''}
-                onChange={(e) => setEditRating(e.target.value ? parseInt(e.target.value) : null)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Sin calificación</option>
-                <option value="1">⭐ 1</option>
-                <option value="2">⭐⭐ 2</option>
-                <option value="3">⭐⭐⭐ 3</option>
-                <option value="4">⭐⭐⭐⭐ 4</option>
-                <option value="5">⭐⭐⭐⭐⭐ 5</option>
-              </select>
-            </div>
-
-            {editError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                {editError}
-              </div>
-            )}
-
-            {editSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-                {editSuccess}
-              </div>
-            )}
-
-            {/* Botones */}
-            <div className="flex space-x-4">
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditError('');
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300"
-                disabled={editLoading}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={editLoading}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {editLoading ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

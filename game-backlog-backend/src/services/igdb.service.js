@@ -189,7 +189,7 @@ const getMostAnticipated = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, cover.url, rating, first_release_date, hypes;
+        fields name, cover.url, genres.name, rating, first_release_date, hypes;
         where 
           first_release_date > ${now}
           & first_release_date < ${oneYearFromNow}

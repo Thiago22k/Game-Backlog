@@ -1,0 +1,151 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Clock, Plus, Check } from 'lucide-react';
+import { getGameCover, formatIGDBImage } from '../../utils/formatters';
+
+const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) => {
+  const navigate = useNavigate();
+  const [isInWishlist, setIsInWishlist] = useState(game.status === 'wishlist');
+
+  // Sincronizar con props cuando cambien
+  useEffect(() => {
+    setIsInWishlist(game.status === 'wishlist');
+  }, [game.status]);
+
+  // Calcular countdown
+  const getCountdown = () => {
+    if (!game.first_release_date) {
+      return { text: 'TBA', color: 'bg-gray-600' };
+    }
+
+    const releaseDate = new Date(game.first_release_date * 1000);
+    const now = new Date();
+    const daysUntil = Math.ceil((releaseDate - now) / (1000 * 60 * 60 * 24));
+
+    if (daysUntil < 0) {
+      return { text: 'Out Now!', color: 'bg-green-600' };
+    } else if (daysUntil === 0) {
+      return { text: 'Releases Today!', color: 'bg-primary-yellow text-primary-navy-dark' };
+    } else if (daysUntil <= 30) {
+      return { text: `Releases in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`, color: 'bg-primary-yellow text-primary-navy-dark' };
+    } else {
+      const options = { month: 'short', day: 'numeric', year: 'numeric' };
+      return { text: releaseDate.toLocaleDateString('en-US', options), color: 'bg-gray-600' };
+    }
+  };
+
+  const countdown = getCountdown();
+
+  // Handle wishlist toggle
+  const handleWishlistClick = async (e) => {
+    e.stopPropagation();
+    
+    if (!interactive) {
+      // Si no está autenticado, redirigir a login
+      localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
+      navigate('/login');
+      return;
+    }
+
+    // Toggle wishlist
+    const newStatus = isInWishlist ? null : 'wishlist';
+    setIsInWishlist(!isInWishlist);
+
+    if (onWishlistToggle) {
+      await onWishlistToggle(game.id, newStatus);
+    }
+  };
+
+  // Obtener artwork (banner superior)
+  const artwork = game.artworks?.[0]?.url || game.screenshots?.[0]?.url || game.cover?.url;
+  const artworkUrl = artwork 
+    ? formatIGDBImage(artwork, 't_screenshot_med')
+    : getGameCover(game);
+
+  // Cover (círculo)
+  const coverUrl = getGameCover(game);
+
+  // Género y año
+  const genre = game.genres?.[0]?.name || 'Unknown';
+  const year = game.first_release_date 
+    ? new Date(game.first_release_date * 1000).getFullYear()
+    : 'TBA';
+
+  return (
+    <div
+      onClick={() => navigate(`/game/${game.id}`)}
+      className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group relative"
+    >
+      {/* Header con Countdown */}
+      <div className="h-12 flex items-center justify-between px-4">
+        {/* Countdown Badge */}
+        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${countdown.color}`}>
+          <Clock size={14} />
+          {countdown.text}
+        </div>
+
+        {/* IGDB Rating (si existe) */}
+        {game.rating && (
+          <div className="px-3 py-1 bg-primary-yellow text-primary-navy-dark font-bold rounded-full text-sm">
+            {Math.round(game.rating)}
+          </div>
+        )}
+      </div>
+
+      {/* Artwork Banner */}
+      <div className="mx-4 mb-8">
+        <img
+          src={artworkUrl}
+          alt={game.name}
+          className="w-full h-32 object-cover rounded-lg"
+          onError={(e) => {
+            e.target.src = coverUrl;
+          }}
+        />
+      </div>
+
+      {/* Cover Circular (mitad incrustado) */}
+      <div className="flex justify-center -mt-12 mb-3">
+        <img
+          src={coverUrl}
+          alt={game.name}
+          className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
+        />
+      </div>
+
+      {/* Info del juego */}
+      <div className="px-4 pb-4 text-center">
+        <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem]">
+          {game.name}
+        </h3>
+        <p className="text-gray-400 text-sm mb-3">
+          {genre} • {year}
+        </p>
+
+        {/* Botón Wishlist */}
+        <button
+          onClick={handleWishlistClick}
+          className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+            isInWishlist
+              ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
+              : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
+          }`}
+        >
+          {isInWishlist ? (
+            <>
+              <Check size={16} />
+              In Wishlist
+            </>
+          ) : (
+            <>
+              <Plus size={16} />
+              Add to Wishlist
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AnticipatedGameCard;

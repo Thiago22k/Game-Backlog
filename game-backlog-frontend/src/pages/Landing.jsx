@@ -7,39 +7,115 @@ import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import GameGrid from '../components/games/GameGrid';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
+import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import { useGames } from '../hooks/useGames';
+import toast from 'react-hot-toast';
 
 
 const Landing = () => {
   const { isAuthenticated } = useAuth();
-  const { addGame, updateGame, userGames, getUserGames } = useGames();
+  const { addGame, updateGame, deleteGame, userGames, getUserGames } = useGames();
   const [popularGames, setPopularGames] = useState([]);
   const [bestOfYearGames, setBestOfYearGames] = useState([]);
   const [anticipatedGames, setAnticipatedGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
+const handleWishlistToggle = async (gameId, newStatus) => {
+  if (!isAuthenticated) return;
+
+  const existingGame = userGames.find(g => g.igdb_game_id === gameId);
+
+  if (newStatus === null && existingGame) {
+    // Remover de wishlist
+    const result = await deleteGame(gameId);
+    
+    if (result.success) {
+      toast.success('Removed from your wishlist');
+      setAnticipatedGames(prev => prev.map(g => 
+        g.id === gameId ? { ...g, status: null } : g
+      ));
+    } else {
+      toast.error('Error removing from your wishlist');
+    }
+  } else if (newStatus === 'wishlist') {
+    // Agregar a wishlist
+    const result = await addGame(gameId, 'wishlist');
+    
+    if (result.success) {
+      toast.success('¡Added to your wishlist!');
+      setAnticipatedGames(prev => prev.map(g => 
+        g.id === gameId ? { ...g, status: 'wishlist' } : g
+      ));
+    } else {
+      toast.error('Error adding to your wishlist');
+    }
+  }
+};
 
 const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
   if (!isAuthenticated) return;
 
   const existingGame = userGames.find(g => g.igdb_game_id === gameId);
 
+  // Si selecciona "Not Played" (null), eliminar el juego
+  if (newStatus === null) {
+    if (existingGame) {
+      const result = await deleteGame(gameId);
+      
+      if (result.success) {
+        toast.success('Game removed from your list');
+        // Actualizar estados locales
+        setPopularGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: null, user_rating: 0 } : g
+        ));
+        setBestOfYearGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: null, user_rating: 0 } : g
+        ));
+        setAnticipatedGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: null, user_rating: 0 } : g
+        ));
+      } else {
+        toast.error('Error deleting the game');
+      }
+    }
+    return;
+  }
+
+  // Si el juego ya existe en la lista, actualizar
   if (existingGame) {
-    // CORRECCIÓN: Cambiamos existingGame.id por gameId (o existingGame.igdb_game_id)
     const result = await updateGame(
-      gameId, // <--- Este debe ser el ID de IGDB (el largo)
+      gameId, 
       newStatus, 
       currentRating >= 1 && currentRating <= 5 ? currentRating : existingGame.rating
     );
     
     if (result.success) {
-      console.log('Status updated successfully');
+      // Mensajes personalizados según el estado
+      const statusLabels = {
+        'completed': 'Completed',
+        'playing': 'Playing',
+        'wishlist': 'Wishlist',
+        'dropped': 'Dropped'
+      };
+      
+      toast.success(`Status changed to "${statusLabels[newStatus] || newStatus}"`);
+      
+      // Actualizar estados locales
+      const updateGame = (g) => 
+        g.id === gameId ? { 
+          ...g, 
+          status: newStatus, 
+          user_rating: currentRating >= 1 && currentRating <= 5 ? currentRating : g.user_rating 
+        } : g;
+      
+      setPopularGames(prev => prev.map(updateGame));
+      setBestOfYearGames(prev => prev.map(updateGame));
+      setAnticipatedGames(prev => prev.map(updateGame));
     } else {
-      console.error('Error updating status:', result.error);
-      alert('Error updating status');
+      toast.error('Error updating status');
     }
-  } else if (newStatus !== null) {
-    // addGame ya estaba bien porque usaba gameId, 
-    // pero lo dejamos limpio por consistencia
+  } else {
+    // Si no existe, agregarlo
     const result = await addGame(
       gameId, 
       newStatus, 
@@ -47,10 +123,31 @@ const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
     );
     
     if (result.success) {
-      console.log('Game added successfully');
+      const statusLabels = {
+        'completed': 'Completed',
+        'playing': 'Playing',
+        'wishlist': 'Wishlist',
+        'dropped': 'Dropped'
+      };
+      
+      toast.success(
+        `¡Added to your list as "${statusLabels[newStatus]}"! now you can rate it ⭐`,
+        { duration: 4000 }
+      );
+      
+      // Actualizar estados locales
+      const updateGame = (g) => 
+        g.id === gameId ? { 
+          ...g, 
+          status: newStatus, 
+          user_rating: currentRating >= 1 && currentRating <= 5 ? currentRating : 0 
+        } : g;
+      
+      setPopularGames(prev => prev.map(updateGame));
+      setBestOfYearGames(prev => prev.map(updateGame));
+      setAnticipatedGames(prev => prev.map(updateGame));
     } else {
-      console.error('Error adding game:', result.error);
-      alert('Error adding game');
+      toast.error('Error adding game');
     }
   }
 };
@@ -61,12 +158,23 @@ const handleRatingChange = async (gameId, rating) => {
   const existingGame = userGames.find(g => g.igdb_game_id === gameId);
 
   if (existingGame) {
-    // CAMBIO: Enviamos gameId (que es el de IGDB) o existingGame.igdb_game_id
     const result = await updateGame(existingGame.igdb_game_id, existingGame.status, rating);
     
     if (result.success) {
-      // ... éxito
+      toast.success(`Saved rating: ${rating} ⭐`);
+      
+      // Actualizar estados locales
+      const updateGame = (g) => 
+        g.id === gameId ? { ...g, user_rating: rating } : g;
+      
+      setPopularGames(prev => prev.map(updateGame));
+      setBestOfYearGames(prev => prev.map(updateGame));
+      setAnticipatedGames(prev => prev.map(updateGame));
+    } else {
+      toast.error('Error saving rating');
     }
+  } else {
+    toast.error('First add the game to your list');
   }
 };
 
@@ -85,20 +193,51 @@ const handleRatingChange = async (gameId, rating) => {
 useEffect(() => {
     const fetchGames = async () => {
       try {
-        // Cargar juegos del usuario si está autenticado
+        // 1. Cargar juegos del usuario si está autenticado
+        let userGamesData = [];
         if (isAuthenticated) {
-          await getUserGames(); // ← Agregar esto
+          const result = await getUserGames();
+          if (result.success) {
+            userGamesData = result.data;
+          }
         }
-        
+
+        // 2. Cargar juegos de IGDB
         const [popularRes, bestOfYearRes, anticipatedRes] = await Promise.all([
-          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=10`),
-          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=10`),
-          axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=10`)
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=12`),
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=12`),
+          axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=12`)
         ]);
 
-        setPopularGames(popularRes.data.games);
-        setBestOfYearGames(bestOfYearRes.data.games);
-        setAnticipatedGames(anticipatedRes.data.games);
+        // 3. MEZCLAR: Agregar estado del usuario a los juegos de IGDB
+        const mergeUserData = (igdbGames) => {
+  return igdbGames.map(game => {
+    const userGame = userGamesData.find(ug => ug.igdb_game_id === game.id);
+    
+    const merged = {
+      ...game,
+      status: userGame?.status || null,
+      user_rating: userGame?.rating || 0,
+    };
+    
+    // Debug: Ver qué se está mezclando
+    if (userGame) {
+      console.log('Merging game:', game.name, {
+        igdb_id: game.id,
+        status: merged.status,
+        user_rating: merged.user_rating,
+        igdb_rating: game.rating
+      });
+    }
+    
+    return merged;
+  });
+};
+
+        setPopularGames(mergeUserData(popularRes.data.games));
+        setBestOfYearGames(mergeUserData(bestOfYearRes.data.games));
+        setAnticipatedGames(mergeUserData(anticipatedRes.data.games));
+        
       } catch (error) {
         console.error('Error loading games:', error);
       } finally {
@@ -107,7 +246,7 @@ useEffect(() => {
     };
 
     fetchGames();
-  }, [isAuthenticated]);
+  }, [isAuthenticated]); // Re-cargar cuando cambie autenticación
 
   return (
     <div className="min-h-screen bg-primary-navy">
@@ -156,7 +295,7 @@ useEffect(() => {
         {/* Games Sections */}
         {loading ? (
   <div className="py-12 text-center">
-    <p className="text-gray-400">Loading games...</p>
+    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
   </div>
 ) : (
   <>
@@ -188,29 +327,66 @@ useEffect(() => {
 </div>
     </div>
 
-    {/* Las otras secciones SIN cambios */}
-    <GameGrid 
-      games={anticipatedGames} 
-      title={
-        <>
-          <Clock className="text-primary-yellow inline-block mr-2" size={24} />
-          Most Anticipated
-        </>
-      }
-      viewAllLink="/explore"
-      showReleaseDate={true}
-    />
+    {/* Most Anticipated */}
+<section className="mb-16">
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-3xl font-bold flex items-center text-white">
+      <Clock className="text-primary-yellow inline-block mr-2" size={24} />
+      Most Anticipated
+    </h2>
+  </div>
 
-    <GameGrid 
-      games={bestOfYearGames} 
-      title={
-        <>
-          <Trophy className="text-primary-yellow inline-block mr-2" size={24} />
-          Best of Last Year
-        </>
-      }
-      viewAllLink="/explore?sort=popular&timeRange=last_year"
-    />
+  {loading ? (
+    <div className="text-center py-8">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
+    </div>
+  ) : (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      {anticipatedGames.map((game) => (
+        <AnticipatedGameCard
+          key={game.id}
+          game={game}
+          interactive={isAuthenticated}
+          onWishlistToggle={handleWishlistToggle}
+        />
+      ))}
+    </div>
+  )}
+</section>
+
+    {/* Best of Last Year */}
+<section className="mb-16">
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-3xl font-bold flex items-center text-white">
+      <Trophy className="text-primary-yellow inline-block mr-2" size={24} />
+      Best of Last Year
+    </h2>
+    <Link 
+      to="/explore?sort=popular&timeRange=last_year" 
+      className="text-primary-yellow hover:text-primary-yellow-dark transition-colors"
+    >
+      View All →
+    </Link>
+  </div>
+
+  {loading ? (
+    <div className="text-center py-8">
+      <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
+    </div>
+  ) : (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+      {bestOfYearGames.map((game) => (
+        <InteractiveGameCard
+          key={game.id}
+          game={game}
+          interactive={isAuthenticated}
+          onStatusChange={handleStatusChange}
+          onRatingChange={handleRatingChange}
+        />
+      ))}
+    </div>
+  )}
+</section>
   </>
 )}
 

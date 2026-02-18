@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Play, ShoppingCart, Trash2, HelpCircle } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
@@ -11,25 +11,29 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   // Estados locales
   const [localStatus, setLocalStatus] = useState(game.status || null);
-  // Solo usar game.rating como rating personal si el juego tiene status
-  // Si no tiene status, game.rating es de IGDB y no debemos usarlo
   const [localRating, setLocalRating] = useState(
-    game.status ? (game.rating || 0) : 0
+    game.status ? (game.user_rating || 0) : 0
   );
+
+  // Sincronizar con los props cuando cambien
+  useEffect(() => {
+    setLocalStatus(game.status || null);
+    setLocalRating(game.status ? (game.user_rating || 0) : 0);
+  }, [game.status, game.user_rating]);
 
   const currentStatus = localStatus;
   const currentRating = localRating;
 
-  // Obtener artwork (banner horizontal)
-  const artwork = game.artworks?.[0]?.url || game.screenshots?.[0]?.url;
+  // Obtener artwork (banner superior)
+  const artwork = game.artworks?.[0]?.url || game.cover?.url;
   const artworkUrl = artwork 
-    ? formatIGDBImage(artwork, 't_screenshot_med')
+    ? formatIGDBImage(artwork)
     : getGameCover(game);
 
-  // Obtener cover (círculo)
+  // Cover (círculo)
   const coverUrl = getGameCover(game);
 
-  // Obtener género y año
+  // Género y año
   const genre = game.genres?.[0]?.name || 'Unknown';
   const year = game.first_release_date 
     ? new Date(game.first_release_date * 1000).getFullYear()
@@ -38,7 +42,6 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const handleStatusClick = (e) => {
     e.stopPropagation();
     
-    // Si no está autenticado, redirigir a login
     if (!interactive) {
       localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
       navigate('/login');
@@ -49,12 +52,15 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   };
 
   const handleStatusSelect = async (newStatus) => {
+    setShowStatusMenu(false);
     setLocalStatus(newStatus);
+    
     if (!newStatus) {
       setLocalRating(0);
     }
+
     if (onStatusChange) {
-      await onStatusChange(game.id, newStatus);
+      await onStatusChange(game.id, newStatus, localRating);
     }
   };
 
@@ -82,29 +88,37 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   const { Icon: StatusIcon, color: statusColor } = getStatusIcon();
 
+  const getIGDBRatingColor = (rating) => {
+  if (!rating) return 'bg-gray-600 text-white';
+  
+  if (rating >= 80) return 'bg-green-500 text-primary-navy-dark';
+  if (rating >= 60) return 'bg-primary-yellow text-primary-navy-dark';
+  if (rating >= 40) return 'bg-orange-500 text-white';
+  return 'bg-red-500 text-white';
+};
+
   return (
     <div className="relative">
-      {/* Card Container */}
+      {/* Card Container - Mismo estilo que AnticipatedGameCard */}
       <div 
         onClick={() => navigate(`/game/${game.id}`)}
-        className="bg-primary-navy-dark rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer group"
+        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
-        {/* Header con iconos y estrellas */}
-        <div className="relative h-12 flex items-center justify-between px-3">
+        {/* Header con Status y Rating */}
+        <div className="h-12 flex items-center justify-between px-4">
           {/* Status Button (izquierda) */}
           <button
             onClick={handleStatusClick}
-            className={`p-2 rounded ${statusColor} transition-transform shadow-lg z-20 ${
-            interactive ? 'hover:scale-110 cursor-pointer' : 'cursor-pointer'
+            className={`p-2 rounded-full ${statusColor} transition-transform ${
+              interactive ? 'hover:scale-110' : ''
             }`}
           >
-            <StatusIcon size={18} className="text-white" />
+            <StatusIcon size={16} className="text-white" />
           </button>
 
           {/* Star Rating (centro) - Solo si tiene estado */}
           {currentStatus && (
             <div 
-              className="absolute left-1/2 transform -translate-x-1/2 z-20"
               onClick={(e) => e.stopPropagation()}
             >
               <StarRating 
@@ -115,47 +129,36 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             </div>
           )}
 
-          {/* IGDB Rating (derecha) */}
-          {game.rating && (
-            <div className="bg-primary-yellow text-primary-navy px-2 py-1 rounded text-xs font-bold z-20">
-              {Math.round(game.rating)}
-              <div className="text-[8px] leading-none">IGDB</div>
-            </div>
-          )}
+          {/* IGDB Rating (derecha) - Siempre mostrar con color dinámico */}
+<div className={`px-3 py-1 rounded-full text-sm font-bold ${getIGDBRatingColor(game.rating)}`}>
+  {game.rating ? Math.round(game.rating) : 'N/A'}
+</div>
         </div>
 
         {/* Artwork Banner */}
-<div className="relative h-32 mx-4 rounded-lg overflow-hidden">
-  <img
-    src={artworkUrl}
-    alt=""
-    className="w-full h-full object-cover"
-    onError={(e) => {
-      e.target.src = 'https://via.placeholder.com/400x200?text=No+Banner';
-    }}
-  />
-  
-  {/* Gradient overlay bottom */}
-  <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-primary-navy-dark to-transparent" />
-</div>
-
-        {/* Cover Circle - Posicionado mitad arriba del artwork */}
-        <div className="flex justify-center -mt-12 relative z-10">
-          <div className="bg-primary-navy-dark rounded-full p-2">
-            <img
-              src={coverUrl}
-              alt={game.name}
-              className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark"
-              onError={(e) => {
-                e.target.src = 'https://via.placeholder.com/96x96?text=?';
-              }}
-            />
-          </div>
+        <div className="mx-4 mb-8">
+          <img
+            src={artworkUrl}
+            alt={game.name}
+            className="w-full h-32 object-cover rounded-lg"
+            onError={(e) => {
+              e.target.src = coverUrl;
+            }}
+          />
         </div>
 
-        {/* Game Info */}
-        <div className="px-4 pb-4 pt-2 text-center">
-          <h3 className="text-white font-bold text-lg mb-1 truncate" title={game.name}>
+        {/* Cover Circular (mitad incrustado) */}
+        <div className="flex justify-center -mt-12 mb-3">
+          <img
+            src={coverUrl}
+            alt={game.name}
+            className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
+          />
+        </div>
+
+        {/* Info del juego */}
+        <div className="px-4 pb-4 text-center">
+          <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem]">
             {game.name}
           </h3>
           <p className="text-gray-400 text-sm">
