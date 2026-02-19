@@ -1,18 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Search, X, Flame, Star, Sparkles, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
-import GameCard from '../components/games/GameCard';
-import ExploreFilters from '../components/games/ExploreFilters';
+import InteractiveGameCard from '../components/games/InteractiveGameCard';
+import { ChevronDown } from 'lucide-react';
+import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 
 const Explore = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
-  const { addGame } = useGames();
+  const { addGame, updateGame, deleteGame, userGames, getUserGames } = useGames();
 
   // Leer parámetros de URL
   const getParamArray = (key) => {
@@ -20,20 +23,23 @@ const Explore = () => {
     return value ? value.split(',').map(Number) : [];
   };
 
-  // Estados de búsqueda
+  // Estados
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(!!searchParams.get('search'));
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Estados de exploración con filtros (leídos de URL)
-  const [exploreGames, setExploreGames] = useState([]);
+  const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
+  const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
+  const [isAnticipatedMode, setIsAnticipatedMode] = useState(searchParams.get('anticipated') === 'true');
 
-  // Filtros (leídos de URL)
+  // Refs para cerrar al hacer click fuera
+  const genreDropdownRef = useRef(null);
+  const platformDropdownRef = useRef(null);
+
+  // Filtros
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'relevance');
-  const [selectedTimeRange, setSelectedTimeRange] = useState(searchParams.get('timeRange') || null);
+  const [timeRange, setTimeRange] = useState(searchParams.get('timeRange') || 'all');
   const [selectedGenres, setSelectedGenres] = useState(getParamArray('genres'));
   const [selectedPlatforms, setSelectedPlatforms] = useState(getParamArray('platforms'));
 
@@ -41,384 +47,588 @@ const Explore = () => {
   const [availableGenres, setAvailableGenres] = useState([]);
   const [availablePlatforms, setAvailablePlatforms] = useState([]);
 
-  // Modal de agregar juego
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedGame, setSelectedGame] = useState(null);
-  const [addStatus, setAddStatus] = useState('completed');
-  const [addRating, setAddRating] = useState(null);
-  const [addLoading, setAddLoading] = useState(false);
-  const [addError, setAddError] = useState('');
-  const [addSuccess, setAddSuccess] = useState('');
+// Cargar géneros y plataformas
+useEffect(() => {
+  const fetchFilters = async () => {
+    try {
+      // Cargar géneros primero
+      const genresRes = await axios.get(ENDPOINTS.GAMES.GENRES);
+      setAvailableGenres(genresRes.data.genres);
+      
+      // Reducir de 1000ms a 250ms
+      await new Promise(resolve => setTimeout(resolve, 250));
+      
+      const platformsRes = await axios.get(ENDPOINTS.GAMES.PLATFORMS);
+      
+      const sortedPlatforms = platformsRes.data.platforms.sort((a, b) => {
+        const topPlatforms = [6, 167, 48, 169, 49, 130];
+        const aIsTop = topPlatforms.includes(a.id);
+        const bIsTop = topPlatforms.includes(b.id);
+        
+        if (aIsTop && !bIsTop) return -1;
+        if (!aIsTop && bIsTop) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
-  // Cargar géneros y plataformas al inicio
-  useEffect(() => {
-    const fetchFiltersData = async () => {
-      try {
-        const [genresRes, platformsRes] = await Promise.all([
-          axios.get(ENDPOINTS.GAMES.GENRES),
-          axios.get(ENDPOINTS.GAMES.PLATFORMS)
-        ]);
+      setAvailablePlatforms(sortedPlatforms);
+      
+    } catch (error) {
+      console.error('Error loading filters:', error);
+      setTimeout(() => {
+        fetchFilters();
+      }, 2000);
+    }
+  };
+  
+  fetchFilters();
 
-        setAvailableGenres(genresRes.data.genres);
-        setAvailablePlatforms(platformsRes.data.platforms);
-      } catch (error) {
-        console.error('Error loading filters:', error);
-      }
-    };
+  if (isAuthenticated) {
+    // Reducir de 1200ms a 400ms
+    setTimeout(() => {
+      getUserGames();
+    }, 400);
+  }
+}, [isAuthenticated]);
 
-    fetchFiltersData();
-  }, []);
+  // Cerrar dropdowns al hacer click fuera
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (genreDropdownRef.current && !genreDropdownRef.current.contains(event.target)) {
+      setGenreDropdownOpen(false);
+    }
+    if (platformDropdownRef.current && !platformDropdownRef.current.contains(event.target)) {
+      setPlatformDropdownOpen(false);
+    }
+  };
 
-  // Actualizar URL cuando cambian los filtros
+  document.addEventListener('mousedown', handleClickOutside);
+  return () => document.removeEventListener('mousedown', handleClickOutside);
+}, []);
+
+// Funciones para toggle
+const toggleGenre = (genreId) => {
+  setSelectedGenres(prev => 
+    prev.includes(genreId) 
+      ? prev.filter(id => id !== genreId)
+      : [...prev, genreId]
+  );
+};
+
+const togglePlatform = (platformId) => {
+  setSelectedPlatforms(prev => 
+    prev.includes(platformId) 
+      ? prev.filter(id => id !== platformId)
+      : [...prev, platformId]
+  );
+};
+
+  // Actualizar URL cuando cambian filtros
   useEffect(() => {
     const params = new URLSearchParams();
 
-    if (searchQuery && isSearching) {
-      params.set('search', searchQuery);
-    } else {
-      if (sortBy !== 'relevance') params.set('sort', sortBy);
-      if (selectedTimeRange) params.set('timeRange', selectedTimeRange);
-      if (selectedGenres.length > 0) params.set('genres', selectedGenres.join(','));
-      if (selectedPlatforms.length > 0) params.set('platforms', selectedPlatforms.join(','));
-    }
+    if (searchQuery) params.set('search', searchQuery);
+    if (sortBy !== 'relevance') params.set('sort', sortBy);
+    if (timeRange !== 'all') params.set('timeRange', timeRange);
+    if (selectedGenres.length > 0) params.set('genres', selectedGenres.join(','));
+    if (selectedPlatforms.length > 0) params.set('platforms', selectedPlatforms.join(','));
+    if (isAnticipatedMode) params.set('anticipated', 'true');
 
-    setSearchParams(params, { replace: true });
-  }, [sortBy, selectedTimeRange, selectedGenres, selectedPlatforms, searchQuery, isSearching]);
+    setSearchParams(params);
+  }, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, isAnticipatedMode]);
 
-  // Modificar el useEffect que carga juegos:
-useEffect(() => {
-  const fetchExploreGames = async () => {
-    setLoading(true);
-    try {
-      if (isSearching && searchQuery) {
-        const response = await axios.get(`${ENDPOINTS.GAMES.SEARCH}?query=${encodeURIComponent(searchQuery)}`);
-        setSearchResults(response.data.games);
-        setHasMore(false); // Search no tiene paginación
-      } else {
-        const params = new URLSearchParams();
-        params.append('sort', sortBy);
-        if (selectedTimeRange) params.append('timeRange', selectedTimeRange);
-        if (selectedGenres.length > 0) params.append('genres', selectedGenres.join(','));
-        if (selectedPlatforms.length > 0) params.append('platforms', selectedPlatforms.join(','));
-        params.append('limit', '20');
-        params.append('offset', offset.toString());
+const fetchGames = async (reset = false) => {
+  setLoading(true);
 
-        const response = await axios.get(`${ENDPOINTS.GAMES.EXPLORE}?${params.toString()}`);
-        
-        if (offset === 0) {
-          // Primera carga: reemplazar juegos
-          setExploreGames(response.data.games);
-        } else {
-          // Carga adicional: agregar al final
-          setExploreGames(prev => [...prev, ...response.data.games]);
-        }
+  try {
+    let response;
 
-        // Si recibió menos de 20, no hay más
-        setHasMore(response.data.games.length === 20);
-      }
-    } catch (error) {
-      console.error('Error loading games:', error);
+    // Si hay búsqueda, usar endpoint de search
+    if (searchQuery.trim()) {
+      response = await axios.get(`${ENDPOINTS.GAMES.SEARCH}?query=${encodeURIComponent(searchQuery)}`);
+      
+      const now = Date.now() / 1000;
+      const filteredGames = response.data.games.filter(game => 
+        game.first_release_date && game.first_release_date <= now
+      );
+
+      const mergedGames = filteredGames.map(game => {
+        const userGame = userGames.find(ug => ug.igdb_game_id === game.id);
+        return {
+          ...game,
+          status: userGame?.status || null,
+          user_rating: userGame?.rating || 0,
+        };
+      });
+
+      setGames(mergedGames);
       setHasMore(false);
-    } finally {
-      setLoading(false);
+      setOffset(0);
+    } else if (isAnticipatedMode) {
+      // Modo anticipated: usar endpoint especial
+      const limit = 20;
+      response = await axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=${limit}`);
+      const anticipatedGames = response.data.games;
+
+      // Mezclar con datos del usuario
+      const mergedGames = anticipatedGames.map(game => {
+        const userGame = userGames.find(ug => ug.igdb_game_id === game.id);
+        return {
+          ...game,
+          status: userGame?.status || null,
+          user_rating: userGame?.rating || 0,
+        };
+      });
+
+      setGames(mergedGames);
+      setHasMore(false); // No hay paginación en anticipated
+      setOffset(0);
+    } else {
+      // Modo normal: usar endpoint de explore con filtros
+      const params = new URLSearchParams();
+      params.append('sort', sortBy);
+      if (timeRange !== 'all') params.append('timeRange', timeRange);
+      params.append('limit', 20);
+      params.append('offset', reset ? 0 : offset);
+      
+      if (selectedGenres.length > 0) {
+        params.append('genres', selectedGenres.join(','));
+      }
+      
+      if (selectedPlatforms.length > 0) {
+        params.append('platforms', selectedPlatforms.join(','));
+      }
+
+      response = await axios.get(`${ENDPOINTS.GAMES.EXPLORE}?${params.toString()}`);
+      const newGames = response.data.games;
+
+      const mergedGames = newGames.map(game => {
+        const userGame = userGames.find(ug => ug.igdb_game_id === game.id);
+        return {
+          ...game,
+          status: userGame?.status || null,
+          user_rating: userGame?.rating || 0,
+        };
+      });
+
+      if (reset) {
+        setGames(mergedGames);
+        setOffset(20);
+      } else {
+        setGames(prev => [...prev, ...mergedGames]);
+        setOffset(prev => prev + 20);
+      }
+
+      setHasMore(newGames.length === 20);
     }
-  };
-
-  fetchExploreGames();
-}, [sortBy, selectedTimeRange, selectedGenres, selectedPlatforms, searchQuery, isSearching, offset]);
-
-  const handleLoadMore = () => {
-  setOffset(prev => prev + 20);
-  };
-
-  // Resetear offset cuando cambian los filtros
-useEffect(() => {
-  setOffset(0);
-  setHasMore(true);
-}, [sortBy, selectedTimeRange, selectedGenres, selectedPlatforms]);
-
-  // Buscar juegos
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    
-    if (!searchQuery.trim()) {
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-  };
-
-  // Limpiar búsqueda
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setSearchResults([]);
-    setIsSearching(false);
-  };
-
-  // Limpiar filtros
-  const handleClearFilters = () => {
-  setSelectedTimeRange(null);
-  setSelectedGenres([]);
-  setSelectedPlatforms([]);
-  setSortBy('relevance');
-  setOffset(0); // ← Agregar esto
-  setHasMore(true); // ← Agregar esto
+  } catch (error) {
+    console.error('Error loading games:', error);
+    toast.error('Error loading games');
+  } finally {
+    setLoading(false);
+  }
 };
 
-  // Abrir modal para agregar
-  const handleAddClick = (game) => {
-    if (!isAuthenticated) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
-      navigate('/login');
-      return;
-    }
+// Recargar cuando cambian filtros o búsqueda
+useEffect(() => {
+  if (searchQuery.trim()) {
+    const timer = setTimeout(() => {
+      fetchGames(true);
+    }, 500);
+    return () => clearTimeout(timer);
+  }
+  
+  // Reducir de 1500ms a 600ms
+  const timer = setTimeout(() => {
+    fetchGames(true);
+  }, 600);
+  
+  return () => clearTimeout(timer);
+}, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, isAnticipatedMode]);
 
-    setSelectedGame(game);
-    setShowAddModal(true);
-    setAddError('');
-    setAddSuccess('');
-  };
+  // Handlers
 
-  // Agregar juego a la lista
-  const handleAddGame = async () => {
-    setAddLoading(true);
-    setAddError('');
+  const handleWishlistToggle = async (gameId, newStatus) => {
+  if (!isAuthenticated) return;
 
-    const result = await addGame(selectedGame.id, addStatus, addRating);
-
+  if (newStatus === null) {
+    const result = await deleteGame(gameId);
     if (result.success) {
-      setAddSuccess('Game added successfully');
-      setTimeout(() => {
-        setShowAddModal(false);
-        setAddStatus('completed');
-        setAddRating(null);
-        setAddSuccess('');
-      }, 1500);
+      toast.success('Removed from wishlist');
+      setGames(prev => prev.map(g => 
+        g.id === gameId ? { ...g, status: null } : g
+      ));
     } else {
-      setAddError(result.error);
+      toast.error('Error removing from wishlist');
     }
+  } else {
+    const result = await addGame(gameId, 'wishlist');
+    if (result.success) {
+      toast.success('Added to wishlist!');
+      setGames(prev => prev.map(g => 
+        g.id === gameId ? { ...g, status: 'wishlist' } : g
+      ));
+    } else {
+      toast.error('Error adding to wishlist');
+    }
+  }
+};
 
-    setAddLoading(false);
+  const handleStatusChange = async (gameId, newStatus) => {
+    if (!isAuthenticated) return;
+
+    const existingGame = userGames.find(g => g.igdb_game_id === gameId);
+
+    if (newStatus === null && existingGame) {
+      const result = await deleteGame(gameId);
+      if (result.success) {
+        toast.success('Game removed from your list');
+        setGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: null, user_rating: 0 } : g
+        ));
+      } else {
+        toast.error('Error removing game');
+      }
+    } else if (existingGame) {
+      const result = await updateGame(gameId, newStatus, existingGame.rating);
+      if (result.success) {
+        toast.success('Status updated');
+        setGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: newStatus } : g
+        ));
+      } else {
+        toast.error('Error updating status');
+      }
+    } else if (newStatus !== null) {
+      const result = await addGame(gameId, newStatus);
+      if (result.success) {
+        toast.success('Game added to your list!');
+        setGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, status: newStatus } : g
+        ));
+      } else {
+        toast.error('Error adding game');
+      }
+    }
   };
 
-  const gamesToDisplay = isSearching ? searchResults : exploreGames;
+  const handleRatingChange = async (gameId, rating) => {
+    if (!isAuthenticated) return;
+
+    const existingGame = userGames.find(g => g.igdb_game_id === gameId);
+
+    if (existingGame) {
+      const result = await updateGame(gameId, existingGame.status, rating);
+      if (result.success) {
+        toast.success(`Rating saved: ${rating} ⭐`);
+        setGames(prev => prev.map(g => 
+          g.id === gameId ? { ...g, user_rating: rating } : g
+        ));
+      } else {
+        toast.error('Error saving rating');
+      }
+    }
+  };
+
+  // Filtros rápidos
+  const quickFilters = [
+    { icon: Flame, label: 'Trending', sort: 'relevance', time: 'last_month' },
+    { icon: Star, label: 'Most Popular', sort: 'popular', time: 'all' },
+    { icon: Clock, label: 'Indie', sort: 'relevance', time: 'all', genre: 32 }, // Indie genre ID
+    { icon: Sparkles, label: 'New Releases', sort: 'recent', time: 'this_year' },
+    { icon: Clock, label: 'Most Anticipated', isAnticipated: true },
+  ];
+
+  const applyQuickFilter = (filter) => {
+  if (filter.isAnticipated) {
+    // Modo especial para anticipated
+    setIsAnticipatedMode(true);
+    setSortBy('relevance');
+    setTimeRange('all');
+    setSelectedGenres([]);
+    setSelectedPlatforms([]);
+    setGames([]);
+  } else {
+    // Modo normal
+    setIsAnticipatedMode(false);
+    setSortBy(filter.sort);
+    setTimeRange(filter.time);
+    if (filter.genre) {
+      setSelectedGenres([filter.genre]);
+    } else {
+      setSelectedGenres([]);
+    }
+    setSelectedPlatforms([]);
+    setGames([]);
+  }
+};
+
+  const clearAllFilters = () => {
+  setSearchQuery('');
+  setSortBy('relevance');
+  setTimeRange('all');
+  setSelectedGenres([]);
+  setSelectedPlatforms([]);
+  setIsAnticipatedMode(false);
+  setGames([]);
+};
+
+  const activeFiltersCount = 
+    (sortBy !== 'relevance' ? 1 : 0) +
+    (timeRange !== 'all' ? 1 : 0) +
+    selectedGenres.length +
+    selectedPlatforms.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-primary-navy">
       <Navbar />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Explore Games</h1>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Explore Games</h1>
+          <p className="text-gray-400">Discover your next favorite game</p>
+        </div>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearch} className="mb-6">
-          <div className="flex space-x-4">
+        {/* Búsqueda */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
+              placeholder="Search games..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search games..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
             />
-            <button
-              type="submit"
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700"
-            >
-              Search
-            </button>
-            {isSearching && (
+            {searchQuery && (
               <button
-                type="button"
-                onClick={handleClearSearch}
-                className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium hover:bg-gray-300"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
               >
-                Clear
+                <X size={20} />
               </button>
             )}
           </div>
-        </form>
+        </div>
 
-        {/* Layout: Filters + Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
-          {/* Sidebar with filters */}
-          {!isSearching && (
-            <div className="lg:col-span-1">
-              <ExploreFilters
-                selectedTimeRange={selectedTimeRange}
-                setSelectedTimeRange={setSelectedTimeRange}
-                selectedGenres={selectedGenres}
-                setSelectedGenres={setSelectedGenres}
-                selectedPlatforms={selectedPlatforms}
-                setSelectedPlatforms={setSelectedPlatforms}
-                availableGenres={availableGenres}
-                availablePlatforms={availablePlatforms}
-                onClear={handleClearFilters}
+        {/* Filtros rápidos */}
+        <div className="mb-6 flex flex-wrap gap-2">
+          {quickFilters.map((filter, index) => {
+            const Icon = filter.icon;
+            return (
+              <button
+                key={index}
+                onClick={() => applyQuickFilter(filter)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary-navy-dark border border-gray-700 rounded-lg text-white hover:border-primary-yellow hover:text-primary-yellow transition-all"
+              >
+                <Icon size={16} />
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mostrar aviso en modo anticipated */}
+{isAnticipatedMode && (
+  <div className="mb-6 bg-primary-yellow/20 border border-primary-yellow rounded-lg p-4 flex items-center justify-between">
+    <div className="flex items-center gap-2">
+      <Clock className="text-primary-yellow" size={20} />
+      <span className="text-white font-medium">
+        Showing upcoming releases
+      </span>
+    </div>
+    <button
+  onClick={() => {
+    setIsAnticipatedMode(false);
+    setGames([]); // ← Agregar
+  }}
+  className="text-primary-yellow hover:text-primary-yellow-dark underline text-sm"
+>
+  Show all games
+</button>
+  </div>
+)}
+
+{/* Filtros principales - Ocultar en modo anticipated */}
+{!isAnticipatedMode && (
+  <div className="mb-6 bg-primary-navy-dark border border-gray-700 rounded-lg p-4">
+    {/* ... filtros existentes ... */}
+  </div>
+)}
+
+        {/* Filtros principales */}
+<div className="mb-6 bg-primary-navy-dark border border-gray-700 rounded-lg p-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Sort */}
+    <div>
+      <label className="block text-sm text-gray-400 mb-2">Sort by</label>
+      <select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+      >
+        <option value="relevance">Relevance</option>
+        <option value="popular">Popular</option>
+        <option value="highest_rated">Highest Rated</option>
+        <option value="recent">Recent</option>
+      </select>
+    </div>
+
+    {/* Time Range */}
+    <div>
+      <label className="block text-sm text-gray-400 mb-2">Time Range</label>
+      <select
+        value={timeRange}
+        onChange={(e) => setTimeRange(e.target.value)}
+        className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+      >
+        <option value="all">All Time</option>
+        <option value="last_month">Last Month</option>
+        <option value="this_year">This Year</option>
+        <option value="last_year">Last Year</option>
+        <option value="last_5_years">Last 5 Years</option>
+      </select>
+    </div>
+
+    {/* Genres Dropdown */}
+    <div className="relative" ref={genreDropdownRef}>
+      <label className="block text-sm text-gray-400 mb-2">Genres</label>
+      <button
+        onClick={() => setGenreDropdownOpen(!genreDropdownOpen)}
+        className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none focus:border-primary-yellow"
+      >
+        <span>
+          {selectedGenres.length === 0 
+            ? 'All Genres' 
+            : `${selectedGenres.length} selected`}
+        </span>
+        <ChevronDown size={16} />
+      </button>
+
+      {genreDropdownOpen && (
+        <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {availableGenres.map(genre => (
+            <label
+              key={genre.id}
+              className="flex items-center px-3 py-2 hover:bg-primary-navy cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedGenres.includes(genre.id)}
+                onChange={() => toggleGenre(genre.id)}
+                className="mr-2 accent-primary-yellow"
               />
-            </div>
-          )}
+              <span className="text-white text-sm">{genre.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
 
-          {/* Games grid */}
-          <div className={isSearching ? 'lg:col-span-4' : 'lg:col-span-3'}>
-            
-            {/* Sorting */}
-            {!isSearching && (
-              <div className="mb-6 flex justify-between items-center">
-                <p className="text-gray-600">
-                  {exploreGames.length} game(s) found
-                </p>
-                <div className="flex items-center space-x-3">
-                  <label className="text-sm font-medium text-gray-700">
-                    Sort by:
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="relevance">Relevance</option>
-                    <option value="popular">Most Popular</option>
-                    <option value="rating">Best Rated</option>
-                    <option value="recent">Most Recent</option>
-                    <option value="alphabetical">Alphabetical (A-Z)</option>
-                  </select>
-                </div>
-              </div>
-            )}
+    {/* Platforms Dropdown */}
+    <div className="relative" ref={platformDropdownRef}>
+      <label className="block text-sm text-gray-400 mb-2">Platforms</label>
+      <button
+        onClick={() => setPlatformDropdownOpen(!platformDropdownOpen)}
+        className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none focus:border-primary-yellow"
+      >
+        <span>
+          {selectedPlatforms.length === 0 
+            ? 'All Platforms' 
+            : `${selectedPlatforms.length} selected`}
+        </span>
+        <ChevronDown size={16} />
+      </button>
 
-            {/* Loading */}
-            {loading && (
-              <div className="text-center py-12">
-                <p className="text-gray-600">Loading games...</p>
-              </div>
-            )}
+      {platformDropdownOpen && (
+        <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          {availablePlatforms.map(platform => (
+            <label
+              key={platform.id}
+              className="flex items-center px-3 py-2 hover:bg-primary-navy cursor-pointer"
+            >
+              <input
+                type="checkbox"
+                checked={selectedPlatforms.includes(platform.id)}
+                onChange={() => togglePlatform(platform.id)}
+                className="mr-2 accent-primary-yellow"
+              />
+              <span className="text-white text-sm">{platform.name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
 
-            {/* No results */}
-            {!loading && gamesToDisplay.length === 0 && (
-              <div className="text-center py-12 bg-white rounded-lg shadow">
-                <p className="text-gray-600">
-                  {isSearching 
-                    ? 'No games found. Try another search.' 
-                    : 'No games match the selected filters.'}
-                </p>
-              </div>
-            )}
+  {/* Filtros activos */}
+  {activeFiltersCount > 0 && (
+    <div className="mt-4 flex items-center justify-between">
+      <span className="text-sm text-gray-400">
+        {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
+      </span>
+      <button
+        onClick={clearAllFilters}
+        className="text-sm text-primary-yellow hover:text-primary-yellow-dark"
+      >
+        Clear All
+      </button>
+    </div>
+  )}
+</div>
 
-            {/* Games grid */}
-            {!loading && gamesToDisplay.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {gamesToDisplay.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
-                    onAdd={handleAddClick}
-                  />
-                ))}
-              </div>
-            )}
+        {/* Contador de juegos */}
+        <div className="mb-6 text-gray-400">
+          Showing {games.length} games
+        </div>
 
-            {/* Load More button */}
-    {!isSearching && hasMore && (
-      <div className="mt-8 text-center">
+        {/* Grid de juegos */}
+{loading && games.length === 0 ? (
+  <div className="text-center py-12">
+    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
+  </div>
+) : games.length === 0 ? (
+  <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
+    <p className="text-gray-400">No games found. Try adjusting your filters.</p>
+  </div>
+) : (
+  <>
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
+      {games.map((game) => (
+        isAnticipatedMode ? (
+          <AnticipatedGameCard
+            key={game.id}
+            game={game}
+            interactive={isAuthenticated}
+            onWishlistToggle={handleWishlistToggle}
+          />
+        ) : (
+          <InteractiveGameCard
+            key={game.id}
+            game={game}
+            interactive={isAuthenticated}
+            onStatusChange={handleStatusChange}
+            onRatingChange={handleRatingChange}
+          />
+        )
+      ))}
+    </div>
+
+    {/* Load More (solo en modo normal) */}
+    {hasMore && !isAnticipatedMode && (
+      <div className="text-center">
         <button
-          onClick={handleLoadMore}
-          className="bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700"
+          onClick={() => fetchGames(false)}
+          disabled={loading}
+          className="px-8 py-3 bg-primary-yellow text-primary-navy-dark rounded-lg font-semibold hover:opacity-90 disabled:opacity-50 transition-all"
         >
-          Load More
+          {loading ? 'Loading...' : 'Load More'}
         </button>
       </div>
     )}
-
-    {!isSearching && !hasMore && exploreGames.length > 0 && (
-      <div className="mt-8 text-center">
-        <p className="text-gray-500 text-sm">No more games to load</p>
-      </div>
-    )}
-
-          </div>
-
-        </div>
+  </>
+)}
       </main>
-
-      {/* Add game modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              Add "{selectedGame?.name}" to your list
-            </h3>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                value={addStatus}
-                onChange={(e) => setAddStatus(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="completed">Completed</option>
-                <option value="playing">Playing</option>
-                <option value="wishlist">Wishlist</option>
-                <option value="dropped">Dropped</option>
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rating
-              </label>
-              <select
-                value={addRating || ''}
-                onChange={(e) => setAddRating(e.target.value ? parseInt(e.target.value) : null)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">No rating</option>
-                <option value="1">⭐ 1</option>
-                <option value="2">⭐⭐ 2</option>
-                <option value="3">⭐⭐⭐ 3</option>
-                <option value="4">⭐⭐⭐⭐ 4</option>
-                <option value="5">⭐⭐⭐⭐⭐ 5</option>
-              </select>
-            </div>
-
-            {addError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                {addError}
-              </div>
-            )}
-
-            {addSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-                {addSuccess}
-              </div>
-            )}
-
-            <div className="flex space-x-4">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  setAddStatus('completed');
-                  setAddRating(null);
-                  setAddError('');
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300"
-                disabled={addLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddGame}
-                disabled={addLoading}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {addLoading ? 'Adding...' : 'Add'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

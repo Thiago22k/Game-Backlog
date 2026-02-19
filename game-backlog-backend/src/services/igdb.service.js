@@ -235,21 +235,25 @@ const exploreGames = async (filters = {}) => {
     conditions.push('cover != null');
 
     // Filtro por rango de tiempo
-    const now = Math.floor(Date.now() / 1000);
-    
-    if (timeRange === 'last_month') {
-      const lastMonth = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${now}`);
-    } else if (timeRange === 'last_year') {
-      const lastYear = Math.floor((Date.now() - (365 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date >= ${lastYear} & first_release_date <= ${now}`);
-    } else if (timeRange === 'last_5_years') {
-      const last5Years = Math.floor((Date.now() - (5 * 365 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${now}`);
-    } else if (timeRange === 'upcoming') {
-      const nextMonth = Math.floor((Date.now() + (30 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date > ${now} & first_release_date <= ${nextMonth}`);
-    }
+const now = Math.floor(Date.now() / 1000);
+
+if (timeRange === 'last_month') {
+  const lastMonth = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
+  conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${now}`);
+} else if (timeRange === 'this_year') {
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
+  conditions.push(`first_release_date >= ${startOfYear} & first_release_date <= ${now}`);
+} else if (timeRange === 'last_year') {
+  const lastYearStart = new Date(new Date().getFullYear() - 1, 0, 1).getTime() / 1000;
+  const lastYearEnd = new Date(new Date().getFullYear() - 1, 11, 31).getTime() / 1000;
+  conditions.push(`first_release_date >= ${lastYearStart} & first_release_date <= ${lastYearEnd}`);
+} else if (timeRange === 'last_5_years') {
+  const last5Years = Math.floor((Date.now() - (5 * 365 * 24 * 60 * 60 * 1000)) / 1000);
+  conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${now}`);
+} else {
+  // Por defecto: solo juegos ya lanzados
+  conditions.push(`first_release_date <= ${now}`);
+}
 
     // Filtro por géneros
     if (genres.length > 0) {
@@ -263,29 +267,25 @@ const exploreGames = async (filters = {}) => {
 
     // Determinar ordenamiento
     let sortClause = '';
-    switch (sort) {
-      case 'popular':
-        conditions.push('total_rating_count > 10');
-        sortClause = 'sort total_rating_count desc';
-        break;
-      case 'rating':
-        conditions.push('rating > 80');
-        conditions.push('rating_count > 10');
-        sortClause = 'sort rating desc';
-        break;
-      case 'recent':
-        sortClause = 'sort first_release_date desc';
-        break;
-      case 'alphabetical':
-        sortClause = 'sort name asc';
-        break;
-      case 'relevance':
-      default:
-        // Orden por agregated_rating (mezcla de rating + popularidad)
-        // O simplemente por ID descendente para variedad
-        sortClause = 'sort aggregated_rating desc';
-        break;
-    }
+switch (sort) {
+  case 'popular':
+    conditions.push('total_rating_count > 10');
+    sortClause = 'sort total_rating_count desc';
+    break;
+  case 'highest_rated': // ← Cambio de nombre
+    conditions.push('rating > 70'); // ← Más permisivo
+    conditions.push('rating_count > 5'); // ← Más permisivo
+    sortClause = 'sort rating desc';
+    break;
+  case 'recent':
+    sortClause = 'sort first_release_date desc';
+    break;
+  // Eliminar 'alphabetical' y 'upcoming'
+  case 'relevance':
+  default:
+    sortClause = 'sort aggregated_rating desc';
+    break;
+}
 
     const whereClause = conditions.join(' & ');
 
@@ -343,27 +343,8 @@ const getPlatforms = async () => {
   try {
     const token = await getAccessToken();
 
-    // IDs de plataformas principales (curadas manualmente)
     const mainPlatformIds = [
-      6,    // PC (Windows)
-      14,   // Mac
-      3,    // Linux
-      167,  // PlayStation 5
-      48,   // PlayStation 4
-      9,    // PlayStation 3
-      169,  // Xbox Series X|S
-      49,   // Xbox One
-      12,   // Xbox 360
-      130,  // Nintendo Switch
-      41,   // Wii U
-      5,    // Wii
-      37,   // Nintendo 3DS
-      159,  // Nintendo DS
-      34,   // Android
-      39,   // iOS
-      170,  // Google Stadia
-      471,  // Meta Quest 2
-      163,  // SteamVR
+      6, 14, 3, 167, 48, 9, 169, 49, 12, 130, 41, 5, 37, 159, 34, 39, 170, 471, 163,
     ];
 
     const response = await axios.post(
@@ -372,6 +353,38 @@ const getPlatforms = async () => {
         fields name;
         where id = (${mainPlatformIds.join(',')});
         sort name asc;
+        limit 50;  // <--- AGREGA ESTA LÍNEA
+      `,
+      {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error obteniendo plataformas:', error.message);
+    throw new Error('Error al obtener plataformas');
+  }
+};
+
+// Obtener múltiples juegos por IDs (batch)
+const getGamesByIds = async (gameIds) => {
+  try {
+    if (gameIds.length === 0) return [];
+
+    const token = await getAccessToken();
+
+    // IGDB permite hasta 500 IDs en una query
+    const response = await axios.post(
+      'https://api.igdb.com/v4/games',
+      `
+        fields name, cover.url, rating, first_release_date, genres.name, 
+               platforms.name, aggregated_rating, artworks.url, screenshots.url;
+        where id = (${gameIds.join(',')});
+        limit 500;
       `,
       {
         headers: {
@@ -384,12 +397,13 @@ const getPlatforms = async () => {
     return response.data;
 
   } catch (error) {
-    console.error('❌ Error obteniendo plataformas:', error.message);
-    throw new Error('Error al obtener plataformas');
+    console.error('❌ Error obteniendo juegos por IDs:', error.message);
+    return []; // Devolver array vacío en caso de error
   }
 };
 
 module.exports = {
+  getGamesByIds,
   searchGames,
   getGameById,
   getPopularGames,

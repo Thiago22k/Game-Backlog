@@ -334,6 +334,12 @@ useEffect(() => {
       <Clock className="text-primary-yellow inline-block mr-2" size={24} />
       Most Anticipated
     </h2>
+    <button
+          onClick={() => window.location.href = '/explore?anticipated=true'}
+          className="text-primary-yellow hover:text-opacity-80 font-medium transition-all"
+        >
+          View All →
+        </button>
   </div>
 
   {loading ? (

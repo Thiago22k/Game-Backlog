@@ -108,37 +108,29 @@ const getUserGames = async (req, res) => {
     const userId = req.user.userId;
     const { status } = req.query;
 
-    const games = await Game.getUserGames(userId, status);
+    const userGames = await Game.getUserGames(userId, status);
 
-    // Obtener detalles de IGDB para cada juego
-    const gamesWithDetails = await Promise.all(
-      games.map(async (game) => {
-        try {
-          const igdbGame = await igdbService.getGameById(game.igdb_game_id);
-          return {
-            ...game,
-            game_details: igdbGame
-          };
-        } catch (error) {
-          // Si falla obtener de IGDB, devolver sin detalles
-          return {
-            ...game,
-            game_details: null
-          };
-        }
-      })
-    );
+    if (userGames.length === 0) {
+      return res.json({ games: [], total: 0 });
+    }
+
+    const igdbGameIds = [...new Set(userGames.map(g => g.igdb_game_id))];
+    
+    const gamesDetails = await igdbService.getGamesByIds(igdbGameIds);
+
+    const gamesWithDetails = userGames.map(userGame => ({
+      ...userGame,
+      game_details: gamesDetails.find(g => g.id === userGame.igdb_game_id) || null
+    }));
 
     res.json({
-      total: gamesWithDetails.length,
-      games: gamesWithDetails
+      games: gamesWithDetails,
+      total: gamesWithDetails.length
     });
 
   } catch (error) {
     console.error('Error en getUserGames:', error);
-    res.status(500).json({
-      error: 'Error al obtener juegos del usuario'
-    });
+    res.status(500).json({ error: 'Error al obtener tus juegos' });
   }
 };
 

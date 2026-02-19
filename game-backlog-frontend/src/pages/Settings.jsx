@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Mail, User as UserIcon, Lock, AlertTriangle, Calendar, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
@@ -9,398 +11,432 @@ const Settings = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Estados para cada sección
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-
-  const [emailData, setEmailData] = useState({
-    newEmail: '',
-    password: '',
-  });
-
-  const [usernameData, setUsernameData] = useState({
-    newUsername: '',
-    password: '',
-  });
-
-  const [deleteData, setDeleteData] = useState({
-    password: '',
-  });
-
+  // Estados para modals
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
-  // Estados de loading y errores
-  const [loadingPassword, setLoadingPassword] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState(false);
-  const [loadingUsername, setLoadingUsername] = useState(false);
-  const [loadingDelete, setLoadingDelete] = useState(false);
+  // Datos de formularios
+  const [emailData, setEmailData] = useState({ newEmail: '', password: '' });
+  const [usernameData, setUsernameData] = useState({ newUsername: '', password: '' });
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [deleteData, setDeleteData] = useState({ password: '', confirmText: '' });
 
-  const [errorPassword, setErrorPassword] = useState('');
-  const [errorEmail, setErrorEmail] = useState('');
-  const [errorUsername, setErrorUsername] = useState('');
-  const [errorDelete, setErrorDelete] = useState('');
+  // Loading states
+  const [loading, setLoading] = useState(false);
 
-  const [successPassword, setSuccessPassword] = useState('');
-  const [successEmail, setSuccessEmail] = useState('');
-  const [successUsername, setSuccessUsername] = useState('');
+  // Handlers
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Cambiar contraseña
+    try {
+      await axios.put(ENDPOINTS.SETTINGS.UPDATE_EMAIL, emailData);
+      toast.success('Email updated successfully!');
+      setShowEmailModal(false);
+      setEmailData({ newEmail: '', password: '' });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error updating email');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateUsername = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await axios.put(ENDPOINTS.SETTINGS.UPDATE_USERNAME, usernameData);
+      toast.success('Username updated successfully!');
+      setShowUsernameModal(false);
+      setUsernameData({ newUsername: '', password: '' });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error updating username');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    setErrorPassword('');
-    setSuccessPassword('');
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setErrorPassword('Las contraseñas no coinciden');
+      toast.error('Passwords do not match');
       return;
     }
 
-    setLoadingPassword(true);
+    setLoading(true);
 
     try {
       await axios.put(ENDPOINTS.SETTINGS.CHANGE_PASSWORD, {
         currentPassword: passwordData.currentPassword,
         newPassword: passwordData.newPassword,
       });
-
-      setSuccessPassword('Contraseña actualizada exitosamente');
+      toast.success('Password changed successfully!');
+      setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
-      setErrorPassword(error.response?.data?.error || 'Error al cambiar contraseña');
+      toast.error(error.response?.data?.error || 'Error changing password');
+    } finally {
+      setLoading(false);
     }
-
-    setLoadingPassword(false);
   };
 
-  // Actualizar email
-  const handleUpdateEmail = async (e) => {
+  const handleDeleteAccount = async (e) => {
     e.preventDefault();
-    setErrorEmail('');
-    setSuccessEmail('');
-    setLoadingEmail(true);
 
-    try {
-      await axios.put(ENDPOINTS.SETTINGS.UPDATE_EMAIL, {
-        newEmail: emailData.newEmail,
-        password: emailData.password,
-      });
-
-      setSuccessEmail('Email actualizado exitosamente');
-      setEmailData({ newEmail: '', password: '' });
-      
-      // Recargar para actualizar el contexto con el nuevo email
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-      setErrorEmail(error.response?.data?.error || 'Error al actualizar email');
+    if (deleteData.confirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm');
+      return;
     }
 
-    setLoadingEmail(false);
-  };
-
-  // Actualizar username
-  const handleUpdateUsername = async (e) => {
-    e.preventDefault();
-    setErrorUsername('');
-    setSuccessUsername('');
-    setLoadingUsername(true);
-
-    try {
-      await axios.put(ENDPOINTS.SETTINGS.UPDATE_USERNAME, {
-        newUsername: usernameData.newUsername,
-        password: usernameData.password,
-      });
-
-      setSuccessUsername('Username actualizado exitosamente');
-      setUsernameData({ newUsername: '', password: '' });
-
-      // Recargar para actualizar el contexto con el nuevo username
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (error) {
-      setErrorUsername(error.response?.data?.error || 'Error al actualizar username');
-    }
-
-    setLoadingUsername(false);
-  };
-
-  // Eliminar cuenta
-  const handleDeleteAccount = async () => {
-    setErrorDelete('');
-    setLoadingDelete(true);
+    setLoading(true);
 
     try {
       await axios.delete(ENDPOINTS.SETTINGS.DELETE_ACCOUNT, {
         data: { password: deleteData.password }
       });
-
-      // Hacer logout y redirigir
+      toast.success('Account deleted successfully');
       logout();
       navigate('/');
     } catch (error) {
-      setErrorDelete(error.response?.data?.error || 'Error al eliminar cuenta');
-      setLoadingDelete(false);
+      toast.error(error.response?.data?.error || 'Error deleting account');
+      setLoading(false);
     }
   };
 
+  // Calcular fecha de miembro
+  const memberSince = user?.created_at 
+    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'Unknown';
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-primary-navy">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Configuración de cuenta</h1>
+      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>
+          <p className="text-gray-400">Manage your account preferences</p>
+        </div>
 
-          <div className="space-y-6">
-            {/* Información actual */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Información actual</h2>
-              <div className="space-y-2">
-                <p className="text-gray-700">
-                  <strong>Username:</strong> {user?.username}
-                </p>
-                <p className="text-gray-700">
-                  <strong>Email:</strong> {user?.email}
-                </p>
+        {/* Account Info Stats */}
+        <div className="mb-8 bg-primary-navy-dark border border-gray-700 rounded-lg p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Calendar className="text-primary-yellow" size={20} />
+            <h2 className="text-lg font-semibold text-white">Account Information</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <span className="text-gray-400">Member since</span>
+              <p className="text-white font-medium">{memberSince}</p>
+            </div>
+            <div>
+              <span className="text-gray-400">Username</span>
+              <p className="text-white font-medium">{user?.username}</p>
+            </div>
+            <div>
+              <span className="text-gray-400">Email</span>
+              <p className="text-white font-medium">{user?.email}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Settings Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Email Card */}
+          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-lg">
+                <Mail className="text-blue-400" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Email Address</h3>
+                <p className="text-sm text-gray-400">Change your email</p>
               </div>
             </div>
+            <p className="text-gray-300 mb-4">{user?.email}</p>
+            <button
+              onClick={() => setShowEmailModal(true)}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Change Email
+            </button>
+          </div>
 
-            {/* Cambiar contraseña */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Cambiar contraseña</h2>
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Contraseña actual
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Nueva contraseña
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Confirmar nueva contraseña
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                {errorPassword && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                    {errorPassword}
-                  </div>
-                )}
-                {successPassword && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                    {successPassword}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loadingPassword}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {loadingPassword ? 'Actualizando...' : 'Cambiar contraseña'}
-                </button>
-              </form>
+          {/* Username Card */}
+          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-cyan-500/20 rounded-lg">
+                <UserIcon className="text-cyan-400" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Username</h3>
+                <p className="text-sm text-gray-400">Change your username</p>
+              </div>
             </div>
+            <p className="text-gray-300 mb-4">{user?.username}</p>
+            <button
+              onClick={() => setShowUsernameModal(true)}
+              className="w-full bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Change Username
+            </button>
+          </div>
+        </div>
 
-            {/* Actualizar email */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Actualizar email</h2>
+        {/* Password Card (Full Width) */}
+        <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-primary-yellow/20 rounded-lg">
+              <Lock className="text-primary-yellow" size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Password</h3>
+              <p className="text-sm text-gray-400">Update your password regularly</p>
+            </div>
+          </div>
+          <p className="text-gray-400 text-sm mb-4">••••••••••••</p>
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-primary-yellow hover:opacity-90 text-primary-navy-dark px-6 py-2 rounded-lg font-semibold transition-all"
+          >
+            Change Password
+          </button>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-red-500/20 rounded-lg">
+              <AlertTriangle className="text-red-400" size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Danger Zone</h3>
+              <p className="text-sm text-gray-400">Permanently delete your account</p>
+            </div>
+          </div>
+          <p className="text-gray-300 text-sm mb-4">
+            Once you delete your account, there is no going back. All your data will be permanently removed.
+          </p>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+          >
+            Delete Account
+          </button>
+        </div>
+
+        {/* Email Modal */}
+        {showEmailModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-primary-navy-dark border border-gray-700 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Change Email</h3>
+                <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+
               <form onSubmit={handleUpdateEmail} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Nuevo email
-                  </label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">New Email</label>
                   <input
                     type="email"
                     required
                     value={emailData.newEmail}
                     onChange={(e) => setEmailData({ ...emailData, newEmail: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Confirmar con contraseña
-                  </label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
                   <input
                     type="password"
                     required
                     value={emailData.password}
                     onChange={(e) => setEmailData({ ...emailData, password: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
                   />
                 </div>
 
-                {errorEmail && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                    {errorEmail}
-                  </div>
-                )}
-                {successEmail && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                    {successEmail}
-                  </div>
-                )}
-
                 <button
                   type="submit"
-                  disabled={loadingEmail}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={loading}
+                  className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 transition-colors"
                 >
-                  {loadingEmail ? 'Actualizando...' : 'Actualizar email'}
+                  {loading ? 'Updating...' : 'Update Email'}
                 </button>
               </form>
             </div>
+          </div>
+        )}
 
-            {/* Actualizar username */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Cambiar username</h2>
-              <p className="text-sm text-gray-600 mb-4">
-                ⚠️ Solo puedes cambiar tu username cada 30 días
-              </p>
+        {/* Username Modal */}
+        {showUsernameModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-primary-navy-dark border border-gray-700 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Change Username</h3>
+                <button onClick={() => setShowUsernameModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+
               <form onSubmit={handleUpdateUsername} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Nuevo username
-                  </label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">New Username</label>
                   <input
                     type="text"
                     required
                     value={usernameData.newUsername}
                     onChange={(e) => setUsernameData({ ...usernameData, newUsername: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
                   />
+                  <p className="text-xs text-gray-500 mt-1">Can only be changed once every 30 days</p>
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Confirmar con contraseña
-                  </label>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
                   <input
                     type="password"
                     required
                     value={usernameData.password}
                     onChange={(e) => setUsernameData({ ...usernameData, password: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
                   />
                 </div>
 
-                {errorUsername && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                    {errorUsername}
-                  </div>
-                )}
-                {successUsername && (
-                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                    {successUsername}
-                  </div>
-                )}
-
                 <button
                   type="submit"
-                  disabled={loadingUsername}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={loading}
+                  className="w-full bg-cyan-500 hover:bg-cyan-600 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 transition-colors"
                 >
-                  {loadingUsername ? 'Actualizando...' : 'Cambiar username'}
+                  {loading ? 'Updating...' : 'Update Username'}
                 </button>
               </form>
             </div>
-
-            {/* Eliminar cuenta */}
-            <div className="bg-white shadow rounded-lg p-6 border-2 border-red-200">
-              <h2 className="text-xl font-semibold text-red-600 mb-4">Zona peligrosa</h2>
-              <p className="text-gray-700 mb-4">
-                Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, está seguro.
-              </p>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
-              >
-                Eliminar cuenta
-              </button>
-            </div>
           </div>
-        </div>
-      </main>
+        )}
 
-      {/* Modal de confirmación de eliminación */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              ¿Estás absolutamente seguro?
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Esta acción no se puede deshacer. Esto eliminará permanentemente tu cuenta y todos tus datos.
-            </p>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirma tu contraseña para continuar
-              </label>
-              <input
-                type="password"
-                value={deleteData.password}
-                onChange={(e) => setDeleteData({ password: e.target.value })}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500"
-                placeholder="Tu contraseña"
-              />
-            </div>
-
-            {errorDelete && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                {errorDelete}
+        {/* Password Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-primary-navy-dark border border-gray-700 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Change Password</h3>
+                <button onClick={() => setShowPasswordModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={24} />
+                </button>
               </div>
-            )}
 
-            <div className="flex space-x-4">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteData({ password: '' });
-                  setErrorDelete('');
-                }}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300"
-                disabled={loadingDelete}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={loadingDelete || !deleteData.password}
-                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {loadingDelete ? 'Eliminando...' : 'Eliminar definitivamente'}
-              </button>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-primary-yellow hover:opacity-90 text-primary-navy-dark px-4 py-2 rounded-lg font-semibold disabled:opacity-50 transition-all"
+                >
+                  {loading ? 'Changing...' : 'Change Password'}
+                </button>
+              </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Delete Account Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-primary-navy-dark border border-red-500 rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-white">Delete Account</h3>
+                <button onClick={() => setShowDeleteModal(false)} className="text-gray-400 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-4">
+                <p className="text-red-400 text-sm font-medium">
+                  ⚠️ This action cannot be undone. All your data will be permanently deleted.
+                </p>
+              </div>
+
+              <form onSubmit={handleDeleteAccount} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">
+                    Type <span className="text-red-400 font-bold">DELETE</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={deleteData.confirmText}
+                    onChange={(e) => setDeleteData({ ...deleteData, confirmText: e.target.value })}
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-red-500"
+                    placeholder="DELETE"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={deleteData.password}
+                    onChange={(e) => setDeleteData({ ...deleteData, password: e.target.value })}
+                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold disabled:opacity-50 transition-colors"
+                >
+                  {loading ? 'Deleting...' : 'Delete Account Permanently'}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
