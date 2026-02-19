@@ -31,7 +31,7 @@ const Profile = () => {
     const myGames = [];
 
     games.forEach(game => {
-      const releaseDate = game.game_details?.first_release_date 
+      const releaseDate = game.game_details?.first_release_date
         ? new Date(game.game_details.first_release_date * 1000)
         : null;
 
@@ -52,7 +52,7 @@ const Profile = () => {
   const applySearch = (gamesList) => {
     if (!searchQuery.trim()) return gamesList;
 
-    return gamesList.filter(game => 
+    return gamesList.filter(game =>
       game.game_details?.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
@@ -81,7 +81,7 @@ const Profile = () => {
 
     switch (sortBy) {
       case 'name':
-        return sorted.sort((a, b) => 
+        return sorted.sort((a, b) =>
           (a.game_details?.name || '').localeCompare(b.game_details?.name || '')
         );
       case 'rating-high':
@@ -90,7 +90,7 @@ const Profile = () => {
         return sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
       case 'recent':
       default:
-        return sorted.sort((a, b) => 
+        return sorted.sort((a, b) =>
           new Date(b.created_at) - new Date(a.created_at)
         );
     }
@@ -112,10 +112,10 @@ const Profile = () => {
   // Handlers para InteractiveGameCard
   const handleStatusChange = async (gameId, newStatus) => {
     const game = games.find(g => g.igdb_game_id === gameId);
-    
+
     if (newStatus === null && game) {
       const result = await deleteGame(gameId);
-      
+
       if (result.success) {
         toast.success('Game removed from your list');
       } else {
@@ -123,7 +123,7 @@ const Profile = () => {
       }
     } else if (game) {
       const result = await updateGame(gameId, newStatus, game.rating);
-      
+
       if (result.success) {
         toast.success('Status updated');
       } else {
@@ -134,10 +134,10 @@ const Profile = () => {
 
   const handleRatingChange = async (gameId, rating) => {
     const game = games.find(g => g.igdb_game_id === gameId);
-    
+
     if (game) {
       const result = await updateGame(gameId, game.status, rating);
-      
+
       if (result.success) {
         toast.success(`Rating saved: ${rating} ⭐`);
       } else {
@@ -149,7 +149,7 @@ const Profile = () => {
   const handleWishlistToggle = async (gameId, newStatus) => {
     if (newStatus === null) {
       const result = await deleteGame(gameId);
-      
+
       if (result.success) {
         toast.success('Removed from wishlist');
       } else {
@@ -157,7 +157,7 @@ const Profile = () => {
       }
     } else {
       const result = await addGame(gameId, 'wishlist');
-      
+
       if (result.success) {
         toast.success('Added to wishlist');
       } else {
@@ -193,7 +193,7 @@ const Profile = () => {
             <h2 className="text-3xl font-bold text-white">
               Welcome back, {user?.username}
             </h2>
-            
+
             {/* Stats */}
             <div className="flex items-center gap-4 mt-2 text-sm">
               <span className="text-gray-400">
@@ -215,7 +215,7 @@ const Profile = () => {
               )}
             </div>
           </div>
-          
+
           <button
             onClick={() => navigate('/settings')}
             className="px-6 py-2 bg-primary-yellow text-primary-navy-dark rounded-lg hover:opacity-90 font-semibold transition-all"
@@ -310,11 +310,10 @@ const Profile = () => {
                       <button
                         key={status.value}
                         onClick={() => setStatusFilter(status.value)}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                          statusFilter === status.value
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === status.value
                             ? 'bg-primary-yellow text-primary-navy-dark'
                             : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
-                        }`}
+                          }`}
                       >
                         {status.label}
                       </button>

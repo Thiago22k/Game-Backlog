@@ -1,62 +1,104 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Star, Check, Play, ShoppingCart, Trash2, Calendar, Clock, Tag, Building2, ExternalLink } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
-
 import Navbar from '../components/layout/Navbar';
-import GameHero from '../components/games/GameHero';
-import GameStats from '../components/games/GameStats';
-import UserGameInfo from '../components/games/UserGameInfo';
-import GameSummary from '../components/games/GameSummary';
-import ScreenshotGallery from '../components/games/ScreenshotGallery';
-import SimilarGames from '../components/games/SimilarGames';
+import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const STATUSES = [
+  { id: 'playing', label: 'Playing', Icon: Play, color: 'bg-blue-600 hover:bg-blue-500', activeRing: 'ring-blue-400' },
+  { id: 'completed', label: 'Completed', Icon: Check, color: 'bg-green-600 hover:bg-green-500', activeRing: 'ring-green-400' },
+  { id: 'wishlist', label: 'Wishlist', Icon: ShoppingCart, color: 'bg-cyan-600 hover:bg-cyan-500', activeRing: 'ring-cyan-400' },
+  { id: 'dropped', label: 'Dropped', Icon: Trash2, color: 'bg-red-600 hover:bg-red-500', activeRing: 'ring-red-400' },
+];
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+const SectionTitle = ({ children }) => (
+  <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">{children}</h2>
+);
+
+const InfoRow = ({ label, children }) => (
+  <div className="flex flex-col gap-1">
+    <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{label}</span>
+    <div className="text-gray-200 text-sm">{children}</div>
+  </div>
+);
+
+/** Star widget — inline dots matching existing StarRating style */
+const InlineStarRating = ({ rating, onRate, interactive }) => {
+  const [hovered, setHovered] = useState(0);
+  const active = hovered || rating || 0;
+
+  const getColor = (star) => {
+    if (star > active) return 'bg-gray-600';
+    if (active === 1) return 'bg-red-500';
+    if (active <= 3) return 'bg-orange-500';
+    return 'bg-green-500';
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          disabled={!interactive}
+          onMouseEnter={() => interactive && setHovered(star)}
+          onMouseLeave={() => interactive && setHovered(0)}
+          onClick={() => interactive && onRate(star)}
+          className={`w-6 h-6 rounded-full transition-all ${getColor(star)} ${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'
+            }`}
+        />
+      ))}
+      {rating ? (
+        <span className="text-sm text-gray-400 ml-1">{rating}/5</span>
+      ) : interactive ? (
+        <span className="text-sm text-gray-500 ml-1">No rating yet</span>
+      ) : null}
+    </div>
+  );
+};
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 const GameDetails = () => {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
-  const { addGame, updateGame, getUserGames } = useGames();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { addGame, updateGame, deleteGame, getUserGames } = useGames();
 
   const [game, setGame] = useState(null);
   const [userGame, setUserGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Modal de agregar/editar
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState('add'); // 'add' o 'edit'
-  const [modalStatus, setModalStatus] = useState('completed');
-  const [modalRating, setModalRating] = useState(null);
-  const [modalLoading, setModalLoading] = useState(false);
-  const [modalError, setModalError] = useState('');
-  const [modalSuccess, setModalSuccess] = useState('');
-
-  // Cargar datos del juego
+  // ── Fetch ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchGameData = async () => {
       setLoading(true);
       setError(null);
-
       try {
-        // Obtener detalles del juego de IGDB
-        const response = await axios.get(`${ENDPOINTS.GAMES.SEARCH.replace('/search', '')}/igdb/${id}`);
-        setGame(response.data.game);
+        const [gameRes, userRes] = await Promise.all([
+          axios.get(`${ENDPOINTS.GAMES.SEARCH.replace('/search', '')}/igdb/${id}`),
+          isAuthenticated ? getUserGames() : Promise.resolve({ success: false }),
+        ]);
 
-        // Si está autenticado, verificar si el juego está en su lista
-        if (isAuthenticated) {
-          const userGamesResult = await getUserGames();
-          if (userGamesResult.success) {
-            const foundGame = userGamesResult.data.find(
-              g => g.igdb_game_id === parseInt(id)
-            );
-            setUserGame(foundGame || null);
-          }
+        setGame(gameRes.data.game);
+
+        if (userRes.success) {
+          const found = userRes.data.find((g) => g.igdb_game_id === parseInt(id));
+          setUserGame(found || null);
         }
       } catch (err) {
-        console.error('Error cargando juego:', err);
-        setError('No se pudo cargar la información del juego');
+        console.error('Error loading game:', err);
+        setError('Could not load game information');
       } finally {
         setLoading(false);
       }
@@ -65,212 +107,459 @@ const GameDetails = () => {
     fetchGameData();
   }, [id, isAuthenticated]);
 
-  // Manejar acción del botón (agregar o editar)
-  const handleAction = (action) => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    if (action === 'add') {
-      setModalMode('add');
-      setModalStatus('completed');
-      setModalRating(null);
-    } else if (action === 'edit') {
-      setModalMode('edit');
-      setModalStatus(userGame.status);
-      setModalRating(userGame.rating);
-    }
-
-    setShowModal(true);
-    setModalError('');
-    setModalSuccess('');
-  };
-
-  // Guardar (agregar o editar)
-  const handleSave = async () => {
-    setModalLoading(true);
-    setModalError('');
-
-    let result;
-    if (modalMode === 'add') {
-      result = await addGame(parseInt(id), modalStatus, modalRating);
-    } else {
-      result = await updateGame(parseInt(id), modalStatus, modalRating);
-    }
-
-    if (result.success) {
-      setModalSuccess(modalMode === 'add' ? 'Juego agregado' : 'Juego actualizado');
-      
-      // Recargar datos del usuario
-      const userGamesResult = await getUserGames();
-      if (userGamesResult.success) {
-        const foundGame = userGamesResult.data.find(
-          g => g.igdb_game_id === parseInt(id)
-        );
-        setUserGame(foundGame || null);
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleStatusSelect = useCallback(async (statusId) => {
+    if (!isAuthenticated) { navigate('/login'); return; }
+    setSaving(true);
+    try {
+      if (statusId === null) {
+        // Remove from list
+        const result = await deleteGame(parseInt(id));
+        if (result.success) {
+          toast.success('Removed from your list');
+          setUserGame(null);
+        } else {
+          toast.error('Error removing game');
+        }
+      } else if (userGame) {
+        // Update existing
+        const result = await updateGame(parseInt(id), statusId, userGame.rating);
+        if (result.success) {
+          toast.success(`Status updated to "${statusId}"`);
+          setUserGame((prev) => ({ ...prev, status: statusId }));
+        } else {
+          toast.error('Error updating status');
+        }
+      } else {
+        // Add new
+        const result = await addGame(parseInt(id), statusId);
+        if (result.success) {
+          toast.success('Added to your list!');
+          const refreshed = await getUserGames();
+          if (refreshed.success) {
+            const found = refreshed.data.find((g) => g.igdb_game_id === parseInt(id));
+            setUserGame(found || null);
+          }
+        } else {
+          toast.error('Error adding game');
+        }
       }
-
-      setTimeout(() => {
-        setShowModal(false);
-        setModalSuccess('');
-      }, 1500);
-    } else {
-      setModalError(result.error);
+    } finally {
+      setSaving(false);
     }
+  }, [isAuthenticated, userGame, id, addGame, updateGame, deleteGame, navigate]);
 
-    setModalLoading(false);
-  };
+  const handleRatingChange = useCallback(async (rating) => {
+    if (!isAuthenticated || !userGame) return;
+    setSaving(true);
+    try {
+      const result = await updateGame(parseInt(id), userGame.status, rating);
+      if (result.success) {
+        toast.success(`Rating saved: ${rating} ⭐`);
+        setUserGame((prev) => ({ ...prev, rating }));
+      } else {
+        toast.error('Error saving rating');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }, [isAuthenticated, userGame, id, updateGame]);
 
+  // ── Loading / error states ────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-primary-navy">
         <Navbar />
-        <div className="flex items-center justify-center h-screen">
-          <p className="text-gray-600">Cargando detalles del juego...</p>
+        <div className="flex items-center justify-center h-[80vh]">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-yellow" />
         </div>
       </div>
     );
   }
 
-  if (error || !game) {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'Juego no encontrado'}</p>
-          <button
-            onClick={() => navigate('/explore')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Volver a explorar
-          </button>
+  if (error || !game || !game.name) {
+    return (
+      <div className="min-h-screen bg-primary-navy">
+        <Navbar />
+        <div className="flex items-center justify-center h-[80vh]">
+          <div className="text-center">
+            <p className="text-gray-400 mb-6 text-lg">{error || 'Game not found'}</p>
+            <button
+              onClick={() => navigate('/explore')}
+              className="bg-primary-yellow text-primary-navy-dark px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
+            >
+              Back to Explore
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-// Agregar validación adicional después de verificar que game existe
-if (!game.name) {
+  // ── Derived values ────────────────────────────────────────────────────────
+  const banner = getGameBanner(game);
+  const cover = getGameCover(game);
+  const igdbScore = game.rating ? Math.round(game.rating) : null;
+  const developer = game.involved_companies
+    ?.filter((ic) => ic.developer)
+    .map((ic) => ic.company.name)
+    .join(', ') || null;
+  const screenshots = game.screenshots?.slice(0, 9) ?? [];
+  const similarGames = game.similar_games?.slice(0, 6) ?? [];
+  const summary = game.summary || game.storyline;
+
+  // A game is "unreleased" if it has no release date yet, or its release date is in the future
+  const isUnreleased = !game.first_release_date || game.first_release_date > Date.now() / 1000;
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-primary-navy">
       <Navbar />
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Este juego no tiene información disponible en IGDB.</p>
-          <button
-            onClick={() => navigate('/explore')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden">
+        {/* Blurred banner background */}
+        {banner && (
+          <div
+            className="absolute inset-0 bg-cover bg-center scale-105"
+            style={{ backgroundImage: `url(${banner})` }}
           >
-            Volver a explorar
+            <div className="absolute inset-0 bg-primary-navy/80 backdrop-blur-sm" />
+          </div>
+        )}
+        {!banner && <div className="absolute inset-0 bg-primary-navy-dark" />}
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Back button */}
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-400 hover:text-white transition mb-8 text-sm"
+          >
+            <ArrowLeft size={16} />
+            Back
           </button>
+
+          <div className="flex flex-col md:flex-row gap-8 items-start">
+            {/* Cover */}
+            <div className="shrink-0">
+              <img
+                src={cover}
+                alt={game.name}
+                className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10"
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
+              />
+            </div>
+
+            {/* Title & meta */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
+                {game.name}
+              </h1>
+
+              {/* Genres pills + Upcoming badge */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {isUnreleased && (
+                  <span className="px-3 py-1 bg-primary-yellow text-primary-navy-dark text-xs font-bold rounded-full flex items-center gap-1">
+                    <Clock size={11} />
+                    Upcoming
+                  </span>
+                )}
+                {game.genres?.map((g) => (
+                  <span key={g.id} className="px-3 py-1 bg-primary-yellow/20 text-primary-yellow text-xs font-semibold rounded-full border border-primary-yellow/30">
+                    {g.name}
+                  </span>
+                ))}
+              </div>
+
+              {/* IGDB Score */}
+              {igdbScore && (
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-2">
+                    <Star className="text-primary-yellow fill-primary-yellow" size={18} />
+                    <span className="text-white font-bold text-xl">{igdbScore}</span>
+                    <span className="text-gray-400 text-sm">/100 IGDB</span>
+                  </div>
+                  <div className="flex-1 max-w-xs bg-gray-700/60 rounded-full h-2">
+                    <div
+                      className="bg-primary-yellow h-2 rounded-full transition-all"
+                      style={{ width: `${igdbScore}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Release date & developer */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-6">
+                {game.first_release_date && (
+                  <span className="flex items-center gap-1.5">
+                    <Calendar size={14} />
+                    {formatReleaseDate(game.first_release_date)}
+                  </span>
+                )}
+                {developer && (
+                  <span className="flex items-center gap-1.5">
+                    <Building2 size={14} />
+                    {developer}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      {/* Hero Section */}
-      <GameHero game={game} userGame={userGame} onAction={handleAction} />
-
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* ── MAIN CONTENT ────────────────────────────────────────────────── */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Columna principal */}
-          <div className="lg:col-span-2 space-y-6">
-            <GameSummary game={game} />
-            <ScreenshotGallery game={game} />
-            <SimilarGames game={game} />
+
+          {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-8">
+
+            {/* Summary */}
+            {summary && <SummarySection summary={summary} />}
+
+            {/* Screenshots */}
+            {screenshots.length > 0 && (
+              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
+                <SectionTitle>Screenshots</SectionTitle>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {screenshots.map((s) => (
+                    <img
+                      key={s.id}
+                      src={formatIGDBImage(s.url, 't_screenshot_med')}
+                      alt="Screenshot"
+                      className="w-full h-36 object-cover rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Similar games */}
+            {similarGames.length > 0 && (
+              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
+                <SectionTitle>Similar Games</SectionTitle>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                  {similarGames.map((sg) => (
+                    <div
+                      key={sg.id}
+                      onClick={() => navigate(`/game/${sg.id}`)}
+                      className="cursor-pointer group"
+                    >
+                      <img
+                        src={getGameCover(sg)}
+                        alt={sg.name}
+                        className="w-full aspect-[3/4] object-cover rounded-lg group-hover:ring-2 group-hover:ring-primary-yellow transition-all"
+                        onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
+                      />
+                      <p className="mt-1.5 text-xs text-gray-400 truncate group-hover:text-white transition-colors">
+                        {sg.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Sidebar */}
+          {/* ── RIGHT SIDEBAR ─────────────────────────────────────────── */}
           <div className="space-y-6">
-            <GameStats game={game} />
-            {isAuthenticated && <UserGameInfo userGame={userGame} />}
-          </div>
 
+            {/* Status & Rating panel */}
+            <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
+              <SectionTitle>My Status</SectionTitle>
+
+              {isAuthenticated ? (
+                <div className={saving ? 'opacity-60 pointer-events-none' : ''}>
+
+                  {isUnreleased ? (
+                    /* ── UNRELEASED: wishlist-only ─────────────────────── */
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-400 text-center">
+                        This game hasn't released yet. Add it to your wishlist to keep track of it.
+                      </p>
+                      <button
+                        onClick={() => handleStatusSelect(userGame?.status === 'wishlist' ? null : 'wishlist')}
+                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold text-white transition-all ${userGame?.status === 'wishlist'
+                          ? 'bg-cyan-600 ring-2 ring-cyan-400 scale-[1.01]'
+                          : 'bg-gray-700 hover:bg-cyan-600 border border-gray-600'
+                          }`}
+                      >
+                        <ShoppingCart size={16} />
+                        {userGame?.status === 'wishlist' ? 'In Wishlist ✓' : 'Add to Wishlist'}
+                      </button>
+                      {userGame?.status === 'wishlist' && (
+                        <button
+                          onClick={() => handleStatusSelect(null)}
+                          className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center"
+                        >
+                          Remove from my list
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── RELEASED: full status + rating ────────────────── */
+                    <>
+                      {/* Status buttons */}
+                      <div className="grid grid-cols-2 gap-2 mb-5">
+                        {STATUSES.map(({ id: sid, label, Icon, color, activeRing }) => {
+                          const isActive = userGame?.status === sid;
+                          return (
+                            <button
+                              key={sid}
+                              onClick={() => handleStatusSelect(isActive ? null : sid)}
+                              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-white transition-all ${color} ${isActive ? `ring-2 ${activeRing} scale-[1.02]` : 'opacity-70 hover:opacity-100'
+                                }`}
+                            >
+                              <Icon size={15} />
+                              {label}
+                              {isActive && <Check size={13} className="ml-auto" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Remove from list button */}
+                      {userGame && (
+                        <button
+                          onClick={() => handleStatusSelect(null)}
+                          className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center mb-5"
+                        >
+                          Remove from my list
+                        </button>
+                      )}
+
+                      {/* Rating */}
+                      {userGame ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-3">My Rating</p>
+                          <InlineStarRating
+                            rating={userGame.rating || 0}
+                            onRate={handleRatingChange}
+                            interactive={true}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 text-center">
+                          Add this game to your list to rate it
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-400 text-sm mb-4">Sign in to track this game and rate it</p>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="w-full bg-primary-yellow text-primary-navy-dark py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Game Info */}
+            <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6 space-y-5">
+              <SectionTitle>
+                <Tag size={16} className="text-primary-yellow" />
+                Game Info
+              </SectionTitle>
+
+              {game.first_release_date && (
+                <InfoRow label="Release Date">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar size={14} className="text-gray-500" />
+                    {formatReleaseDate(game.first_release_date)}
+                  </span>
+                </InfoRow>
+              )}
+
+              {developer && (
+                <InfoRow label="Developer">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 size={14} className="text-gray-500" />
+                    {developer}
+                  </span>
+                </InfoRow>
+              )}
+
+              {game.platforms?.length > 0 && (
+                <InfoRow label="Platforms">
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {game.platforms.slice(0, 6).map((p) => (
+                      <span key={p.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
+                        {p.name}
+                      </span>
+                    ))}
+                    {game.platforms.length > 6 && (
+                      <span className="text-xs text-gray-500">+{game.platforms.length - 6} more</span>
+                    )}
+                  </div>
+                </InfoRow>
+              )}
+
+              {igdbScore && (
+                <InfoRow label="IGDB Score">
+                  <div className="flex items-center gap-2">
+                    <Star size={14} className="text-primary-yellow fill-primary-yellow" />
+                    <span className="font-bold text-white">{igdbScore}</span>
+                    <span className="text-gray-500">/100</span>
+                  </div>
+                </InfoRow>
+              )}
+
+              {game.game_modes?.length > 0 && (
+                <InfoRow label="Game Modes">
+                  <div className="flex flex-wrap gap-1.5 mt-0.5">
+                    {game.game_modes.map((m) => (
+                      <span key={m.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
+                        {m.name}
+                      </span>
+                    ))}
+                  </div>
+                </InfoRow>
+              )}
+
+              {game.websites?.find((w) => w.category === 1) && (
+                <InfoRow label="Website">
+                  <a
+                    href={game.websites.find((w) => w.category === 1).url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-primary-yellow hover:underline"
+                  >
+                    <ExternalLink size={13} />
+                    Official Site
+                  </a>
+                </InfoRow>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* Modal agregar/editar */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">
-              {modalMode === 'add' ? `Agregar "${game.name}"` : `Editar "${game.name}"`}
-            </h3>
+// ─── Summary with expand/collapse ────────────────────────────────────────────
+const SummarySection = ({ summary }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = summary.length > 350;
+  const display = expanded || !isLong ? summary : `${summary.slice(0, 350)}…`;
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
-              <select
-                value={modalStatus}
-                onChange={(e) => setModalStatus(e.target.value)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="completed">Completado</option>
-                <option value="playing">Jugando</option>
-                <option value="wishlist">Lista de deseos</option>
-                <option value="dropped">Abandonado</option>
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Calificación
-              </label>
-              <select
-                value={modalRating || ''}
-                onChange={(e) => setModalRating(e.target.value ? parseInt(e.target.value) : null)}
-                className="block w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">Sin calificación</option>
-                <option value="1">⭐ 1</option>
-                <option value="2">⭐⭐ 2</option>
-                <option value="3">⭐⭐⭐ 3</option>
-                <option value="4">⭐⭐⭐⭐ 4</option>
-                <option value="5">⭐⭐⭐⭐⭐ 5</option>
-              </select>
-            </div>
-
-            {modalError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                {modalError}
-              </div>
-            )}
-
-            {modalSuccess && (
-              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
-                {modalSuccess}
-              </div>
-            )}
-
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300"
-                disabled={modalLoading}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={modalLoading}
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {modalLoading ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </div>
-        </div>
+  return (
+    <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
+      <SectionTitle>Summary</SectionTitle>
+      <p className="text-gray-300 leading-relaxed whitespace-pre-line text-sm">{display}</p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-3 text-primary-yellow hover:underline font-medium text-sm"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
       )}
     </div>
   );
