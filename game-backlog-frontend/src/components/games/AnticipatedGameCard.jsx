@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Check } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
+import RatingBadge from '../common/RatingBadge';
 
 const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) => {
   const navigate = useNavigate();
@@ -86,9 +87,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
 
         {/* IGDB Rating (si existe) */}
         {game.rating && (
-          <div className="px-3 py-1 bg-primary-yellow text-primary-navy-dark font-bold rounded-full text-sm">
-            {Math.round(game.rating)}
-          </div>
+          <RatingBadge rating={game.rating} size="sm" />
         )}
       </div>
 

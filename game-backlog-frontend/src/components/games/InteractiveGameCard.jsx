@@ -4,6 +4,7 @@ import { Check, Play, ShoppingCart, Trash2, HelpCircle } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
+import RatingBadge from '../common/RatingBadge';
 
 const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange }) => {
   const navigate = useNavigate();
@@ -89,15 +90,6 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   const { Icon: StatusIcon, color: statusColor } = getStatusIcon();
 
-  const getIGDBRatingColor = (rating) => {
-    if (!rating) return 'bg-gray-600 text-white';
-
-    if (rating >= 80) return 'bg-green-500 text-primary-navy-dark';
-    if (rating >= 60) return 'bg-primary-yellow text-primary-navy-dark';
-    if (rating >= 40) return 'bg-orange-500 text-white';
-    return 'bg-red-500 text-white';
-  };
-
   return (
     <div className="relative">
       {/* Card Container - Mismo estilo que AnticipatedGameCard */}
@@ -130,10 +122,8 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             </div>
           )}
 
-          {/* IGDB Rating (derecha) - Siempre mostrar con color dinámico */}
-          <div className={`px-3 py-1 rounded-full text-sm font-bold ${getIGDBRatingColor(game.rating)}`}>
-            {game.rating ? Math.round(game.rating) : 'N/A'}
-          </div>
+          {/* IGDB Rating (derecha) */}
+          <RatingBadge rating={game.rating} size="sm" />
         </div>
 
         {/* Artwork Banner */}

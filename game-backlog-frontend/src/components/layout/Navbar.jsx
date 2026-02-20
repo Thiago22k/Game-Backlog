@@ -49,7 +49,7 @@ const Navbar = () => {
         <nav className="relative z-10 bg-primary-navy-dark rounded-b-[2.5rem] rounded-t-none mx-auto mt-0 shadow-lg w-full max-w-3xl">
           <div className="px-8">
             <div className="flex justify-between items-center h-20">
-              
+
               {/* Mobile: Logo + Hamburger */}
               <div className="flex items-center lg:hidden w-full justify-between">
                 <Link to="/" className="flex items-center space-x-2">
@@ -66,14 +66,13 @@ const Navbar = () => {
 
               {/* Desktop: Full navbar */}
               <div className="hidden lg:flex items-center justify-between w-full">
-                
+
                 {/* Left: Links */}
                 <div className="flex items-center space-x-8">
                   <Link
                     to="/explore"
-                    className={`text-white text-base font-medium pb-1 transition-all ${
-                      isActive('/explore') ? 'border-b-2 border-white' : 'hover:text-gray-300'
-                    }`}
+                    className={`text-white text-base font-medium pb-1 transition-all ${isActive('/explore') ? 'border-b-2 border-white' : 'hover:text-gray-300'
+                      }`}
                   >
                     Explore
                   </Link>
@@ -89,7 +88,7 @@ const Navbar = () => {
 
                 {/* Center: Logo */}
                 <Link to="/" className="flex items-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
-                  <Logo className="w-8 h-8 text-white" />
+                  <Logo className="w-6 h-6 text-white" />
                   <span className="text-white font-bold text-xl">Stackd</span>
                 </Link>
 
@@ -97,7 +96,7 @@ const Navbar = () => {
                 <div className="flex items-center space-x-3">
                   {/* Search button - OCULTO en páginas de auth */}
                   {!isAuthPage && (
-                    <button 
+                    <button
                       onClick={() => setSearchModalOpen(true)}
                       className="flex items-center space-x-2 bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2 rounded-lg transition-all text-sm"
                     >
@@ -119,31 +118,31 @@ const Navbar = () => {
                       </button>
 
                       {profileDropdownOpen && (
-  <div className="absolute right-0 mt-2 w-48 bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg py-2 z-[200]">
-    <Link
-      to="/profile"
-      className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
-      onClick={() => setProfileDropdownOpen(false)}
-    >
-      My Profile
-    </Link>
-    <Link
-      to="/settings"
-      className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
-      onClick={() => setProfileDropdownOpen(false)}
-    >
-      Settings
-    </Link>
-    <hr className="my-2 border-gray-700" />
-    <button
-      onClick={handleLogout}
-      className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-primary-navy hover:text-red-300 transition-colors flex items-center space-x-2"
-    >
-      <LogOut size={16} />
-      <span>Log Out</span>
-    </button>
-  </div>
-)}
+                        <div className="absolute right-0 mt-2 w-48 bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg py-2 z-[200]">
+                          <Link
+                            to="/profile"
+                            className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            My Profile
+                          </Link>
+                          <Link
+                            to="/settings"
+                            className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
+                            onClick={() => setProfileDropdownOpen(false)}
+                          >
+                            Settings
+                          </Link>
+                          <hr className="my-2 border-gray-700" />
+                          <button
+                            onClick={handleLogout}
+                            className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-primary-navy hover:text-red-300 transition-colors flex items-center space-x-2"
+                          >
+                            <LogOut size={16} />
+                            <span>Log Out</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* Get Started button */
@@ -151,7 +150,7 @@ const Navbar = () => {
                       to="/register"
                       className="bg-gradient-get-started hover:opacity-90 text-primary-navy px-6 py-2 rounded-lg font-semibold transition-all text-sm"
                     >
-                       Get Started
+                      Get Started
                     </Link>
                   )}
                 </div>
@@ -173,10 +172,10 @@ const Navbar = () => {
                 <span className="text-text-secondary text-sm font-medium opacity-50 cursor-not-allowed">
                   Playlist (Coming soon)
                 </span>
-                
+
                 {/* Search button mobile - OCULTO en páginas de auth */}
                 {!isAuthPage && (
-                  <button 
+                  <button
                     onClick={() => {
                       setSearchModalOpen(true);
                       setMobileMenuOpen(false);
@@ -230,9 +229,9 @@ const Navbar = () => {
       </div>
 
       {/* Search Modal */}
-      <SearchModal 
-        isOpen={searchModalOpen} 
-        onClose={() => setSearchModalOpen(false)} 
+      <SearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
       />
     </>
   );

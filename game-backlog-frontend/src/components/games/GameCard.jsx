@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import RatingBadge from '../common/RatingBadge';
 
 const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   const navigate = useNavigate();
-  
+
   // Detectar si es un juego del usuario
   const isUserGame = !!game.status;
-  
+
   // ID del juego (varía según contexto)
   const gameId = game.igdb_game_id || game.id;
 
@@ -14,12 +15,12 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   const cover = game.cover?.url || game.game_details?.cover?.url;
   const igdbRating = game.rating || game.game_details?.rating;
   const status = game.status;
-  
+
   // Rating del usuario: solo relevante si es un juego del usuario
   const userRating = isUserGame ? game.rating : null;
 
   // Formatear URL de cover
-  const coverUrl = cover 
+  const coverUrl = cover
     ? `https:${cover.replace('t_thumb', 't_cover_big')}`
     : 'https://via.placeholder.com/264x374?text=No+Cover';
 
@@ -34,12 +35,12 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow">
       {/* Cover del juego - CLICKEABLE */}
-      <div 
-        className="relative cursor-pointer" 
+      <div
+        className="relative cursor-pointer"
         onClick={() => navigate(`/game/${gameId}`)}
       >
-        <img 
-          src={coverUrl} 
+        <img
+          src={coverUrl}
           alt={name}
           className="w-full h-64 object-cover"
           onError={(e) => {
@@ -56,20 +57,20 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
 
         {/* Rating de IGDB (solo si NO es un juego del usuario) */}
         {!isUserGame && igdbRating && (
-          <p className="text-sm text-gray-600 mb-2">
-            Rating IGDB: {Math.round(igdbRating)}/100
-          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-sm font-semibold text-gray-600">IGDB:</span>
+            <RatingBadge rating={igdbRating} size="sm" />
+          </div>
         )}
 
         {/* Status del usuario (solo si es un juego del usuario) */}
         {isUserGame && status && (
           <div className="mb-2">
-            <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-              status === 'completed' ? 'bg-green-100 text-green-800' :
-              status === 'playing' ? 'bg-blue-100 text-blue-800' :
-              status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
+            <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${status === 'completed' ? 'bg-green-100 text-green-800' :
+                status === 'playing' ? 'bg-blue-100 text-blue-800' :
+                  status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+              }`}>
               {statusLabels[status]}
             </span>
           </div>
