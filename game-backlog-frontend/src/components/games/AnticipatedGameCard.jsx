@@ -36,10 +36,10 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
 
   const countdown = getCountdown();
 
-  // Handle wishlist toggle
   const handleWishlistClick = async (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    
+
     if (!interactive) {
       // Si no está autenticado, redirigir a login
       localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
@@ -57,8 +57,8 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
   };
 
   // Obtener artwork (banner superior)
-  const artwork = game.artworks?.[0]?.url || game.screenshots?.[0]?.url || game.cover?.url;
-  const artworkUrl = artwork 
+  const artwork = game.screenshots?.[0]?.url || game.artworks?.[0]?.url || game.cover?.url;
+  const artworkUrl = artwork
     ? formatIGDBImage(artwork, 't_screenshot_med')
     : getGameCover(game);
 
@@ -67,7 +67,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
 
   // Género y año
   const genre = game.genres?.[0]?.name || 'Unknown';
-  const year = game.first_release_date 
+  const year = game.first_release_date
     ? new Date(game.first_release_date * 1000).getFullYear()
     : 'TBA';
 
@@ -124,12 +124,12 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
 
         {/* Botón Wishlist */}
         <button
+          type="button"
           onClick={handleWishlistClick}
-          className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-            isInWishlist
-              ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
-              : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
-          }`}
+          className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${isInWishlist
+            ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
+            : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
+            }`}
         >
           {isInWishlist ? (
             <>

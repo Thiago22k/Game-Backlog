@@ -110,7 +110,7 @@ const Settings = () => {
   };
 
   // Calcular fecha de miembro
-  const memberSince = user?.created_at 
+  const memberSince = user?.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'Unknown';
 

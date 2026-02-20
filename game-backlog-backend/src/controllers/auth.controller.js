@@ -1,7 +1,26 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
 const User = require('../models/user.model');
 const { isValidEmail, isValidPassword, isValidUsername } = require('../utils/validation');
+
+// Configurar transportador de nodemailer (Ethereal para desarrollo)
+let transporter;
+nodemailer.createTestAccount((err, account) => {
+  if (err) {
+    console.error('Failed to create a testing account. ' + err.message);
+    return;
+  }
+  transporter = nodemailer.createTransport({
+    host: account.smtp.host,
+    port: account.smtp.port,
+    secure: account.smtp.secure,
+    auth: {
+      user: account.user,
+      pass: account.pass,
+    },
+  });
+});
 
 // Generar JWT
 const generateToken = (userId) => {
@@ -12,6 +31,7 @@ const generateToken = (userId) => {
   );
 };
 
+// ... registro, login, getProfile ...
 // Registro de usuario
 const register = async (req, res) => {
   try {
@@ -104,9 +124,9 @@ const login = async (req, res) => {
 
     // Detectar si el identifier es un email o username
     const isEmail = identifier.includes('@');
-    
+
     // Buscar usuario por email o username según corresponda
-    const user = isEmail 
+    const user = isEmail
       ? await User.findByEmail(identifier)
       : await User.findByUsername(identifier);
 
@@ -151,7 +171,7 @@ const getProfile = async (req, res) => {
   try {
     // req.user viene del middleware de autenticación
     const user = await User.findById(req.user.userId);
-    
+
     if (!user) {
       return res.status(404).json({
         error: 'Usuario no encontrado'
@@ -168,8 +188,105 @@ const getProfile = async (req, res) => {
   }
 };
 
+// Solicitar restablecimiento de contraseña
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'El email es requerido' });
+    }
+
+    const user = await User.findByEmail(email);
+
+    // Si no existe, igual respondemos success para no revelar qué emails están registrados
+    if (!user) {
+      return res.json({ message: 'Si el correo existe, se ha enviado un enlace de recuperación.' });
+    }
+
+    // Crear token con un secreto único que incluye la contraseña actual (Hash)
+    // Así, cuando cambie la contraseña, este token será inválido.
+    const secret = process.env.JWT_SECRET + user.password;
+    const token = jwt.sign({ email: user.email, id: user.id }, secret, {
+      expiresIn: '15m'
+    });
+
+    const resetLink = `http://localhost:5173/reset-password?id=${user.id}&token=${token}`;
+
+    // Enviar email
+    if (transporter) {
+      const message = {
+        from: '"Game Backlog" <noreply@gamebacklog.com>',
+        to: user.email,
+        subject: 'Recuperación de Contraseña',
+        text: `Para restablecer tu contraseña, haz clic en este enlace: ${resetLink}`,
+        html: `<p>Para restablecer tu contraseña, haz clic en este enlace:</p><p><a href="${resetLink}">Restablecer Contraseña</a></p>`
+      };
+
+      const info = await transporter.sendMail(message);
+      console.log('--- PASSWORD RESET EMAIL SENT ---');
+      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+      console.log('---------------------------------');
+    }
+
+    res.json({ message: 'Si el correo existe, se ha enviado un enlace de recuperación.' });
+  } catch (error) {
+    console.error('Error en forgotPassword:', error);
+    res.status(500).json({ error: 'Error al procesar la solicitud' });
+  }
+};
+
+// Restablecer contraseña
+const resetPassword = async (req, res) => {
+  try {
+    const { id, token, newPassword } = req.body;
+
+    if (!id || !token || !newPassword) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+    }
+
+    // Intentamos buscar al usuario para obtener su hash actual, 
+    // necesitamos todo el objeto de usuario incluyendo el password (User.findByEmail u obtener password con query manual si findById no lo trae)
+    // Usamos el query exacto de base de datos para obtener el registro completo (findById no devuelve la pass)
+    const pool = require('../config/database');
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const user = userResult.rows[0];
+
+    if (!user) {
+      return res.status(400).json({ error: 'Enlace inválido o expirado' });
+    }
+
+    const secret = process.env.JWT_SECRET + user.password;
+
+    try {
+      // Verificar si el token es válido
+      jwt.verify(token, secret);
+    } catch (err) {
+      return res.status(400).json({ error: 'Enlace inválido o expirado' });
+    }
+
+    // Token válido, actualizamos contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+    await User.changePassword(user.id, hashedPassword);
+
+    res.json({ message: 'Contraseña actualizada exitosamente' });
+
+  } catch (error) {
+    console.error('Error en resetPassword:', error);
+    res.status(500).json({ error: 'Error al restablecer la contraseña' });
+  }
+}
+
 module.exports = {
   register,
   login,
   getProfile,
+  forgotPassword,
+  resetPassword,
 };

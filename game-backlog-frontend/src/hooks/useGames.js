@@ -8,15 +8,15 @@ export const useGames = () => {
   const [error, setError] = useState(null);
 
   // Obtener juegos del usuario
-  const getUserGames = async (status = null) => {
-    setLoading(true);
+  const getUserGames = async (status = null, showLoader = true) => {
+    if (showLoader) setLoading(true);
     setError(null);
 
     try {
-      const url = status 
+      const url = status
         ? `${ENDPOINTS.GAMES.USER_GAMES}?status=${status}`
         : ENDPOINTS.GAMES.USER_GAMES;
-      
+
       const response = await axios.get(url);
       setGames(response.data.games);
       return { success: true, data: response.data.games };
@@ -25,7 +25,7 @@ export const useGames = () => {
       setError(errorMsg);
       return { success: false, error: errorMsg };
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
@@ -48,7 +48,6 @@ export const useGames = () => {
 
   // Agregar juego a la lista del usuario
   const addGame = async (igdbGameId, status = 'completed', rating = null) => {
-    setLoading(true);
     setError(null);
 
     try {
@@ -56,23 +55,20 @@ export const useGames = () => {
       if (rating) body.rating = rating;
 
       const response = await axios.post(ENDPOINTS.GAMES.USER_GAMES, body);
-      
-      // Después de agregar, refrescar la lista
-      await getUserGames();
-      
+
+      // Después de agregar, refrescar la lista en segundo plano (sin loading)
+      await getUserGames(null, false);
+
       return { success: true, data: response.data.game };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al agregar juego';
       setError(errorMsg);
       return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
     }
   };
 
   // Actualizar juego del usuario
   const updateGame = async (userGameId, status = null, rating = null) => {
-    setLoading(true);
     setError(null);
 
     try {
@@ -81,36 +77,31 @@ export const useGames = () => {
       if (rating !== null) body.rating = rating;
 
       const response = await axios.put(`${ENDPOINTS.GAMES.USER_GAMES}/${userGameId}`, body);
-      
-      // Después de actualizar, refrescar la lista
-      await getUserGames();
-      
+
+      // Después de actualizar, refrescar la lista en segundo plano (sin loading)
+      await getUserGames(null, false);
+
       return { success: true, data: response.data.game };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al actualizar juego';
       setError(errorMsg);
       return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
     }
   };
 
   // Eliminar juego del usuario
   const deleteGame = async (igdbGameId) => {
-    setLoading(true);
     setError(null);
 
     try {
       await axios.delete(`${ENDPOINTS.GAMES.USER_GAMES}/${igdbGameId}`);
-      // Actualizar lista local eliminando el juego
-      setGames(games.filter(game => game.igdb_game_id !== igdbGameId));
+      // Actualizar lista local eliminando el juego usando estado previo
+      setGames(prev => prev.filter(game => game.igdb_game_id !== igdbGameId));
       return { success: true };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al eliminar juego';
       setError(errorMsg);
       return { success: false, error: errorMsg };
-    } finally {
-      setLoading(false);
     }
   };
 

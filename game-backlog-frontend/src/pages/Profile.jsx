@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Clock, Gamepad2, Search, Trophy, Star } from 'lucide-react';
@@ -22,13 +22,14 @@ const Profile = () => {
   // Cargar juegos al montar el componente
   useEffect(() => {
     getUserGames();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Separar juegos en wishlist (próximos) y el resto
-  const separateGames = () => {
+  // Separar juegos en wishlist (próximos) y el resto usando useMemo
+  const { wishlistComingSoon, myGames } = useMemo(() => {
     const now = new Date();
-    const wishlistComingSoon = [];
-    const myGames = [];
+    const wishlist = [];
+    const my = [];
 
     games.forEach(game => {
       const releaseDate = game.game_details?.first_release_date
@@ -37,85 +38,81 @@ const Profile = () => {
 
       // Si es wishlist Y (no tiene fecha O la fecha es futura)
       if (game.status === 'wishlist' && (!releaseDate || releaseDate > now)) {
-        wishlistComingSoon.push(game);
+        wishlist.push(game);
       } else {
-        myGames.push(game);
+        my.push(game);
       }
     });
 
-    return { wishlistComingSoon, myGames };
-  };
+    return { wishlistComingSoon: wishlist, myGames: my };
+  }, [games]);
 
-  const { wishlistComingSoon, myGames } = separateGames();
-
-  // Aplicar búsqueda
-  const applySearch = (gamesList) => {
-    if (!searchQuery.trim()) return gamesList;
-
-    return gamesList.filter(game =>
-      game.game_details?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Aplicar búsqueda a wishlist de manera separada
+  const filteredWishlist = useMemo(() => {
+    if (!searchQuery.trim()) return wishlistComingSoon;
+    const query = searchQuery.toLowerCase();
+    return wishlistComingSoon.filter(game =>
+      game.game_details?.name?.toLowerCase().includes(query)
     );
-  };
+  }, [searchQuery, wishlistComingSoon]);
 
-  // Aplicar filtros (solo para My Games)
-  const applyFilters = (gamesList) => {
-    let filtered = [...gamesList];
+  // Procesar mis juegos (búsqueda, filtros, ordenamiento) con un solo recorrido si es posible
+  const processedMyGames = useMemo(() => {
+    let result = myGames;
 
-    // Filtro por estado
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(game => game.game_details?.name?.toLowerCase().includes(query));
+    }
+
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(game => game.status === statusFilter);
+      result = result.filter(game => game.status === statusFilter);
     }
 
-    // Filtro por calificación
     if (ratingFilter !== 'all') {
-      const targetRating = parseInt(ratingFilter);
-      filtered = filtered.filter(game => game.rating === targetRating);
+      const targetRating = parseInt(ratingFilter, 10);
+      result = result.filter(game => game.rating === targetRating);
     }
 
-    return filtered;
-  };
-
-  // Aplicar ordenamiento
-  const applySort = (gamesList) => {
-    const sorted = [...gamesList];
-
+    // Ordenamiento
+    result = [...result];
     switch (sortBy) {
       case 'name':
-        return sorted.sort((a, b) =>
-          (a.game_details?.name || '').localeCompare(b.game_details?.name || '')
-        );
+        result.sort((a, b) => (a.game_details?.name || '').localeCompare(b.game_details?.name || ''));
+        break;
       case 'rating-high':
-        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+        break;
       case 'rating-low':
-        return sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+        result.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+        break;
       case 'recent':
       default:
-        return sorted.sort((a, b) =>
-          new Date(b.created_at) - new Date(a.created_at)
-        );
+        result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
     }
-  };
 
-  // Procesar juegos
-  const filteredWishlist = applySearch(wishlistComingSoon);
-  const processedMyGames = applySort(applyFilters(applySearch(myGames)));
+    return result;
+  }, [myGames, searchQuery, statusFilter, ratingFilter, sortBy]);
 
-  // Calcular estadísticas
-  const stats = {
-    total: games.length,
-    completed: games.filter(g => g.status === 'completed').length,
-    avgRating: games.filter(g => g.rating).length > 0
-      ? (games.reduce((sum, g) => sum + (g.rating || 0), 0) / games.filter(g => g.rating).length).toFixed(1)
-      : 0,
-  };
+  // Calcular estadísticas con useMemo para prevenir recálculos
+  const stats = useMemo(() => {
+    const ratedGames = games.filter(g => g.rating);
+    return {
+      total: games.length,
+      completed: games.filter(g => g.status === 'completed').length,
+      avgRating: ratedGames.length > 0
+        ? (ratedGames.reduce((sum, g) => sum + g.rating, 0) / ratedGames.length).toFixed(1)
+        : 0,
+    };
+  }, [games]);
 
-  // Handlers para InteractiveGameCard
-  const handleStatusChange = async (gameId, newStatus) => {
+  // Handlers envueltos en useCallback para referencias persistentes
+  const handleStatusChange = useCallback(async (gameId, newStatus) => {
     const game = games.find(g => g.igdb_game_id === gameId);
 
     if (newStatus === null && game) {
       const result = await deleteGame(gameId);
-
       if (result.success) {
         toast.success('Game removed from your list');
       } else {
@@ -123,33 +120,30 @@ const Profile = () => {
       }
     } else if (game) {
       const result = await updateGame(gameId, newStatus, game.rating);
-
       if (result.success) {
         toast.success('Status updated');
       } else {
         toast.error('Error updating status');
       }
     }
-  };
+  }, [games, deleteGame, updateGame]);
 
-  const handleRatingChange = async (gameId, rating) => {
+  const handleRatingChange = useCallback(async (gameId, rating) => {
     const game = games.find(g => g.igdb_game_id === gameId);
 
     if (game) {
       const result = await updateGame(gameId, game.status, rating);
-
       if (result.success) {
         toast.success(`Rating saved: ${rating} ⭐`);
       } else {
         toast.error('Error saving rating');
       }
     }
-  };
+  }, [games, updateGame]);
 
-  const handleWishlistToggle = async (gameId, newStatus) => {
+  const handleWishlistToggle = useCallback(async (gameId, newStatus) => {
     if (newStatus === null) {
       const result = await deleteGame(gameId);
-
       if (result.success) {
         toast.success('Removed from wishlist');
       } else {
@@ -157,17 +151,16 @@ const Profile = () => {
       }
     } else {
       const result = await addGame(gameId, 'wishlist');
-
       if (result.success) {
         toast.success('Added to wishlist');
       } else {
         toast.error('Error adding to wishlist');
       }
     }
-  };
+  }, [deleteGame, addGame]);
 
-  // Mapear juegos para las cards
-  const mapGameForCard = (game) => {
+  // Mapear juegos para las cards persistente con useCallback
+  const mapGameForCard = useCallback((game) => {
     return {
       id: game.igdb_game_id,
       name: game.game_details?.name || 'Unknown',
@@ -180,7 +173,7 @@ const Profile = () => {
       status: game.status,
       user_rating: game.rating,
     };
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-primary-navy">
@@ -311,8 +304,8 @@ const Profile = () => {
                         key={status.value}
                         onClick={() => setStatusFilter(status.value)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === status.value
-                            ? 'bg-primary-yellow text-primary-navy-dark'
-                            : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
+                          ? 'bg-primary-yellow text-primary-navy-dark'
+                          : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
                           }`}
                       >
                         {status.label}

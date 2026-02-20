@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast'; // ← Importar
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+import ForgotPassword from '../pages/auth/ForgotPassword';
+import ResetPassword from '../pages/auth/ResetPassword';
 import Landing from '../pages/Landing';
 import Profile from '../pages/Profile';
 import Settings from '../pages/Settings';
@@ -14,7 +16,7 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       {/* Toaster global */}
-      <Toaster 
+      <Toaster
         position="bottom-right"
         toastOptions={{
           duration: 3000,
@@ -31,32 +33,48 @@ const AppRoutes = () => {
           },
         }}
       />
-      
+
       <Routes>
         {/* Ruta raíz */}
         <Route path="/" element={<Landing />} />
 
         {/* Rutas públicas (solo para NO autenticados) */}
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <Login />
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/register" 
+        <Route
+          path="/register"
           element={
             <PublicRoute>
               <Register />
             </PublicRoute>
-          } 
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicRoute>
+              <ForgotPassword />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/reset-password"
+          element={
+            <PublicRoute>
+              <ResetPassword />
+            </PublicRoute>
+          }
         />
 
         {/* Explore público */}
         <Route path="/explore" element={<Explore />} />
-        
+
         {/* Game details público */}
         <Route path="/game/:id" element={<GameDetails />} />
 

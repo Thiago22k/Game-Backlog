@@ -26,7 +26,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   // Obtener artwork (banner superior)
   const artwork = game.artworks?.[0]?.url || game.cover?.url;
-  const artworkUrl = artwork 
+  const artworkUrl = artwork
     ? formatIGDBImage(artwork)
     : getGameCover(game);
 
@@ -35,13 +35,14 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   // Género y año
   const genre = game.genres?.[0]?.name || 'Unknown';
-  const year = game.first_release_date 
+  const year = game.first_release_date
     ? new Date(game.first_release_date * 1000).getFullYear()
     : 'TBA';
 
   const handleStatusClick = (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    
+
     if (!interactive) {
       localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
       navigate('/login');
@@ -54,7 +55,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const handleStatusSelect = async (newStatus) => {
     setShowStatusMenu(false);
     setLocalStatus(newStatus);
-    
+
     if (!newStatus) {
       setLocalRating(0);
     }
@@ -89,18 +90,18 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const { Icon: StatusIcon, color: statusColor } = getStatusIcon();
 
   const getIGDBRatingColor = (rating) => {
-  if (!rating) return 'bg-gray-600 text-white';
-  
-  if (rating >= 80) return 'bg-green-500 text-primary-navy-dark';
-  if (rating >= 60) return 'bg-primary-yellow text-primary-navy-dark';
-  if (rating >= 40) return 'bg-orange-500 text-white';
-  return 'bg-red-500 text-white';
-};
+    if (!rating) return 'bg-gray-600 text-white';
+
+    if (rating >= 80) return 'bg-green-500 text-primary-navy-dark';
+    if (rating >= 60) return 'bg-primary-yellow text-primary-navy-dark';
+    if (rating >= 40) return 'bg-orange-500 text-white';
+    return 'bg-red-500 text-white';
+  };
 
   return (
     <div className="relative">
       {/* Card Container - Mismo estilo que AnticipatedGameCard */}
-      <div 
+      <div
         onClick={() => navigate(`/game/${game.id}`)}
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
@@ -108,21 +109,21 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         <div className="h-12 flex items-center justify-between px-4">
           {/* Status Button (izquierda) */}
           <button
+            type="button"
             onClick={handleStatusClick}
-            className={`p-2 rounded-full ${statusColor} transition-transform ${
-              interactive ? 'hover:scale-110' : ''
-            }`}
+            className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''
+              }`}
           >
             <StatusIcon size={16} className="text-white" />
           </button>
 
           {/* Star Rating (centro) - Solo si tiene estado */}
           {currentStatus && (
-            <div 
+            <div
               onClick={(e) => e.stopPropagation()}
             >
-              <StarRating 
-                rating={currentRating} 
+              <StarRating
+                rating={currentRating}
                 onRate={handleRatingClick}
                 interactive={interactive}
               />
@@ -130,9 +131,9 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
           )}
 
           {/* IGDB Rating (derecha) - Siempre mostrar con color dinámico */}
-<div className={`px-3 py-1 rounded-full text-sm font-bold ${getIGDBRatingColor(game.rating)}`}>
-  {game.rating ? Math.round(game.rating) : 'N/A'}
-</div>
+          <div className={`px-3 py-1 rounded-full text-sm font-bold ${getIGDBRatingColor(game.rating)}`}>
+            {game.rating ? Math.round(game.rating) : 'N/A'}
+          </div>
         </div>
 
         {/* Artwork Banner */}

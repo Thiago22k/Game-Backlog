@@ -189,7 +189,7 @@ const getMostAnticipated = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, cover.url, genres.name, rating, first_release_date, hypes;
+        fields name, cover.url, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes;
         where 
           first_release_date > ${now}
           & first_release_date < ${oneYearFromNow}
@@ -230,30 +230,30 @@ const exploreGames = async (filters = {}) => {
 
     // Construir condiciones WHERE
     const conditions = [];
-    
+
     // Siempre tener cover
     conditions.push('cover != null');
 
     // Filtro por rango de tiempo
-const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000);
 
-if (timeRange === 'last_month') {
-  const lastMonth = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
-  conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${now}`);
-} else if (timeRange === 'this_year') {
-  const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
-  conditions.push(`first_release_date >= ${startOfYear} & first_release_date <= ${now}`);
-} else if (timeRange === 'last_year') {
-  const lastYearStart = new Date(new Date().getFullYear() - 1, 0, 1).getTime() / 1000;
-  const lastYearEnd = new Date(new Date().getFullYear() - 1, 11, 31).getTime() / 1000;
-  conditions.push(`first_release_date >= ${lastYearStart} & first_release_date <= ${lastYearEnd}`);
-} else if (timeRange === 'last_5_years') {
-  const last5Years = Math.floor((Date.now() - (5 * 365 * 24 * 60 * 60 * 1000)) / 1000);
-  conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${now}`);
-} else {
-  // Por defecto: solo juegos ya lanzados
-  conditions.push(`first_release_date <= ${now}`);
-}
+    if (timeRange === 'last_month') {
+      const lastMonth = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
+      conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${now}`);
+    } else if (timeRange === 'this_year') {
+      const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
+      conditions.push(`first_release_date >= ${startOfYear} & first_release_date <= ${now}`);
+    } else if (timeRange === 'last_year') {
+      const lastYearStart = new Date(new Date().getFullYear() - 1, 0, 1).getTime() / 1000;
+      const lastYearEnd = new Date(new Date().getFullYear() - 1, 11, 31).getTime() / 1000;
+      conditions.push(`first_release_date >= ${lastYearStart} & first_release_date <= ${lastYearEnd}`);
+    } else if (timeRange === 'last_5_years') {
+      const last5Years = Math.floor((Date.now() - (5 * 365 * 24 * 60 * 60 * 1000)) / 1000);
+      conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${now}`);
+    } else {
+      // Por defecto: solo juegos ya lanzados
+      conditions.push(`first_release_date <= ${now}`);
+    }
 
     // Filtro por géneros
     if (genres.length > 0) {
@@ -267,44 +267,44 @@ if (timeRange === 'last_month') {
 
     // Determinar ordenamiento
     let sortClause = '';
-switch (sort) {
-  case 'popular':
-    conditions.push('total_rating_count > 10');
-    sortClause = 'sort total_rating_count desc';
-    break;
-  case 'highest_rated': // ← Cambio de nombre
-    conditions.push('rating > 70'); // ← Más permisivo
-    conditions.push('rating_count > 5'); // ← Más permisivo
-    sortClause = 'sort rating desc';
-    break;
-  case 'recent':
-    sortClause = 'sort first_release_date desc';
-    break;
-  // Eliminar 'alphabetical' y 'upcoming'
-  case 'relevance':
-  default:
-    sortClause = 'sort aggregated_rating desc';
-    break;
-}
+    switch (sort) {
+      case 'popular':
+        conditions.push('total_rating_count > 10');
+        sortClause = 'sort total_rating_count desc';
+        break;
+      case 'highest_rated': // ← Cambio de nombre
+        conditions.push('rating > 70'); // ← Más permisivo
+        conditions.push('rating_count > 5'); // ← Más permisivo
+        sortClause = 'sort rating desc';
+        break;
+      case 'recent':
+        sortClause = 'sort first_release_date desc';
+        break;
+      // Eliminar 'alphabetical' y 'upcoming'
+      case 'relevance':
+      default:
+        sortClause = 'sort aggregated_rating desc';
+        break;
+    }
 
     const whereClause = conditions.join(' & ');
 
     const response = await axios.post(
-  'https://api.igdb.com/v4/games',
-  `
+      'https://api.igdb.com/v4/games',
+      `
     fields name, cover.url, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url;
     where ${whereClause};
     ${sortClause};
     limit ${limit};
     offset ${offset};
   `,
-  {
-    headers: {
-      'Client-ID': process.env.IGDB_CLIENT_ID,
-      'Authorization': `Bearer ${token}`,
-    },
-  }
-);
+      {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
 
     return response.data;
 
