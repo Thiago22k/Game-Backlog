@@ -23,9 +23,9 @@ nodemailer.createTestAccount((err, account) => {
 });
 
 // Generar JWT
-const generateToken = (userId) => {
+const generateToken = (userId, username) => {
   return jwt.sign(
-    { userId },
+    { userId, username },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
   );
@@ -89,7 +89,7 @@ const register = async (req, res) => {
     const newUser = await User.create(username, email, hashedPassword);
 
     // Generar token
-    const token = generateToken(newUser.id);
+    const token = generateToken(newUser.id, newUser.username);
 
     // Responder
     res.status(201).json({
@@ -145,7 +145,7 @@ const login = async (req, res) => {
     }
 
     // Generar token
-    const token = generateToken(user.id);
+    const token = generateToken(user.id, user.username);
 
     // Responder (sin enviar el password)
     res.json({

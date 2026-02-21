@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const gamesController = require('../controllers/games.controller');
-const authenticateToken = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 
 // Rutas públicas (búsqueda de juegos en IGDB)
 router.get('/search', gamesController.searchGames);

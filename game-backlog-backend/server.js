@@ -39,11 +39,13 @@ app.get('/api/health', (req, res) => {
 const authRoutes = require('./src/routes/auth.routes');
 const gamesRoutes = require('./src/routes/games.routes');
 const settingsRoutes = require('./src/routes/settings.routes');
+const collectionsRoutes = require('./src/routes/collections.routes');
 
 // Usar rutas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit más estricto para auth
 app.use('/api/games', gamesRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/collections', collectionsRoutes);
 
 // Debug: Ver rutas registradas
 console.log('📋 Rutas registradas:');

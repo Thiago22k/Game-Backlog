@@ -6,7 +6,7 @@ import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
 import RatingBadge from '../common/RatingBadge';
 
-const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange }) => {
+const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true }) => {
   const navigate = useNavigate();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
 
@@ -98,19 +98,20 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
         {/* Header con Status y Rating */}
-        <div className="h-12 flex items-center justify-between px-4">
+        <div className={`h-12 flex items-center px-4 ${showStatus ? 'justify-between' : 'justify-end'}`}>
           {/* Status Button (izquierda) */}
-          <button
-            type="button"
-            onClick={handleStatusClick}
-            className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''
-              }`}
-          >
-            <StatusIcon size={16} className="text-white" />
-          </button>
+          {showStatus && (
+            <button
+              type="button"
+              onClick={handleStatusClick}
+              className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''}`}
+            >
+              <StatusIcon size={16} className="text-white" />
+            </button>
+          )}
 
           {/* Star Rating (centro) - Solo si tiene estado */}
-          {currentStatus && (
+          {showStatus && currentStatus && (
             <div
               onClick={(e) => e.stopPropagation()}
             >

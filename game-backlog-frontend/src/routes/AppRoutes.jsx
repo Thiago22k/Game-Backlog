@@ -10,6 +10,8 @@ import ProfileLayout from '../pages/profile/ProfileLayout';
 import ProfileGames from '../pages/profile/ProfileGames';
 import ProfileStats from '../pages/profile/ProfileStats';
 import ProfileCollections from '../pages/profile/ProfileCollections';
+import CollectionForm from '../components/collections/CollectionForm';
+import CollectionDetails from '../components/collections/CollectionDetails';
 import Settings from '../pages/Settings';
 import Explore from '../pages/Explore';
 import GameDetails from '../pages/GameDetails';
@@ -90,6 +92,9 @@ const AppRoutes = () => {
         {/* Game details público */}
         <Route path="/game/:slug" element={<GameDetails />} />
 
+        {/* Collection details público (la vista decide si permite o no basado en privacidad) */}
+        <Route path="/collections/:id" element={<CollectionDetails />} />
+
         {/* Rutas protegidas */}
         <Route path="/profile" element={<ProfileRedirect />} />
 
@@ -111,6 +116,24 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <Settings />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/collections/new"
+          element={
+            <PrivateRoute>
+              <CollectionForm />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/collections/:id/edit"
+          element={
+            <PrivateRoute>
+              <CollectionForm />
             </PrivateRoute>
           }
         />

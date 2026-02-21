@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const settingsController = require('../controllers/settings.controller');
-const authenticateToken = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 
 // Todas las rutas requieren autenticación
 router.put('/change-password', authenticateToken, settingsController.changePassword);

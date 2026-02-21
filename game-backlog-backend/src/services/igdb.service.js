@@ -36,7 +36,7 @@ const searchGames = async (query, limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, summary, first_release_date, rating, platforms.name, genres.name;
+        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name;
         search "${query}";
         limit ${limit};
       `,
@@ -86,6 +86,7 @@ const getGameById = async (slugOrId) => {
           similar_games.name,
           similar_games.slug,
           similar_games.cover.url,
+          similar_games.cover.image_id,
           similar_games.rating,
           involved_companies.company.name,
           involved_companies.developer,
@@ -120,7 +121,7 @@ const getPopularGames = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, rating, first_release_date, total_rating_count;
+        fields name, slug, cover.url, cover.image_id, rating, first_release_date, total_rating_count;
         where 
           first_release_date > ${threeYearsAgo} 
           & first_release_date < ${now}
@@ -159,7 +160,7 @@ const getRecentGames = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, rating, first_release_date;
+        fields name, slug, cover.url, cover.image_id, rating, first_release_date;
         where 
           first_release_date > ${threeMonthsAgo} 
           & first_release_date <= ${now}
@@ -195,7 +196,7 @@ const getMostAnticipated = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes;
+        fields name, slug, cover.url, cover.image_id, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes;
         where 
           first_release_date > ${now}
           & first_release_date < ${oneYearFromNow}
@@ -298,7 +299,7 @@ const exploreGames = async (filters = {}) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-    fields name, slug, cover.url, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url;
+    fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url;
     where ${whereClause};
     ${sortClause};
     limit ${limit};
@@ -387,7 +388,7 @@ const getGamesByIds = async (gameIds) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, rating, first_release_date, genres.name, 
+        fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, 
                platforms.name, aggregated_rating, artworks.url, screenshots.url;
         where id = (${gameIds.join(',')});
         limit 500;

@@ -43,3 +43,51 @@ COMMENT ON TABLE user_games IS 'Relación entre usuarios y juegos de IGDB con es
 COMMENT ON COLUMN user_games.igdb_game_id IS 'ID del juego en la API de IGDB';
 COMMENT ON COLUMN user_games.status IS 'Estado del juego: completed, playing, wishlist, dropped';
 COMMENT ON COLUMN user_games.rating IS 'Calificación personal del 1 al 5';
+
+-- Tabla de colecciones
+CREATE TABLE collections (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_public BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla para relacionar juegos con colecciones
+CREATE TABLE collection_games (
+    id SERIAL PRIMARY KEY,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    igdb_game_id INTEGER NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_collection_game UNIQUE(collection_id, igdb_game_id)
+);
+
+-- Tabla para likes de colecciones (Future usage)
+CREATE TABLE collection_likes (
+    id SERIAL PRIMARY KEY,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_collection_like UNIQUE(collection_id, user_id)
+);
+
+-- Tabla para comentarios en colecciones (Future usage)
+CREATE TABLE collection_comments (
+    id SERIAL PRIMARY KEY,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices adicionales
+CREATE INDEX idx_collections_user_id ON collections(user_id);
+CREATE INDEX idx_collection_games_collection_id ON collection_games(collection_id);
+
+COMMENT ON TABLE collections IS 'Colecciones (listas) de juegos creadas por usuarios';
+COMMENT ON TABLE collection_games IS 'Juegos que pertenecen a una colección';
+COMMENT ON TABLE collection_likes IS 'Likes otorgados a colecciones';
+COMMENT ON TABLE collection_comments IS 'Comentarios en colecciones';
