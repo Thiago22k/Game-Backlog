@@ -1,16 +1,28 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast'; // ← Importar
+import { Toaster } from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
 import ForgotPassword from '../pages/auth/ForgotPassword';
 import ResetPassword from '../pages/auth/ResetPassword';
 import Landing from '../pages/Landing';
-import Profile from '../pages/Profile';
+import ProfileLayout from '../pages/profile/ProfileLayout';
+import ProfileGames from '../pages/profile/ProfileGames';
+import ProfileStats from '../pages/profile/ProfileStats';
+import ProfileCollections from '../pages/profile/ProfileCollections';
 import Settings from '../pages/Settings';
 import Explore from '../pages/Explore';
 import GameDetails from '../pages/GameDetails';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
+
+const ProfileRedirect = () => {
+  const { user, isAuthenticated } = useAuth();
+  if (isAuthenticated && user?.username) {
+    return <Navigate to={`/profile/${user.username}/games`} replace />;
+  }
+  return <Navigate to="/login" replace />;
+};
 
 const AppRoutes = () => {
   return (
@@ -79,14 +91,20 @@ const AppRoutes = () => {
         <Route path="/game/:slug" element={<GameDetails />} />
 
         {/* Rutas protegidas */}
+        <Route path="/profile" element={<ProfileRedirect />} />
+
         <Route
-          path="/profile"
+          path="/profile/:username"
           element={
             <PrivateRoute>
-              <Profile />
+              <ProfileLayout />
             </PrivateRoute>
           }
-        />
+        >
+          <Route index element={<ProfileStats />} />
+          <Route path="games" element={<ProfileGames />} />
+          <Route path="collections" element={<ProfileCollections />} />
+        </Route>
 
         <Route
           path="/settings"

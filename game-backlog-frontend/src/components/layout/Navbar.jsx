@@ -53,7 +53,7 @@ const Navbar = () => {
               {/* Mobile: Logo + Hamburger */}
               <div className="flex items-center lg:hidden w-full justify-between">
                 <Link to="/" className="flex items-center">
-                  <Logo className="h-6 w-auto text-white" />
+                  <Logo className="h-5 w-auto text-white" />
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -87,7 +87,7 @@ const Navbar = () => {
 
                 {/* Center: Logo */}
                 <Link to="/" className="flex items-center absolute left-1/2 transform -translate-x-1/2">
-                  <Logo className="h-6 w-auto text-white" />
+                  <Logo className="h-5 w-auto text-white" />
                 </Link>
 
                 {/* Right: Search + Auth */}
@@ -118,7 +118,7 @@ const Navbar = () => {
                       {profileDropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg py-2 z-[200]">
                           <Link
-                            to="/profile"
+                            to={user ? `/profile/${user.username}/games` : '/profile'}
                             className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
                             onClick={() => setProfileDropdownOpen(false)}
                           >
@@ -188,7 +188,7 @@ const Navbar = () => {
                 {isAuthenticated ? (
                   <>
                     <Link
-                      to="/profile"
+                      to={user ? `/profile/${user.username}/games` : '/profile'}
                       className="text-white text-sm font-medium"
                       onClick={() => setMobileMenuOpen(false)}
                     >
