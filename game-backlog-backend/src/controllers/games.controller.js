@@ -115,7 +115,7 @@ const getUserGames = async (req, res) => {
     }
 
     const igdbGameIds = [...new Set(userGames.map(g => g.igdb_game_id))];
-    
+
     const gamesDetails = await igdbService.getGamesByIds(igdbGameIds);
 
     const gamesWithDetails = userGames.map(userGame => ({

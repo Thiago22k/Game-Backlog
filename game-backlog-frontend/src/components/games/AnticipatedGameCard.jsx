@@ -42,8 +42,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
     e.stopPropagation();
 
     if (!interactive) {
-      // Si no está autenticado, redirigir a login
-      localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
+      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       navigate('/login');
       return;
     }
@@ -74,7 +73,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
 
   return (
     <div
-      onClick={() => navigate(`/game/${game.id}`)}
+      onClick={() => navigate(`/game/${game.slug || game.id}`)}
       className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group relative"
     >
       {/* Header con Countdown */}

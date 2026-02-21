@@ -8,7 +8,7 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   const isUserGame = !!game.status;
 
   // ID del juego (varía según contexto)
-  const gameId = game.igdb_game_id || game.id;
+  const gameId = game.slug || game.igdb_game_id || game.id;
 
   // Extraer info del juego
   const name = game.name || game.game_details?.name || 'Sin nombre';
@@ -67,9 +67,9 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
         {isUserGame && status && (
           <div className="mb-2">
             <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${status === 'completed' ? 'bg-green-100 text-green-800' :
-                status === 'playing' ? 'bg-blue-100 text-blue-800' :
-                  status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
+              status === 'playing' ? 'bg-blue-100 text-blue-800' :
+                status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-gray-100 text-gray-800'
               }`}>
               {statusLabels[status]}
             </span>

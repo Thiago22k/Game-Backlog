@@ -61,8 +61,8 @@ const SearchModal = ({ isOpen, onClose }) => {
     return () => clearTimeout(timeoutId);
   }, [query]);
 
-  const handleGameClick = (gameId) => {
-    navigate(`/game/${gameId}`);
+  const handleGameClick = (game) => {
+    navigate(`/game/${game.slug || game.id}`);
     onClose();
     setQuery('');
     setResults([]);
@@ -71,11 +71,11 @@ const SearchModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-start justify-center pt-32 px-4"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-primary-navy rounded-2xl shadow-2xl w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
@@ -117,7 +117,7 @@ const SearchModal = ({ isOpen, onClose }) => {
               {results.map((game) => (
                 <button
                   key={game.id}
-                  onClick={() => handleGameClick(game.id)}
+                  onClick={() => handleGameClick(game)}
                   className="w-full flex items-center px-6 py-3 hover:bg-white hover:bg-opacity-5 transition-all text-left"
                 >
                   <img

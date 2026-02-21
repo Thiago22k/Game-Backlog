@@ -7,6 +7,8 @@ import { useGames } from '../hooks/useGames';
 import Navbar from '../components/layout/Navbar';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
+import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
+import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -159,10 +161,10 @@ const Profile = () => {
     }
   }, [deleteGame, addGame]);
 
-  // Mapear juegos para las cards persistente con useCallback
   const mapGameForCard = useCallback((game) => {
     return {
       id: game.igdb_game_id,
+      slug: game.game_details?.slug,
       name: game.game_details?.name || 'Unknown',
       cover: game.game_details?.cover,
       artworks: game.game_details?.artworks,
@@ -232,9 +234,31 @@ const Profile = () => {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
-          </div>
+          <>
+            {/* Skeletons para Wishlist */}
+            <section className="mb-12 pointer-events-none">
+              <div className="flex items-center mb-6">
+                <div className="h-8 w-64 bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <AnticipatedGameCardSkeleton key={`wish-skel-${i}`} />
+                ))}
+              </div>
+            </section>
+
+            {/* Skeletons para My Games */}
+            <section className="pointer-events-none">
+              <div className="flex items-center mb-6">
+                <div className="h-8 w-48 bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <InteractiveGameCardSkeleton key={`my-skel-${i}`} />
+                ))}
+              </div>
+            </section>
+          </>
         ) : games.length === 0 ? (
           <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
             <p className="text-gray-400 mb-4">
@@ -262,7 +286,7 @@ const Profile = () => {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
                   {filteredWishlist.map((game) => (
                     <AnticipatedGameCard
                       key={game.id}
@@ -357,7 +381,7 @@ const Profile = () => {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
                     {processedMyGames.map((game) => (
                       <InteractiveGameCard
                         key={game.id}

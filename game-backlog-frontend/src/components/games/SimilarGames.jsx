@@ -21,7 +21,7 @@ const SimilarGames = ({ game }) => {
         {game.similar_games.slice(0, 4).map((similarGame) => (
           <div
             key={similarGame.id}
-            onClick={() => navigate(`/game/${similarGame.id}`)}
+            onClick={() => navigate(`/game/${similarGame.slug || similarGame.id}`)}
             className="cursor-pointer group"
           >
             <img

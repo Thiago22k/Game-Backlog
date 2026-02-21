@@ -7,6 +7,8 @@ import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
+import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
+import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
 import { useGames } from '../hooks/useGames';
 import toast from 'react-hot-toast';
 
@@ -207,9 +209,46 @@ const Landing = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {loading ? (
-          <div className="py-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow" />
-          </div>
+          <>
+            {/* Popular Now Skeletons */}
+            <div className="py-12">
+              <div className="flex justify-between items-center mb-6">
+                <div className="h-8 w-48 bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-6 w-24 bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <InteractiveGameCardSkeleton key={`pop-skel-${i}`} />
+                ))}
+              </div>
+            </div>
+
+            {/* Most Anticipated Skeletons */}
+            <section className="mb-16">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-8 w-56 bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-6 w-24 bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <AnticipatedGameCardSkeleton key={`ant-skel-${i}`} />
+                ))}
+              </div>
+            </section>
+
+            {/* Best of Last Year Skeletons */}
+            <section className="mb-16">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-8 w-56 bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-6 w-24 bg-gray-700 rounded animate-pulse"></div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <InteractiveGameCardSkeleton key={`best-skel-${i}`} />
+                ))}
+              </div>
+            </section>
+          </>
         ) : (
           <>
             {/* Popular Now */}
@@ -226,7 +265,7 @@ const Landing = () => {
                   View All →
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
                 {popularGames.map((game) => (
                   <InteractiveGameCard
                     key={game.id}
@@ -253,7 +292,7 @@ const Landing = () => {
                   View All →
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
                 {anticipatedGames.map((game) => (
                   <AnticipatedGameCard
                     key={game.id}
@@ -279,7 +318,7 @@ const Landing = () => {
                   View All →
                 </Link>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
                 {bestOfYearGames.map((game) => (
                   <InteractiveGameCard
                     key={game.id}

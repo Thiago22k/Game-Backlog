@@ -76,7 +76,7 @@ const AppRoutes = () => {
         <Route path="/explore" element={<Explore />} />
 
         {/* Game details público */}
-        <Route path="/game/:id" element={<GameDetails />} />
+        <Route path="/game/:slug" element={<GameDetails />} />
 
         {/* Rutas protegidas */}
         <Route

@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Menu, X, User, LogOut } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import Logo from '../../assets/logo.svg?react';
+import Logo from '../../assets/stackd.svg?react';
 import SearchModal from './SearchModal';
 
 const Navbar = () => {
@@ -52,9 +52,8 @@ const Navbar = () => {
 
               {/* Mobile: Logo + Hamburger */}
               <div className="flex items-center lg:hidden w-full justify-between">
-                <Link to="/" className="flex items-center space-x-2">
-                  <Logo className="w-7 h-7 text-white" />
-                  <span className="text-white font-bold text-lg">Stackd</span>
+                <Link to="/" className="flex items-center">
+                  <Logo className="h-6 w-auto text-white" />
                 </Link>
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -87,9 +86,8 @@ const Navbar = () => {
                 </div>
 
                 {/* Center: Logo */}
-                <Link to="/" className="flex items-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
-                  <Logo className="w-6 h-6 text-white" />
-                  <span className="text-white font-bold text-xl">Stackd</span>
+                <Link to="/" className="flex items-center absolute left-1/2 transform -translate-x-1/2">
+                  <Logo className="h-6 w-auto text-white" />
                 </Link>
 
                 {/* Right: Search + Auth */}

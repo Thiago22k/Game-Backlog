@@ -9,6 +9,8 @@ import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
+import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
+import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
 
 const TOP_PLATFORMS = [6, 167, 48, 169, 49, 130];
 
@@ -488,8 +490,14 @@ const Explore = () => {
 
         {/* Grid de juegos */}
         {loading && games.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
+            {Array.from({ length: 12 }).map((_, i) =>
+              isAnticipatedMode ? (
+                <AnticipatedGameCardSkeleton key={`skel-${i}`} />
+              ) : (
+                <InteractiveGameCardSkeleton key={`skel-${i}`} />
+              )
+            )}
           </div>
         ) : games.length === 0 ? (
           <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
@@ -497,7 +505,7 @@ const Explore = () => {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
               {games.map((game) =>
                 isAnticipatedMode ? (
                   <AnticipatedGameCard

@@ -27,8 +27,8 @@ app.use('/api', generalLimiter);
 
 // Ruta de prueba
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV

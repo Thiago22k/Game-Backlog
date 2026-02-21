@@ -58,7 +58,7 @@ const InlineStarRating = ({ rating, onRate, interactive }) => {
 };
 // ─── Main page ────────────────────────────────────────────────────────────────
 const GameDetails = () => {
-  const { id } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addGame, updateGame, deleteGame, getUserGames } = useGames();
@@ -77,7 +77,7 @@ const GameDetails = () => {
       setLoading(true);
       setError(null);
       try {
-        const gameRes = await axios.get(`${ENDPOINTS.GAMES.SEARCH.replace('/search', '')}/igdb/${id}`);
+        const gameRes = await axios.get(`${ENDPOINTS.GAMES.SEARCH.replace('/search', '')}/igdb/${slug}`);
         if (!isMounted) return;
         const gameData = gameRes.data.game;
         setGame(gameData);
@@ -95,13 +95,13 @@ const GameDetails = () => {
       isMounted = false;
       setBanner(null);
     };
-  }, [id]);
+  }, [slug]);
 
   // ── Fetch User Game ──────────────────────────────────────────────────────
   useEffect(() => {
     let isMounted = true;
     const fetchUserGame = async () => {
-      if (!isAuthenticated) {
+      if (!isAuthenticated || !game?.id) {
         setUserGame(null);
         return;
       }
@@ -109,7 +109,7 @@ const GameDetails = () => {
         const userRes = await getUserGames();
         if (!isMounted) return;
         if (userRes.success) {
-          const found = userRes.data.find((g) => g.igdb_game_id === parseInt(id));
+          const found = userRes.data.find((g) => g.igdb_game_id === game.id);
           setUserGame(found || null);
         }
       } catch (err) {
@@ -118,16 +118,16 @@ const GameDetails = () => {
     };
     fetchUserGame();
     return () => { isMounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, isAuthenticated]);
+  }, [game?.id, isAuthenticated]);
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleStatusSelect = useCallback(async (statusId) => {
     if (!isAuthenticated) { navigate('/login'); return; }
+    if (!game?.id) return;
     setSaving(true);
     try {
       if (statusId === null) {
         // Remove from list
-        const result = await deleteGame(parseInt(id));
+        const result = await deleteGame(game.id);
         if (result.success) {
           toast.success('Removed from your list');
           setUserGame(null);
@@ -136,7 +136,7 @@ const GameDetails = () => {
         }
       } else if (userGame) {
         // Update existing
-        const result = await updateGame(parseInt(id), statusId, userGame.rating);
+        const result = await updateGame(game.id, statusId, userGame.rating);
         if (result.success) {
           toast.success(`Status updated to "${statusId}"`);
           setUserGame((prev) => ({ ...prev, status: statusId }));
@@ -145,12 +145,12 @@ const GameDetails = () => {
         }
       } else {
         // Add new
-        const result = await addGame(parseInt(id), statusId);
+        const result = await addGame(game.id, statusId);
         if (result.success) {
           toast.success('Added to your list!');
           const refreshed = await getUserGames();
           if (refreshed.success) {
-            const found = refreshed.data.find((g) => g.igdb_game_id === parseInt(id));
+            const found = refreshed.data.find((g) => g.igdb_game_id === game.id);
             setUserGame(found || null);
           }
         } else {
@@ -160,12 +160,12 @@ const GameDetails = () => {
     } finally {
       setSaving(false);
     }
-  }, [isAuthenticated, userGame, id, addGame, updateGame, deleteGame, navigate]);
+  }, [isAuthenticated, userGame, game?.id, addGame, updateGame, deleteGame, navigate]);
   const handleRatingChange = useCallback(async (rating) => {
-    if (!isAuthenticated || !userGame) return;
+    if (!isAuthenticated || !userGame || !game?.id) return;
     setSaving(true);
     try {
-      const result = await updateGame(parseInt(id), userGame.status, rating);
+      const result = await updateGame(game.id, userGame.status, rating);
       if (result.success) {
         toast.success(`Rating saved: ${rating} ⭐`);
         setUserGame((prev) => ({ ...prev, rating }));
@@ -175,7 +175,7 @@ const GameDetails = () => {
     } finally {
       setSaving(false);
     }
-  }, [isAuthenticated, userGame, id, updateGame]);
+  }, [isAuthenticated, userGame, game?.id, updateGame]);
   // ── Derived values (Must be before early returns to follow Rules of Hooks) ────
   const cover = useMemo(() => game ? getGameCover(game) : null, [game]);
   const igdbScore = useMemo(() => game?.rating ? Math.round(game.rating) : null, [game]);
@@ -265,15 +265,22 @@ const GameDetails = () => {
               {/* Genres pills + Upcoming badge */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {isUnreleased && (
-                  <span className="px-3 py-1 bg-primary-yellow text-primary-navy-dark text-xs font-bold rounded-full flex items-center gap-1">
+                  <button
+                    onClick={() => navigate('/explore?anticipated=true')}
+                    className="px-3 py-1 bg-primary-yellow text-primary-navy-dark text-xs font-bold rounded-full flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer"
+                  >
                     <Clock size={11} />
                     Upcoming
-                  </span>
+                  </button>
                 )}
                 {game.genres?.map((g) => (
-                  <span key={g.id} className="px-3 py-1 bg-primary-yellow/20 text-primary-yellow text-xs font-semibold rounded-full border border-primary-yellow/30">
+                  <button
+                    key={g.id}
+                    onClick={() => navigate(`/explore?genres=${g.id}`)}
+                    className="px-3 py-1 bg-primary-yellow/20 text-primary-yellow text-xs font-semibold rounded-full border border-primary-yellow/30 hover:bg-primary-yellow/30 transition-colors cursor-pointer"
+                  >
                     {g.name}
-                  </span>
+                  </button>
                 ))}
               </div>
               {/* IGDB Score */}
@@ -349,7 +356,7 @@ const GameDetails = () => {
                   {similarGames.map((sg) => (
                     <div
                       key={sg.id}
-                      onClick={() => navigate(`/game/${sg.id}`)}
+                      onClick={() => navigate(`/game/${sg.slug || sg.id}`)}
                       className="cursor-pointer group"
                     >
                       <img

@@ -45,7 +45,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
     e.stopPropagation();
 
     if (!interactive) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.id}`);
+      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       navigate('/login');
       return;
     }
@@ -94,7 +94,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
     <div className="relative">
       {/* Card Container - Mismo estilo que AnticipatedGameCard */}
       <div
-        onClick={() => navigate(`/game/${game.id}`)}
+        onClick={() => navigate(`/game/${game.slug || game.id}`)}
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
         {/* Header con Status y Rating */}
