@@ -118,7 +118,7 @@ const Navbar = () => {
                       {profileDropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg py-2 z-[200]">
                           <Link
-                            to={user ? `/profile/${user.username}/games` : '/profile'}
+                            to={user ? `/profile/${user.username}` : '/profile'}
                             className="block px-4 py-2 text-sm text-white hover:bg-primary-navy hover:text-primary-yellow transition-colors"
                             onClick={() => setProfileDropdownOpen(false)}
                           >
@@ -188,7 +188,7 @@ const Navbar = () => {
                 {isAuthenticated ? (
                   <>
                     <Link
-                      to={user ? `/profile/${user.username}/games` : '/profile'}
+                      to={user ? `/profile/${user.username}` : '/profile'}
                       className="text-white text-sm font-medium"
                       onClick={() => setMobileMenuOpen(false)}
                     >

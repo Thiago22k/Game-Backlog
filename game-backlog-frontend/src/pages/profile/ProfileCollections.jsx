@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { Plus, Library } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCollections } from '../../hooks/useCollections';
@@ -9,9 +9,8 @@ const ProfileCollections = () => {
     const { username } = useParams();
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { isOwner } = useOutletContext();
     const { collections, loading, getUserCollections } = useCollections();
-
-    const isOwner = user?.username === username;
 
     useEffect(() => {
         if (username) {

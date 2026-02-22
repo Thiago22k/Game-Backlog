@@ -4,7 +4,7 @@ import { Clock, Plus, Check } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
 
-const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) => {
+const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, showWishlistButton = true }) => {
   const navigate = useNavigate();
   const [isInWishlist, setIsInWishlist] = useState(game.status === 'wishlist');
 
@@ -121,26 +121,28 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle }) =>
         </p>
 
         {/* Botón Wishlist */}
-        <button
-          type="button"
-          onClick={handleWishlistClick}
-          className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${isInWishlist
-            ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
-            : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
-            }`}
-        >
-          {isInWishlist ? (
-            <>
-              <Check size={16} />
-              In Wishlist
-            </>
-          ) : (
-            <>
-              <Plus size={16} />
-              Add to Wishlist
-            </>
-          )}
-        </button>
+        {showWishlistButton && (
+          <button
+            type="button"
+            onClick={handleWishlistClick}
+            className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${isInWishlist
+              ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
+              : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
+              }`}
+          >
+            {isInWishlist ? (
+              <>
+                <Check size={16} />
+                In Wishlist
+              </>
+            ) : (
+              <>
+                <Plus size={16} />
+                Add to Wishlist
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

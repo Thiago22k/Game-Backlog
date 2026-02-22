@@ -1,4 +1,4 @@
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useParams } from 'react-router-dom';
 import { Gamepad2, Trophy, Star, Clock, XCircle } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
@@ -14,7 +14,8 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
 );
 
 const ProfileStats = () => {
-    const { games, loading } = useOutletContext();
+    const { games, loading, isOwner } = useOutletContext();
+    const { username } = useParams();
 
     if (loading) {
         return (
@@ -35,7 +36,9 @@ const ProfileStats = () => {
 
     return (
         <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-white mb-6">Your Library Stats</h3>
+            <h3 className="text-2xl font-bold text-white mb-6">
+                {isOwner ? 'Your Library Stats' : `${username}'s Library Stats`}
+            </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard

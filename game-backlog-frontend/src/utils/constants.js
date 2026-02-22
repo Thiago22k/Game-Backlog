@@ -22,6 +22,7 @@ export const ENDPOINTS = {
     CHANGE_PASSWORD: '/settings/change-password',
     UPDATE_EMAIL: '/settings/update-email',
     UPDATE_USERNAME: '/settings/update-username',
+    UPDATE_PROFILE_VISIBILITY: '/settings/update-profile-visibility',
     DELETE_ACCOUNT: '/settings/delete-account',
   },
 };

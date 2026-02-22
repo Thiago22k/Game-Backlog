@@ -113,6 +113,62 @@ const Collection = {
         return result.rows;
     },
 
+    // Añadir un juego específico a una colección existente
+    async addGameToCollection(collectionId, userId, igdbGameId) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Verificar que la colección existe y pertenece al usuario
+            const authCheck = await client.query('SELECT id FROM collections WHERE id = $1 AND user_id = $2', [collectionId, userId]);
+            if (authCheck.rows.length === 0) {
+                throw new Error("Colección no encontrada o sin permisos");
+            }
+
+            // 2. Verificar que el juego no está ya en la colección
+            const duplicateCheck = await client.query('SELECT id FROM collection_games WHERE collection_id = $1 AND igdb_game_id = $2', [collectionId, igdbGameId]);
+            if (duplicateCheck.rows.length > 0) {
+                // Ya existe, podemos retornar null o lanzar error. En este caso retornamos objeto para identificar duplicado.
+                return { isDuplicate: true };
+            }
+
+            // 3. Obtener el max sort_order
+            const maxOrderResult = await client.query('SELECT MAX(sort_order) as max_order FROM collection_games WHERE collection_id = $1', [collectionId]);
+            const nextOrder = (maxOrderResult.rows[0].max_order !== null) ? parseInt(maxOrderResult.rows[0].max_order) + 1 : 0;
+
+            // 4. Insertar
+            const insertQuery = `
+          INSERT INTO collection_games (collection_id, igdb_game_id, sort_order)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `;
+            const result = await client.query(insertQuery, [collectionId, igdbGameId, nextOrder]);
+
+            // 5. Actualizar updated_at de la colección
+            await client.query('UPDATE collections SET updated_at = CURRENT_TIMESTAMP WHERE id = $1', [collectionId]);
+
+            await client.query('COMMIT');
+            return { success: true, data: result.rows[0] };
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
+    },
+
+    // Obtener IDs de colecciones del usuario que ya contienen un juego específico
+    async getCollectionsContainingGame(userId, igdbGameId) {
+        const query = `
+            SELECT c.id 
+            FROM collections c
+            JOIN collection_games cg ON c.id = cg.collection_id
+            WHERE c.user_id = $1 AND cg.igdb_game_id = $2
+        `;
+        const result = await pool.query(query, [userId, igdbGameId]);
+        return result.rows.map(row => row.id);
+    },
+
     // --- LIKES ---
 
     async toggleLike(collectionId, userId) {

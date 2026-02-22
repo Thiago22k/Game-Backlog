@@ -2,13 +2,7 @@ const Collection = require('../models/collection.model');
 const igdbService = require('../services/igdb.service');
 const User = require('../models/user.model'); // Asumiendo que existe o usando una query simple. Si no existe User.findByUsername, usaremos pool directamente o lo buscaremos. En este caso enviaremos username por params.
 
-// Usaremos un workaround para User.findByUsername si no existe.
-const pool = require('../config/database');
-
-const getUserIdByUsername = async (username) => {
-    const result = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
-    return result.rows[0]?.id;
-};
+// En lugar del workaround, usaremos User.findByUsername
 
 // Crear una colección
 const createCollection = async (req, res) => {
@@ -44,10 +38,28 @@ const getUserCollections = async (req, res) => {
         const requestingUserId = req.user?.userId; // Si está autenticado
         const { username } = req.params;
 
-        const targetUserId = await getUserIdByUsername(username);
+        let targetUserId;
+        let isProfilePublic = true;
+        let targetUsername = null;
 
-        if (!targetUserId) {
-            return res.status(404).json({ error: 'Usuario no encontrado' });
+        if (username) {
+            const user = await User.findByUsername(username);
+            if (!user) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            targetUserId = user.id;
+            isProfilePublic = user.is_profile_public;
+            targetUsername = user.username;
+
+            if (!isProfilePublic && targetUserId !== requestingUserId) {
+                return res.json({
+                    collections: [],
+                    is_profile_public: false,
+                    username: targetUsername
+                });
+            }
+        } else {
+            targetUserId = requestingUserId;
         }
 
         // Obtener colecciones básicas
@@ -72,7 +84,9 @@ const getUserCollections = async (req, res) => {
         }
 
         res.json({
-            collections
+            collections,
+            is_profile_public: isProfilePublic,
+            username: targetUsername || req.user?.username
         });
     } catch (error) {
         console.error('Error en getUserCollections:', error);
@@ -252,6 +266,51 @@ const deleteComment = async (req, res) => {
     }
 };
 
+// --- SINGLE GAME ADDITION ---
+
+const addGameToCollection = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { id } = req.params; // collection_id
+        const { igdb_game_id } = req.body;
+
+        if (!igdb_game_id) {
+            return res.status(400).json({ error: 'El ID del juego (igdb_game_id) es requerido' });
+        }
+
+        const result = await Collection.addGameToCollection(id, userId, igdb_game_id);
+
+        if (result.isDuplicate) {
+            return res.status(409).json({ error: 'El juego ya está en esta colección' });
+        }
+
+        res.status(201).json({
+            message: 'Juego añadido a la colección',
+            game: result.data
+        });
+    } catch (error) {
+        if (error.message.includes('No encontrada o sin permisos')) {
+            return res.status(403).json({ error: error.message });
+        }
+        console.error('Error en addGameToCollection:', error);
+        res.status(500).json({ error: 'Error al añadir el juego a la colección' });
+    }
+};
+
+const checkGameInCollections = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { igdb_game_id } = req.params;
+
+        const collectionIds = await Collection.getCollectionsContainingGame(userId, igdb_game_id);
+
+        res.json({ collectionIds });
+    } catch (error) {
+        console.error('Error en checkGameInCollections:', error);
+        res.status(500).json({ error: 'Error al verificar colecciones' });
+    }
+};
+
 module.exports = {
     createCollection,
     getUserCollections,
@@ -261,5 +320,7 @@ module.exports = {
     toggleLike,
     getComments,
     addComment,
-    deleteComment
+    deleteComment,
+    addGameToCollection,
+    checkGameInCollections
 };

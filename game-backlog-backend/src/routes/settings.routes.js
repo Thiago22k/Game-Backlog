@@ -7,6 +7,7 @@ const { authenticateToken } = require('../middlewares/auth');
 router.put('/change-password', authenticateToken, settingsController.changePassword);
 router.put('/update-email', authenticateToken, settingsController.updateEmail);
 router.put('/update-username', authenticateToken, settingsController.updateUsername);
+router.put('/update-profile-visibility', authenticateToken, settingsController.updateProfileVisibility);
 router.delete('/delete-account', authenticateToken, settingsController.deleteAccount);
 
 module.exports = router;

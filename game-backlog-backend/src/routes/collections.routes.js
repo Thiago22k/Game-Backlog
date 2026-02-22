@@ -16,6 +16,10 @@ router.post('/', collectionsController.createCollection);
 router.put('/:id', collectionsController.updateCollection);
 router.delete('/:id', collectionsController.deleteCollection);
 
+// --- SINGLE GAME ---
+router.post('/:id/games', collectionsController.addGameToCollection);
+router.get('/contains/:igdb_game_id', collectionsController.checkGameInCollections);
+
 // --- SOCIAL ---
 router.post('/:id/like', collectionsController.toggleLike);
 router.post('/:id/comments', collectionsController.addComment);

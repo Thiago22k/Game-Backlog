@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Play, ShoppingCart, Trash2, HelpCircle } from 'lucide-react';
+import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
 import RatingBadge from '../common/RatingBadge';
+import AddToCollectionModal from '../collections/AddToCollectionModal';
+import { useAuth } from '../../context/AuthContext';
 
-const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true }) => {
+const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true, showAddButton = true }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
   // Estados locales
   const [localStatus, setLocalStatus] = useState(game.status || null);
@@ -51,6 +55,19 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
     }
 
     setShowStatusMenu(true);
+  };
+
+  const handleAddToCollectionClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      navigate('/login');
+      return;
+    }
+
+    setIsCollectionModalOpen(true);
   };
 
   const handleStatusSelect = async (newStatus) => {
@@ -98,7 +115,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
         {/* Header con Status y Rating */}
-        <div className={`h-12 flex items-center px-4 ${showStatus ? 'justify-between' : 'justify-end'}`}>
+        <div className={`h-12 flex items-center px-4 ${(showStatus || currentStatus) ? 'justify-between' : 'justify-end'}`}>
           {/* Status Button (izquierda) */}
           {showStatus && (
             <button
@@ -110,10 +127,11 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             </button>
           )}
 
-          {/* Star Rating (centro) - Solo si tiene estado */}
-          {showStatus && currentStatus && (
+          {/* Star Rating (centro/izquierda) - Solo si tiene estado */}
+          {currentStatus && (
             <div
               onClick={(e) => e.stopPropagation()}
+              className={!showStatus ? 'opacity-0 group-hover:opacity-100 transition-opacity' : ''}
             >
               <StarRating
                 rating={currentRating}
@@ -124,7 +142,9 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
           )}
 
           {/* IGDB Rating (derecha) */}
-          <RatingBadge rating={game.rating} size="sm" />
+          <div className="ml-auto">
+            <RatingBadge rating={game.rating} size="sm" />
+          </div>
         </div>
 
         {/* Artwork Banner */}
@@ -149,13 +169,27 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         </div>
 
         {/* Info del juego */}
-        <div className="px-4 pb-4 text-center">
-          <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem]">
+        <div className="px-4 pb-5 text-center relative">
+          <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem] px-6" title={game.name}>
             {game.name}
           </h3>
           <p className="text-gray-400 text-sm">
             {genre} • {year}
           </p>
+
+          {/* Add to Collection Button (Floating Bottom Right) */}
+          {showAddButton && (
+            <div className="absolute bottom-2 right-2 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={handleAddToCollectionClick}
+                className={`p-2 rounded-full text-gray-500 md:opacity-0 group-hover:opacity-100 hover:text-primary-yellow hover:bg-gray-800 transition-all ${interactive ? 'hover:scale-110' : ''}`}
+                title="Add to Collection"
+              >
+                <FolderPlus size={20} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -165,6 +199,15 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
           currentStatus={currentStatus}
           onSelect={handleStatusSelect}
           onClose={() => setShowStatusMenu(false)}
+        />
+      )}
+
+      {/* Add to Collection Modal */}
+      {isCollectionModalOpen && (
+        <AddToCollectionModal
+          isOpen={isCollectionModalOpen}
+          onClose={() => setIsCollectionModalOpen(false)}
+          game={game}
         />
       )}
     </div>

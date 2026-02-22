@@ -22,7 +22,7 @@ const STATUS_LABELS = {
 
 const Landing = () => {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addGame, updateGame, deleteGame, userGames, getUserGames } = useGames();
 
   const [popularGames, setPopularGames] = useState([]);
@@ -196,7 +196,7 @@ const Landing = () => {
             </div>
           ) : (
             <Link
-              to="/profile"
+              to={`/profile/${user?.username}`}
               className="inline-block bg-gradient-get-started hover:opacity-90 text-primary-navy px-8 py-4 rounded-lg text-lg font-bold transition"
             >
               Go to My Profile

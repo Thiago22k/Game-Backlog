@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
 import { useAuth } from '../../context/AuthContext';
@@ -12,15 +12,22 @@ const CollectionDetails = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
     const { getCollectionDetails, toggleLike, getComments, addComment, deleteComment, loading } = useCollections();
+    const gridRef = useRef(null);
 
     const [collection, setCollection] = useState(null);
     const [likesCount, setLikesCount] = useState(0);
     const [isLiked, setIsLiked] = useState(false);
+    const [isPrivateError, setIsPrivateError] = useState(false);
 
     // Comentarios
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+    // Paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 8; // Usaremos 8 para colecciones (2 filas de 4) o 12 (3 filas de 4). El usuario dijo "como my games", que usa 12.
+
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -37,13 +44,40 @@ const CollectionDetails = () => {
                     setComments(commentsRes.data || []);
                 }
             } else {
-                toast.error('Could not load collection details');
-                navigate(-1);
+                if (result.error === 'No tienes permiso para ver esta colección' || result.error === 'Colección no encontrada o no tienes permisos' || result.error?.includes('permiso')) {
+                    setIsPrivateError(true);
+                } else {
+                    toast.error('Could not load collection details');
+                    navigate(-1);
+                }
             }
         };
 
         fetchDetails();
     }, [id, getCollectionDetails, getComments, navigate]);
+
+    const totalPages = useMemo(() => {
+        if (!collection?.games) return 0;
+        return Math.ceil(collection.games.length / itemsPerPage);
+    }, [collection]);
+
+    const paginatedGames = useMemo(() => {
+        if (!collection?.games) return [];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return collection.games.slice(startIndex, startIndex + itemsPerPage);
+    }, [collection, currentPage]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    useEffect(() => {
+        if (gridRef.current && currentPage > 1) {
+            gridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [currentPage]);
 
     const handleToggleLike = async () => {
         if (!user) {
@@ -113,6 +147,34 @@ const CollectionDetails = () => {
         );
     }
 
+    if (isPrivateError) {
+        return (
+            <div className="min-h-screen bg-primary-navy">
+                <Navbar />
+                <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
+                    >
+                        <ArrowLeft size={20} className="mr-2" />
+                        Back
+                    </button>
+                    <div className="flex flex-col items-center justify-center py-24 bg-primary-navy-dark rounded-xl border border-gray-700 shadow-lg relative overflow-hidden mt-8">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl" />
+
+                        <div className="relative p-5 bg-gray-800/50 rounded-full mb-6 border border-gray-700 shadow-inner">
+                            <Lock className="text-purple-400" size={56} strokeWidth={1.5} />
+                        </div>
+                        <h3 className="text-3xl font-bold text-white mb-3 tracking-wide">Private Collection</h3>
+                        <p className="text-gray-400 max-w-md text-center leading-relaxed">
+                            The creator has chosen to keep this collection private.
+                        </p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
     if (!collection) return null;
 
     const isOwner = user && user.id === collection.user_id;
@@ -131,104 +193,143 @@ const CollectionDetails = () => {
                 </button>
 
                 {/* Header Section */}
-                <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6 md:p-8 mb-8 relative overflow-hidden">
-                    {/* Background effect */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-yellow/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+                <div className="mb-14">
+                    <div className="max-w-4xl">
+                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 text-balance">
+                            {collection.title}
+                        </h1>
 
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10">
-                        <div className="flex-1">
-                            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-                                {collection.title}
-                            </h1>
-
-                            {collection.description && (
-                                <p className="text-gray-300 text-lg mb-6 max-w-3xl">
-                                    {collection.description}
-                                </p>
+                        <div className="flex flex-wrap items-center text-sm text-gray-400 gap-4 mb-6">
+                            {isOwner ? (
+                                <Link to={`/profile/${user.username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
+                                    <UserIcon size={16} className="mr-1.5" />
+                                    {user.username}
+                                </Link>
+                            ) : (
+                                <Link to={`/profile/${collection.creator_username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
+                                    <UserIcon size={16} className="mr-1.5" />
+                                    {collection.creator_username}
+                                </Link>
                             )}
 
-                            <div className="flex flex-wrap items-center text-sm text-gray-400 gap-6">
-                                {/* Todavía no tenemos el username real del creador explícito en getCollectionDetails, asumiendo "Creator" por ahora si no es el dueño */}
-                                {isOwner ? (
-                                    <Link to={`/profile/${user.username}`} className="flex items-center hover:text-primary-yellow transition-colors">
-                                        <UserIcon size={16} className="mr-2" />
-                                        By {user.username}
-                                    </Link>
-                                ) : (
-                                    <Link to={`/profile/${collection.creator_username}`} className="flex items-center hover:text-primary-yellow transition-colors">
-                                        <UserIcon size={16} className="mr-2" />
-                                        By {collection.creator_username}
-                                    </Link>
-                                )}
+                            <span className="text-gray-600">•</span>
 
-                                <span className="flex items-center">
-                                    <Gamepad2 size={16} className="mr-2" />
-                                    {collection.games?.length || 0} Games
-                                </span>
+                            <span>
+                                {collection.games?.length || 0} Games
+                            </span>
 
-                                <span className="flex items-center">
-                                    <Calendar size={16} className="mr-2" />
-                                    Updated {new Date(collection.updated_at).toLocaleDateString()}
-                                </span>
-                            </div>
+                            <span className="text-gray-600">•</span>
+
+                            <span>
+                                Updated {new Date(collection.updated_at).toLocaleDateString()}
+                            </span>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-3 mt-4 md:mt-0">
+                        <div className="flex flex-wrap items-center gap-3 mb-8">
                             {isOwner && (
                                 <Link
                                     to={`/collections/${collection.id}/edit`}
-                                    className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors border border-gray-700"
+                                    className="flex items-center px-4 py-2 bg-gray-800/50 hover:bg-gray-700 text-white rounded-full transition-colors border border-gray-700/50 text-sm font-medium"
                                 >
-                                    <Edit3 size={18} className="mr-2" />
+                                    <Edit3 size={16} className="mr-2" />
                                     Edit
                                 </Link>
                             )}
 
                             <button
                                 onClick={handleShare}
-                                className="flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors border border-gray-700"
+                                className="flex items-center px-4 py-2 bg-gray-800/50 hover:bg-gray-700 text-white rounded-full transition-colors border border-gray-700/50 text-sm font-medium"
                             >
-                                <Share2 size={18} className="mr-2" />
+                                <Share2 size={16} className="mr-2" />
                                 Share
                             </button>
 
                             <button
                                 onClick={handleToggleLike}
-                                className={`flex items-center px-4 py-2 rounded-lg transition-all border ${isLiked
-                                    ? 'bg-red-500/10 border-red-500/50 text-red-500 hover:bg-red-500/20'
-                                    : 'bg-gray-800 border-gray-700 text-white hover:bg-gray-700'
+                                className={`flex items-center px-4 py-2 rounded-full transition-all border text-sm font-medium ${isLiked
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
+                                    : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700'
                                     }`}
                             >
                                 <Heart
-                                    size={18}
-                                    className={`mr-2 transition-transform ${isLiked ? 'fill-current scale-110' : ''}`}
+                                    size={16}
+                                    className={`mr-2 transition-transform ${isLiked ? 'fill-current scale-110 shadow-sm' : ''}`}
                                 />
                                 {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
                             </button>
                         </div>
+
+                        {collection.description && (
+                            <p className="text-gray-300 text-lg leading-relaxed">
+                                {collection.description}
+                            </p>
+                        )}
                     </div>
                 </div>
 
                 {/* Games Grid */}
-                <div className="mb-12">
+                <div className="mb-12" ref={gridRef}>
                     <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
                         <Gamepad2 className="mr-3 text-primary-yellow" />
                         Games in this Collection
+                        {collection.games && (
+                            <span className="ml-3 text-sm font-normal text-gray-500">
+                                ({collection.games.length} games)
+                            </span>
+                        )}
                     </h2>
 
                     {collection.games && collection.games.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                            {collection.games.map((cg) => (
-                                <div key={cg.id} className="relative group">
-                                    {/* Ranking Badge */}
-                                    <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary-yellow text-primary-navy-dark font-bold rounded-full flex items-center justify-center z-10 shadow-lg border-2 border-primary-navy shadow-black/50">
-                                        {cg.sort_order + 1}
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
+                                {paginatedGames.map((cg) => (
+                                    <div key={cg.id} className="relative group">
+                                        {/* Ranking Badge - Calculado basado en su posición global en la colección */}
+                                        <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary-yellow text-primary-navy-dark font-bold rounded-full flex items-center justify-center z-10 shadow-lg border-2 border-primary-navy shadow-black/50">
+                                            {cg.sort_order + 1}
+                                        </div>
+                                        <InteractiveGameCard game={{ ...cg.game_details, id: cg.igdb_game_id }} interactive={false} showStatus={false} />
                                     </div>
-                                    <InteractiveGameCard game={{ ...cg.game_details, id: cg.igdb_game_id }} interactive={false} showStatus={false} />
+                                ))}
+                            </div>
+
+                            {/* Paginación */}
+                            {totalPages > 1 && (
+                                <div className="flex justify-center items-center space-x-2 mt-12 pb-8">
+                                    <button
+                                        onClick={() => handlePageChange(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="p-2 rounded-lg bg-primary-navy-dark border border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary-yellow transition-colors"
+                                    >
+                                        Prev
+                                    </button>
+
+                                    <div className="flex space-x-1">
+                                        {[...Array(totalPages)].map((_, i) => (
+                                            <button
+                                                key={i + 1}
+                                                onClick={() => handlePageChange(i + 1)}
+                                                className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${currentPage === i + 1
+                                                    ? 'bg-primary-yellow text-primary-navy-dark'
+                                                    : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
+                                                    }`}
+                                            >
+                                                {i + 1}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handlePageChange(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="p-2 rounded-lg bg-primary-navy-dark border border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary-yellow transition-colors"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
-                            ))}
-                        </div>
+                            )}
+                        </>
                     ) : (
                         <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-12 text-center">
                             <Gamepad2 size={48} className="mx-auto text-gray-600 mb-4" />

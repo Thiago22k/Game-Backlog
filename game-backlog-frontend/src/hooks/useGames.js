@@ -6,20 +6,28 @@ export const useGames = () => {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isProfilePublic, setIsProfilePublic] = useState(true);
 
-  // Obtener juegos del usuario
-  const getUserGames = async (status = null, showLoader = true) => {
+  // Obtener juegos del usuario (puede ser propio o de otro por username)
+  const getUserGames = async (username = null, status = null, showLoader = true) => {
     if (showLoader) setLoading(true);
     setError(null);
 
     try {
-      const url = status
-        ? `${ENDPOINTS.GAMES.USER_GAMES}?status=${status}`
+      let url = username
+        ? `${ENDPOINTS.GAMES.USER_GAMES}/${username}`
         : ENDPOINTS.GAMES.USER_GAMES;
+
+      if (status) {
+        url += `?status=${status}`;
+      }
 
       const response = await axios.get(url);
       setGames(response.data.games);
-      return { success: true, data: response.data.games };
+      if (response.data.is_profile_public !== undefined) {
+        setIsProfilePublic(response.data.is_profile_public);
+      }
+      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al obtener juegos';
       setError(errorMsg);
@@ -110,6 +118,7 @@ export const useGames = () => {
     userGames: games, // Alias para compatibilidad con Landing.jsx
     loading,
     error,
+    isProfilePublic,
     getUserGames,
     searchGames,
     addGame,

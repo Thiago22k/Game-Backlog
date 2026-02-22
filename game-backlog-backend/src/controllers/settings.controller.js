@@ -247,9 +247,36 @@ const deleteAccount = async (req, res) => {
   }
 };
 
+// Actualizar visibilidad del perfil
+const updateProfileVisibility = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { isPublic } = req.body;
+
+    if (typeof isPublic !== 'boolean') {
+      return res.status(400).json({
+        error: 'El campo isPublic es obligatorio y debe ser booleano'
+      });
+    }
+
+    const updatedUser = await User.updateProfileVisibility(userId, isPublic);
+
+    res.json({
+      message: 'Visibilidad del perfil actualizada',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error en updateProfileVisibility:', error);
+    res.status(500).json({
+      error: 'Error al actualizar visibilidad del perfil'
+    });
+  }
+};
+
 module.exports = {
   changePassword,
   updateEmail,
   updateUsername,
   deleteAccount,
+  updateProfileVisibility,
 };

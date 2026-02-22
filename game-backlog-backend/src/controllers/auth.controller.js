@@ -98,6 +98,7 @@ const register = async (req, res) => {
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
+        is_profile_public: newUser.is_profile_public,
       },
       token,
     });
@@ -154,6 +155,7 @@ const login = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        is_profile_public: user.is_profile_public,
       },
       token,
     });

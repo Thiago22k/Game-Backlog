@@ -21,7 +21,7 @@ import PublicRoute from './PublicRoute';
 const ProfileRedirect = () => {
   const { user, isAuthenticated } = useAuth();
   if (isAuthenticated && user?.username) {
-    return <Navigate to={`/profile/${user.username}/games`} replace />;
+    return <Navigate to={`/profile/${user.username}`} replace />;
   }
   return <Navigate to="/login" replace />;
 };
@@ -98,14 +98,7 @@ const AppRoutes = () => {
         {/* Rutas protegidas */}
         <Route path="/profile" element={<ProfileRedirect />} />
 
-        <Route
-          path="/profile/:username"
-          element={
-            <PrivateRoute>
-              <ProfileLayout />
-            </PrivateRoute>
-          }
-        >
+        <Route path="/profile/:username" element={<ProfileLayout />}>
           <Route index element={<ProfileStats />} />
           <Route path="games" element={<ProfileGames />} />
           <Route path="collections" element={<ProfileCollections />} />

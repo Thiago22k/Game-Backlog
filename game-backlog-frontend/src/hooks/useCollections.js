@@ -145,6 +145,26 @@ export const useCollections = () => {
         }
     }, []);
 
+    const addGameToCollection = useCallback(async (collectionId, igdbGameId) => {
+        try {
+            const response = await axios.post(`/collections/${collectionId}/games`, { igdb_game_id: igdbGameId });
+            return { success: true, data: response.data.game };
+        } catch (err) {
+            const errorMsg = err.response?.data?.error || 'Error al añadir el juego a la colección';
+            return { success: false, error: errorMsg };
+        }
+    }, []);
+
+    const checkGameInCollections = useCallback(async (igdbGameId) => {
+        try {
+            const response = await axios.get(`/collections/contains/${igdbGameId}`);
+            return { success: true, data: response.data.collectionIds };
+        } catch (err) {
+            const errorMsg = err.response?.data?.error || 'Error al verificar colecciones';
+            return { success: false, error: errorMsg };
+        }
+    }, []);
+
     return {
         collections,
         loading,
@@ -158,6 +178,8 @@ export const useCollections = () => {
         getComments,
         addComment,
         deleteComment,
+        addGameToCollection,
+        checkGameInCollections,
         clearError
     };
 };

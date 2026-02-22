@@ -26,6 +26,9 @@ const Settings = () => {
   // Loading states
   const [loading, setLoading] = useState(false);
 
+  // Profile Privacy State
+  const [isProfilePublic, setIsProfilePublic] = useState(user?.is_profile_public ?? true);
+
   // Handlers
   const handleUpdateEmail = async (e) => {
     e.preventDefault();
@@ -105,6 +108,20 @@ const Settings = () => {
       navigate('/');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error deleting account');
+      setLoading(false);
+    }
+  };
+
+  const handleTogglePrivacy = async () => {
+    setLoading(true);
+    try {
+      const newStatus = !isProfilePublic;
+      await axios.put(ENDPOINTS.SETTINGS.UPDATE_PROFILE_VISIBILITY, { isPublic: newStatus });
+      setIsProfilePublic(newStatus);
+      toast.success(newStatus ? 'Profile set to Public' : 'Profile set to Private');
+    } catch (error) {
+      toast.error('Error updating privacy settings');
+    } finally {
       setLoading(false);
     }
   };
@@ -190,24 +207,60 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Password Card (Full Width) */}
-        <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-primary-yellow/20 rounded-lg">
-              <Lock className="text-primary-yellow" size={24} />
+        {/* Third Row: Privacy and Password */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Privacy Card */}
+          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors flex flex-col justify-between">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-purple-500/20 rounded-lg">
+                <Lock className="text-purple-400" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Profile Privacy</h3>
+                <p className="text-sm text-gray-400">Control who can see your profile</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">Password</h3>
-              <p className="text-sm text-gray-400">Update your password regularly</p>
+
+            <div className="flex items-center justify-between bg-primary-navy border border-gray-700 p-4 rounded-lg mt-auto">
+              <span className="text-sm text-gray-300">
+                {isProfilePublic ? 'Public Profile (Visible to everyone)' : 'Private Profile (Only visible to you)'}
+              </span>
+              <button
+                onClick={handleTogglePrivacy}
+                disabled={loading}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isProfilePublic ? 'bg-primary-yellow' : 'bg-gray-600'
+                  }`}
+              >
+                <span className="sr-only">Toggle Profile Privacy</span>
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isProfilePublic ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                />
+              </button>
             </div>
           </div>
-          <p className="text-gray-400 text-sm mb-4">••••••••••••</p>
-          <button
-            onClick={() => setShowPasswordModal(true)}
-            className="bg-primary-yellow hover:opacity-90 text-primary-navy-dark px-6 py-2 rounded-lg font-semibold transition-all"
-          >
-            Change Password
-          </button>
+
+          {/* Password Card (Changed from full width to half size inside the grid above) */}
+          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-primary-yellow/20 rounded-lg">
+                  <Lock className="text-primary-yellow" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Password</h3>
+                  <p className="text-sm text-gray-400">Update your password regularly</p>
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mb-4 mt-auto">••••••••••••</p>
+            </div>
+            <button
+              onClick={() => setShowPasswordModal(true)}
+              className="w-full bg-primary-yellow hover:opacity-90 text-primary-navy-dark px-6 py-2 rounded-lg font-semibold transition-all mt-auto"
+            >
+              Change Password
+            </button>
+          </div>
         </div>
 
         {/* Danger Zone */}

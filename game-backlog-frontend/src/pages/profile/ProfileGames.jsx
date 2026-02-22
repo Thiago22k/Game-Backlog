@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Clock, Gamepad2, Search } from 'lucide-react';
@@ -9,13 +9,22 @@ import AnticipatedGameCardSkeleton from '../../components/games/AnticipatedGameC
 
 const ProfileGames = () => {
     const navigate = useNavigate();
+    const gridRef = useRef(null);
     // Obtener el hook desde el Outlet
-    const { games, loading, updateGame, deleteGame, addGame } = useOutletContext();
+    const { games, loading, updateGame, deleteGame, addGame, isOwner } = useOutletContext();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [ratingFilter, setRatingFilter] = useState('all');
     const [sortBy, setSortBy] = useState('recent');
+
+    // Paginación
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12; // 3 filas de 4 tarjetas
+
+    // Resetear a página 1 cuando cambian los filtros
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, statusFilter, sortBy]);
 
     const { wishlistComingSoon, myGames } = useMemo(() => {
         const now = new Date();
@@ -57,10 +66,7 @@ const ProfileGames = () => {
             result = result.filter(game => game.status === statusFilter);
         }
 
-        if (ratingFilter !== 'all') {
-            const targetRating = parseInt(ratingFilter, 10);
-            result = result.filter(game => game.rating === targetRating);
-        }
+
 
         result = [...result];
         switch (sortBy) {
@@ -80,7 +86,29 @@ const ProfileGames = () => {
         }
 
         return result;
-    }, [myGames, searchQuery, statusFilter, ratingFilter, sortBy]);
+    }, [myGames, searchQuery, statusFilter, sortBy]);
+
+    const totalPages = Math.ceil(processedMyGames.length / itemsPerPage);
+
+    const paginatedGames = useMemo(() => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        return processedMyGames.slice(startIndex, startIndex + itemsPerPage);
+    }, [processedMyGames, currentPage]);
+
+    const handlePageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= totalPages) {
+            setCurrentPage(newPage);
+        }
+    };
+
+    // Scroll to the top of the grid section when the page changes
+    useEffect(() => {
+        // We only scroll if the page is changed and we are not in the first mount
+        // Or simply always scroll when currentPage changes if we want accuracy
+        if (gridRef.current) {
+            gridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [currentPage]);
 
     const handleStatusChange = useCallback(async (gameId, newStatus) => {
         const game = games.find(g => g.igdb_game_id === gameId);
@@ -156,7 +184,7 @@ const ProfileGames = () => {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                     <input
                         type="text"
-                        placeholder="Search your games..."
+                        placeholder={isOwner ? "Search your games..." : "Search games..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
@@ -191,14 +219,16 @@ const ProfileGames = () => {
             ) : games.length === 0 ? (
                 <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
                     <p className="text-gray-400 mb-4">
-                        You don't have any games in your collection yet.
+                        {isOwner ? "You don't have any games in your collection yet." : "This user doesn't have any games in their collection yet."}
                     </p>
-                    <button
-                        onClick={() => navigate('/explore')}
-                        className="bg-primary-yellow text-primary-navy-dark px-6 py-2 rounded-lg hover:opacity-90 font-semibold transition-all"
-                    >
-                        Explore Games
-                    </button>
+                    {isOwner && (
+                        <button
+                            onClick={() => navigate('/explore')}
+                            className="bg-primary-yellow text-primary-navy-dark px-6 py-2 rounded-lg hover:opacity-90 font-semibold transition-all"
+                        >
+                            Explore Games
+                        </button>
+                    )}
                 </div>
             ) : (
                 <>
@@ -207,7 +237,7 @@ const ProfileGames = () => {
                             <div className="flex items-center mb-6">
                                 <Clock className="text-primary-yellow mr-2" size={24} />
                                 <h3 className="text-2xl font-bold text-white">
-                                    My Wishlist (Coming Soon)
+                                    {isOwner ? 'My Wishlist (Coming Soon)' : 'Wishlist'}
                                 </h3>
                                 <span className="ml-3 text-gray-400">
                                     {filteredWishlist.length} game{filteredWishlist.length !== 1 ? 's' : ''}
@@ -219,7 +249,8 @@ const ProfileGames = () => {
                                     <AnticipatedGameCard
                                         key={game.id}
                                         game={mapGameForCard(game)}
-                                        interactive={true}
+                                        interactive={isOwner}
+                                        showWishlistButton={isOwner}
                                         onWishlistToggle={handleWishlistToggle}
                                     />
                                 ))}
@@ -228,11 +259,11 @@ const ProfileGames = () => {
                     )}
 
                     {myGames.length > 0 && (
-                        <section>
+                        <section ref={gridRef} className="scroll-mt-24">
                             <div className="flex items-center mb-6">
                                 <Gamepad2 className="text-primary-yellow mr-2" size={24} />
                                 <h3 className="text-2xl font-bold text-white">
-                                    My Games
+                                    {isOwner ? 'My Games' : 'Games Library'}
                                 </h3>
                                 <span className="ml-3 text-gray-400">
                                     {processedMyGames.length} / {myGames.length} game{myGames.length !== 1 ? 's' : ''}
@@ -261,24 +292,7 @@ const ProfileGames = () => {
                                         </button>
                                     ))}
                                 </div>
-
                                 <div className="flex flex-wrap gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-gray-400 text-sm">Rating:</span>
-                                        <select
-                                            value={ratingFilter}
-                                            onChange={(e) => setRatingFilter(e.target.value)}
-                                            className="bg-primary-navy-dark border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-yellow"
-                                        >
-                                            <option value="all">All</option>
-                                            <option value="5">⭐⭐⭐⭐⭐(5)</option>
-                                            <option value="4">⭐⭐⭐⭐ (4)</option>
-                                            <option value="3">⭐⭐⭐ (3)</option>
-                                            <option value="2">⭐⭐ (2)</option>
-                                            <option value="1">⭐ (1)</option>
-                                        </select>
-                                    </div>
-
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-400 text-sm">Sort by:</span>
                                         <select
@@ -302,17 +316,79 @@ const ProfileGames = () => {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                                    {processedMyGames.map((game) => (
-                                        <InteractiveGameCard
-                                            key={game.id}
-                                            game={mapGameForCard(game)}
-                                            interactive={true}
-                                            onStatusChange={handleStatusChange}
-                                            onRatingChange={handleRatingChange}
-                                        />
-                                    ))}
-                                </div>
+                                <>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
+                                        {paginatedGames.map((game) => (
+                                            <InteractiveGameCard
+                                                key={game.id}
+                                                game={mapGameForCard(game)}
+                                                interactive={isOwner}
+                                                showStatus={isOwner}
+                                                onStatusChange={handleStatusChange}
+                                                onRatingChange={handleRatingChange}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* Pagination Controls */}
+                                    {totalPages > 1 && (
+                                        <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentPage === 1
+                                                    ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                                    : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                                    }`}
+                                            >
+                                                Prev
+                                            </button>
+
+                                            <div className="flex items-center gap-1 mx-2">
+                                                {/* Logic to show pages (simplified for most use cases < 10 pages) */}
+                                                {Array.from({ length: totalPages }).map((_, idx) => {
+                                                    const pageNum = idx + 1;
+                                                    // Show first, last, current, and adjacent pages
+                                                    if (
+                                                        pageNum === 1 ||
+                                                        pageNum === totalPages ||
+                                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                                    ) {
+                                                        return (
+                                                            <button
+                                                                key={pageNum}
+                                                                onClick={() => handlePageChange(pageNum)}
+                                                                className={`w-10 h-10 rounded-full font-medium transition-all flex items-center justify-center text-sm border ${currentPage === pageNum
+                                                                    ? 'bg-primary-yellow text-primary-navy-dark border-primary-yellow scale-110 shadow-sm'
+                                                                    : 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white backdrop-blur-sm'
+                                                                    }`}
+                                                            >
+                                                                {pageNum}
+                                                            </button>
+                                                        );
+                                                    } else if (
+                                                        pageNum === currentPage - 2 ||
+                                                        pageNum === currentPage + 2
+                                                    ) {
+                                                        return <span key={pageNum} className="text-gray-500 px-1">...</span>;
+                                                    }
+                                                    return null;
+                                                })}
+                                            </div>
+
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentPage === totalPages
+                                                    ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                                    : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                                    }`}
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </section>
                     )}
@@ -325,7 +401,8 @@ const ProfileGames = () => {
                         </div>
                     )}
                 </>
-            )}
+            )
+            }
         </>
     );
 };

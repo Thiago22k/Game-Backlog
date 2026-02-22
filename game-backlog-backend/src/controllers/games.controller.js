@@ -1,5 +1,6 @@
 const Game = require('../models/game.model');
 const igdbService = require('../services/igdb.service');
+const User = require('../models/user.model');
 
 // Buscar juegos en IGDB
 const searchGames = async (req, res) => {
@@ -105,10 +106,43 @@ const addGameToUser = async (req, res) => {
 // Obtener juegos del usuario
 const getUserGames = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const requestingUserId = req.user?.userId;
+    const { username } = req.params; // Viene de /user/:username
     const { status } = req.query;
 
-    const userGames = await Game.getUserGames(userId, status);
+    let targetUserId;
+    let isProfilePublic = true;
+    let targetUsername = null;
+
+    if (username) {
+      // Buscar el ID del usuario por nombre
+      const user = await User.findByUsername(username);
+      if (!user) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      targetUserId = user.id;
+      isProfilePublic = user.is_profile_public;
+      targetUsername = user.username;
+
+      // Si el perfil es privado y no es el dueño
+      if (!isProfilePublic && targetUserId !== requestingUserId) {
+        return res.json({
+          games: [],
+          total: 0,
+          is_profile_public: false,
+          username: targetUsername
+        });
+      }
+    } else {
+      // Si no hay username, es la ruta /user (protegida por authenticateToken)
+      targetUserId = requestingUserId;
+    }
+
+    if (!targetUserId) {
+      return res.status(401).json({ error: 'Usuario no identificado' });
+    }
+
+    const userGames = await Game.getUserGames(targetUserId, status);
 
     if (userGames.length === 0) {
       return res.json({ games: [], total: 0 });
@@ -125,7 +159,9 @@ const getUserGames = async (req, res) => {
 
     res.json({
       games: gamesWithDetails,
-      total: gamesWithDetails.length
+      total: gamesWithDetails.length,
+      is_profile_public: isProfilePublic,
+      username: targetUsername || req.user?.username
     });
 
   } catch (error) {

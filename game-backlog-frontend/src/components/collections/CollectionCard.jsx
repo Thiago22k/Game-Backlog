@@ -1,4 +1,4 @@
-import { Library, Edit3, Heart } from 'lucide-react';
+import { Library, Edit3, Heart, Lock, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getGameCover } from '../../utils/formatters';
 
@@ -96,15 +96,30 @@ const CollectionCard = ({ collection, isOwner }) => {
 
             {/* Info Area */}
             <div className="p-4 flex flex-col flex-grow">
-                <h3 className="text-lg font-bold text-white mb-1 line-clamp-1">{collection.title}</h3>
-                <p className="text-sm text-gray-400 mb-3 flex-grow line-clamp-2">
+                <h3 className="text-lg font-bold text-white mb-1 line-clamp-1" title={collection.title}>
+                    {collection.title}
+                </h3>
+                <p className="text-sm text-gray-400 mb-3 flex-grow line-clamp-2" title={collection.description}>
                     {collection.description || 'No description provided.'}
                 </p>
 
                 <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-700/50">
-                    <div className="flex items-center text-gray-400 text-sm">
-                        <Library size={14} className="mr-1.5" />
-                        <span>{totalGames} game{totalGames !== 1 ? 's' : ''}</span>
+                    <div className="flex items-center text-gray-400 text-sm gap-3">
+                        <div className="flex items-center">
+                            <Library size={14} className="mr-1.5" />
+                            <span>{totalGames} game{totalGames !== 1 ? 's' : ''}</span>
+                        </div>
+                        {collection.is_public ? (
+                            <div className="flex items-center text-gray-500" title="Public Collection">
+                                <Globe size={14} className="mr-1" />
+                                <span className="text-[10px] uppercase font-bold tracking-wider">Public</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center text-primary-yellow/70" title="Private Collection">
+                                <Lock size={14} className="mr-1" />
+                                <span className="text-[10px] uppercase font-bold tracking-wider">Private</span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex items-center text-gray-400 text-sm">
