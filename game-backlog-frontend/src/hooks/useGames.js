@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 
@@ -7,9 +7,10 @@ export const useGames = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isProfilePublic, setIsProfilePublic] = useState(true);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
 
   // Obtener juegos del usuario (puede ser propio o de otro por username)
-  const getUserGames = async (username = null, status = null, showLoader = true) => {
+  const getUserGames = useCallback(async (username = null, status = null, showLoader = true) => {
     if (showLoader) setLoading(true);
     setError(null);
 
@@ -27,7 +28,10 @@ export const useGames = () => {
       if (response.data.is_profile_public !== undefined) {
         setIsProfilePublic(response.data.is_profile_public);
       }
-      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public };
+      if (response.data.avatar_url !== undefined) {
+        setProfileAvatarUrl(response.data.avatar_url);
+      }
+      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public, profileAvatarUrl: response.data.avatar_url };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al obtener juegos';
       setError(errorMsg);
@@ -35,10 +39,10 @@ export const useGames = () => {
     } finally {
       if (showLoader) setLoading(false);
     }
-  };
+  }, []);
 
   // Buscar juegos en IGDB
-  const searchGames = async (query) => {
+  const searchGames = useCallback(async (query) => {
     setLoading(true);
     setError(null);
 
@@ -52,10 +56,10 @@ export const useGames = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Agregar juego a la lista del usuario
-  const addGame = async (igdbGameId, status = 'completed', rating = null) => {
+  const addGame = useCallback(async (igdbGameId, status = 'completed', rating = null) => {
     setError(null);
 
     try {
@@ -73,10 +77,10 @@ export const useGames = () => {
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }
-  };
+  }, [getUserGames]);
 
   // Actualizar juego del usuario
-  const updateGame = async (userGameId, status = null, rating = null) => {
+  const updateGame = useCallback(async (userGameId, status = null, rating = null) => {
     setError(null);
 
     try {
@@ -95,10 +99,10 @@ export const useGames = () => {
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }
-  };
+  }, [getUserGames]);
 
   // Eliminar juego del usuario
-  const deleteGame = async (igdbGameId) => {
+  const deleteGame = useCallback(async (igdbGameId) => {
     setError(null);
 
     try {
@@ -111,7 +115,7 @@ export const useGames = () => {
       setError(errorMsg);
       return { success: false, error: errorMsg };
     }
-  };
+  }, []);
 
   return {
     games,
@@ -119,6 +123,7 @@ export const useGames = () => {
     loading,
     error,
     isProfilePublic,
+    profileAvatarUrl,
     getUserGames,
     searchGames,
     addGame,

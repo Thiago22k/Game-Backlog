@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Flame, Clock, Trophy } from 'lucide-react';
+import { Flame, Clock, Trophy, ClipboardList, Star, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
@@ -99,7 +99,7 @@ const Landing = () => {
       const result = await addGame(gameId, newStatus, validRating);
       if (result.success) {
         toast.success(
-          `Added to your list as "${STATUS_LABELS[newStatus]}"! Now you can rate it ⭐`,
+          `Added as "${STATUS_LABELS[newStatus]}"! Now you can rate it`,
           { duration: 4000 }
         );
         updateAllLists(gameId, { status: newStatus, user_rating: validRating ?? 0 });
@@ -119,7 +119,7 @@ const Landing = () => {
 
     const result = await updateGame(existingGame.igdb_game_id, existingGame.status, rating);
     if (result.success) {
-      toast.success(`Saved rating: ${rating} ⭐`);
+      toast.success(`Saved rating: ${rating}`);
       updateAllLists(gameId, { user_rating: rating });
     } else {
       toast.error('Error saving rating');
@@ -340,15 +340,17 @@ const Landing = () => {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-              { emoji: '📋', title: 'Organize Your Backlog', desc: "Keep track of all the games you want to play and the ones you've completed" },
-              { emoji: '⭐', title: 'Rate Your Games', desc: 'Assign ratings from 1 to 5 stars to each game you complete' },
-              { emoji: '🎮', title: 'Discover New Titles', desc: 'Explore thousands of games thanks to integration with IGDB' },
-            ].map(({ emoji, title, desc }) => (
+              { icon: ClipboardList, title: 'Organize Your Backlog', desc: "Keep track of all the games you want to play and the ones you've completed", color: 'text-blue-400' },
+              { icon: Star, title: 'Rate Your Games', desc: 'Assign ratings from 1 to 5 stars to each game you complete', color: 'text-primary-yellow' },
+              { icon: Gamepad2, title: 'Discover New Titles', desc: 'Explore thousands of games thanks to integration with IGDB', color: 'text-purple-400' },
+            ].map(({ icon: Icon, title, desc, color }) => (
               <div
                 key={title}
-                className="bg-primary-navy-dark p-8 rounded-2xl shadow-lg text-center border border-gray-700 hover:border-primary-yellow transition-all"
+                className="bg-primary-navy-dark p-8 rounded-2xl shadow-lg text-center border border-gray-700 hover:border-primary-yellow transition-all flex flex-col items-center"
               >
-                <div className="text-5xl mb-4">{emoji}</div>
+                <div className={`mb-6 p-4 rounded-full bg-gray-800 bg-opacity-50 ${color}`}>
+                  <Icon size={40} />
+                </div>
                 <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
                 <p className="text-gray-400">{desc}</p>
               </div>

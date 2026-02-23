@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../assets/stackd.svg?react';
 import SearchModal from './SearchModal';
+import defaultAvatar from '../../assets/default_avatar.png';
 
 const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -77,9 +78,8 @@ const Navbar = () => {
                   </Link>
                   <Link
                     to="/collections"
-                    className={`text-text-secondary text-base font-medium pb-1 transition-all cursor-not-allowed opacity-50`}
-                    onClick={(e) => e.preventDefault()}
-                    title="Coming soon"
+                    className={`text-white text-base font-medium pb-1 transition-all ${isActive('/collections') ? 'border-b-2 border-white' : 'hover:text-gray-300'
+                      }`}
                   >
                     Collections
                   </Link>
@@ -110,8 +110,12 @@ const Navbar = () => {
                         onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                         className="flex items-center space-x-2 text-white hover:text-gray-300 transition-all"
                       >
-                        <div className="w-8 h-8 bg-primary-cyan rounded-full flex items-center justify-center">
-                          <User size={18} />
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-600 bg-primary-navy-dark">
+                          <img
+                            src={user?.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar}
+                            alt={user?.username || 'User'}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                       </button>
 
@@ -143,12 +147,11 @@ const Navbar = () => {
                       )}
                     </div>
                   ) : (
-                    /* Get Started button */
                     <Link
-                      to="/register"
+                      to="/login"
                       className="bg-gradient-get-started hover:opacity-90 text-primary-navy px-6 py-2 rounded-lg font-semibold transition-all text-sm"
                     >
-                      Get Started
+                      Login
                     </Link>
                   )}
                 </div>
@@ -161,15 +164,12 @@ const Navbar = () => {
             <div className="lg:hidden bg-primary-navy border-t border-gray-700 px-6 py-4 rounded-b-[2.5rem]">
               <div className="flex flex-col space-y-3">
                 <Link
-                  to="/explore"
+                  to="/collections"
                   className="text-white text-sm font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Explore
+                  Explore Collections
                 </Link>
-                <span className="text-text-secondary text-sm font-medium opacity-50 cursor-not-allowed">
-                  Playlist (Coming soon)
-                </span>
 
                 {/* Search button mobile - OCULTO en páginas de auth */}
                 {!isAuthPage && (

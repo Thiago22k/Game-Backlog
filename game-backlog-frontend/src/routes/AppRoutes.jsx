@@ -14,6 +14,7 @@ import CollectionForm from '../components/collections/CollectionForm';
 import CollectionDetails from '../components/collections/CollectionDetails';
 import Settings from '../pages/Settings';
 import Explore from '../pages/Explore';
+import ExploreCollections from '../pages/collections/ExploreCollections';
 import GameDetails from '../pages/GameDetails';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
@@ -86,8 +87,9 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Explore público */}
+        {/* Explore públicos */}
         <Route path="/explore" element={<Explore />} />
+        <Route path="/collections" element={<ExploreCollections />} />
 
         {/* Game details público */}
         <Route path="/game/:slug" element={<GameDetails />} />

@@ -7,6 +7,7 @@ import StarRating from './StarRating';
 import RatingBadge from '../common/RatingBadge';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
 import { useAuth } from '../../context/AuthContext';
+import toast from 'react-hot-toast';
 
 const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true, showAddButton = true }) => {
   const navigate = useNavigate();
@@ -50,7 +51,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
     if (!interactive) {
       localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
-      navigate('/login');
+      toast.error('Log in to add games to your library');
       return;
     }
 
@@ -63,7 +64,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
     if (!user) {
       localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
-      navigate('/login');
+      toast.error('Log in to add games to your collection');
       return;
     }
 
@@ -115,19 +116,21 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
       >
         {/* Header con Status y Rating */}
-        <div className={`h-12 flex items-center px-4 ${(showStatus || currentStatus) ? 'justify-between' : 'justify-end'}`}>
+        <div className="h-12 px-4 relative flex items-center justify-center w-full">
           {/* Status Button (izquierda) */}
           {showStatus && (
-            <button
-              type="button"
-              onClick={handleStatusClick}
-              className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''}`}
-            >
-              <StatusIcon size={16} className="text-white" />
-            </button>
+            <div className="absolute left-4">
+              <button
+                type="button"
+                onClick={handleStatusClick}
+                className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''}`}
+              >
+                <StatusIcon size={16} className="text-white" />
+              </button>
+            </div>
           )}
 
-          {/* Star Rating (centro/izquierda) - Solo si tiene estado */}
+          {/* Star Rating (centro) - Solo si tiene estado */}
           {currentStatus && (
             <div
               onClick={(e) => e.stopPropagation()}
@@ -142,7 +145,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
           )}
 
           {/* IGDB Rating (derecha) */}
-          <div className="ml-auto">
+          <div className="absolute right-4">
             <RatingBadge rating={game.rating} size="sm" />
           </div>
         </div>

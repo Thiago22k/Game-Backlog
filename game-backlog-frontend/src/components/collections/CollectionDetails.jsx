@@ -3,18 +3,25 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
+import { useGames } from '../../hooks/useGames';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../layout/Navbar';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
+import defaultAvatar from '../../assets/default_avatar.png';
 
 const CollectionDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
     const { getCollectionDetails, toggleLike, getComments, addComment, deleteComment, loading } = useCollections();
+    const { addGame, updateGame, deleteGame, getUserGames, userGames } = useGames();
     const gridRef = useRef(null);
 
     const [collection, setCollection] = useState(null);
+    const [collectionGames, setCollectionGames] = useState([]);
+    const userGamesRef = useRef(userGames);
+    useEffect(() => { userGamesRef.current = userGames; }, [userGames]);
+
     const [likesCount, setLikesCount] = useState(0);
     const [isLiked, setIsLiked] = useState(false);
     const [isPrivateError, setIsPrivateError] = useState(false);
@@ -31,10 +38,34 @@ const CollectionDetails = () => {
 
     useEffect(() => {
         const fetchDetails = async () => {
-            const result = await getCollectionDetails(id);
+            // Cargar user games en paralelo si está autenticado
+            const [result, userGamesResult] = await Promise.all([
+                getCollectionDetails(id),
+                user ? getUserGames() : Promise.resolve({ success: false, data: [] })
+            ]);
+
             if (result.success && result.data) {
                 setCollection(result.data);
-                // Asumimos que el backend pronto mandará estos datos en el detalle
+
+                const userGamesData = userGamesResult.success ? userGamesResult.data : [];
+                userGamesRef.current = userGamesData;
+
+                // Merge user status/rating into collection games
+                if (result.data.games) {
+                    const mergedGames = result.data.games.map(cg => {
+                        const userGameInfo = userGamesData.find(ug => ug.igdb_game_id === cg.igdb_game_id);
+                        return {
+                            ...cg,
+                            game_details: {
+                                ...cg.game_details,
+                                status: userGameInfo?.status ?? null,
+                                user_rating: userGameInfo?.rating ?? 0
+                            }
+                        };
+                    });
+                    setCollectionGames(mergedGames);
+                }
+
                 setLikesCount(result.data.likes_count || 0);
                 setIsLiked(result.data.user_has_liked || false);
 
@@ -54,18 +85,18 @@ const CollectionDetails = () => {
         };
 
         fetchDetails();
-    }, [id, getCollectionDetails, getComments, navigate]);
+    }, [id, getCollectionDetails, getComments, navigate, user, getUserGames]);
 
     const totalPages = useMemo(() => {
-        if (!collection?.games) return 0;
-        return Math.ceil(collection.games.length / itemsPerPage);
-    }, [collection]);
+        if (!collectionGames) return 0;
+        return Math.ceil(collectionGames.length / itemsPerPage);
+    }, [collectionGames]);
 
     const paginatedGames = useMemo(() => {
-        if (!collection?.games) return [];
+        if (!collectionGames) return [];
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return collection.games.slice(startIndex, startIndex + itemsPerPage);
-    }, [collection, currentPage]);
+        return collectionGames.slice(startIndex, startIndex + itemsPerPage);
+    }, [collectionGames, currentPage]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -79,9 +110,89 @@ const CollectionDetails = () => {
         }
     }, [currentPage]);
 
+    // Constante local para statuses
+    const STATUS_LABELS = {
+        completed: 'Completed',
+        playing: 'Playing',
+        wishlist: 'Wishlist',
+        dropped: 'Dropped',
+    };
+
+    const updateCollectionGame = (gameId, patch) => {
+        setCollectionGames(prev => prev.map(cg => {
+            if (cg.igdb_game_id === gameId) {
+                return {
+                    ...cg,
+                    game_details: { ...cg.game_details, ...patch }
+                };
+            }
+            return cg;
+        }));
+    };
+
+    const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
+        if (!user) return;
+
+        const existingGame = userGamesRef.current.find((g) => g.igdb_game_id === gameId);
+        const validRating = currentRating >= 1 && currentRating <= 5 ? currentRating : null;
+
+        if (newStatus === null) {
+            if (!existingGame) return;
+            const result = await deleteGame(gameId);
+            if (result.success) {
+                toast.success('Game removed from your list');
+                updateCollectionGame(gameId, { status: null, user_rating: 0 });
+            } else {
+                toast.error('Error deleting the game');
+            }
+            return;
+        }
+
+        if (existingGame) {
+            const result = await updateGame(gameId, newStatus, validRating ?? existingGame.rating);
+            if (result.success) {
+                toast.success(`Status changed to "${STATUS_LABELS[newStatus] || newStatus}"`);
+                updateCollectionGame(gameId, {
+                    status: newStatus,
+                    user_rating: validRating ?? undefined,
+                });
+            } else {
+                toast.error('Error updating status');
+            }
+        } else {
+            const result = await addGame(gameId, newStatus, validRating);
+            if (result.success) {
+                toast.success(
+                    `Added as "${STATUS_LABELS[newStatus]}"! Now you can rate it`,
+                    { duration: 4000 }
+                );
+                updateCollectionGame(gameId, { status: newStatus, user_rating: validRating ?? 0 });
+            } else {
+                toast.error('Error adding game');
+            }
+        }
+    };
+
+    const handleRatingChange = async (gameId, rating) => {
+        if (!user) return;
+        const existingGame = userGamesRef.current.find((g) => g.igdb_game_id === gameId);
+        if (!existingGame) {
+            toast.error('First add the game to your list');
+            return;
+        }
+
+        const result = await updateGame(gameId, existingGame.status, rating);
+        if (result.success) {
+            toast.success(`Saved rating: ${rating}`);
+            updateCollectionGame(gameId, { user_rating: rating });
+        } else {
+            toast.error('Error saving rating');
+        }
+    };
+
     const handleToggleLike = async () => {
         if (!user) {
-            toast.error('You must be logged in to like a collection');
+            toast.error('Log in to like collections');
             return;
         }
 
@@ -202,12 +313,16 @@ const CollectionDetails = () => {
                         <div className="flex flex-wrap items-center text-sm text-gray-400 gap-4 mb-6">
                             {isOwner ? (
                                 <Link to={`/profile/${user.username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
-                                    <UserIcon size={16} className="mr-1.5" />
+                                    <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
+                                        <img src={user.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar} alt={user.username} className="w-full h-full object-cover" />
+                                    </div>
                                     {user.username}
                                 </Link>
                             ) : (
                                 <Link to={`/profile/${collection.creator_username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
-                                    <UserIcon size={16} className="mr-1.5" />
+                                    <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
+                                        <img src={collection.creator_avatar_url ? `http://localhost:3000${collection.creator_avatar_url}` : defaultAvatar} alt={collection.creator_username} className="w-full h-full object-cover" />
+                                    </div>
                                     {collection.creator_username}
                                 </Link>
                             )}
@@ -273,23 +388,25 @@ const CollectionDetails = () => {
                     <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
                         <Gamepad2 className="mr-3 text-primary-yellow" />
                         Games in this Collection
-                        {collection.games && (
+                        {collectionGames && (
                             <span className="ml-3 text-sm font-normal text-gray-500">
-                                ({collection.games.length} games)
+                                ({collectionGames.length} games)
                             </span>
                         )}
                     </h2>
 
-                    {collection.games && collection.games.length > 0 ? (
+                    {collectionGames && collectionGames.length > 0 ? (
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
                                 {paginatedGames.map((cg) => (
                                     <div key={cg.id} className="relative group">
-                                        {/* Ranking Badge - Calculado basado en su posición global en la colección */}
-                                        <div className="absolute -top-3 -left-3 w-8 h-8 bg-primary-yellow text-primary-navy-dark font-bold rounded-full flex items-center justify-center z-10 shadow-lg border-2 border-primary-navy shadow-black/50">
-                                            {cg.sort_order + 1}
-                                        </div>
-                                        <InteractiveGameCard game={{ ...cg.game_details, id: cg.igdb_game_id }} interactive={false} showStatus={false} />
+                                        <InteractiveGameCard
+                                            game={{ ...cg.game_details, id: cg.igdb_game_id }}
+                                            interactive={!!user}
+                                            showStatus={true}
+                                            onStatusChange={handleStatusChange}
+                                            onRatingChange={handleRatingChange}
+                                        />
                                     </div>
                                 ))}
                             </div>
@@ -353,8 +470,8 @@ const CollectionDetails = () => {
                     {user ? (
                         <form onSubmit={handleAddComment} className="mb-10">
                             <div className="flex gap-4 items-start">
-                                <div className="w-10 h-10 rounded-full bg-primary-yellow text-primary-navy-dark flex items-center justify-center font-bold flex-shrink-0 text-lg">
-                                    {user.username.charAt(0).toUpperCase()}
+                                <div className="w-10 h-10 rounded-full bg-primary-yellow overflow-hidden text-primary-navy-dark flex items-center justify-center font-bold flex-shrink-0 text-lg border border-gray-600">
+                                    <img src={user.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                 </div>
                                 <div className="flex-1 bg-primary-navy border border-gray-700 rounded-xl overflow-hidden focus-within:border-primary-yellow transition-colors relative flex flex-col">
                                     <textarea
@@ -388,8 +505,8 @@ const CollectionDetails = () => {
                         {comments.length > 0 ? (
                             comments.map((comment) => (
                                 <div key={comment.id} className="flex gap-4 group">
-                                    <Link to={`/profile/${comment.username}`} className="w-10 h-10 rounded-full bg-gray-700 text-white flex items-center justify-center font-bold flex-shrink-0 text-lg hover:ring-2 hover:ring-primary-yellow transition-all">
-                                        {comment.username.charAt(0).toUpperCase()}
+                                    <Link to={`/profile/${comment.username}`} className="w-10 h-10 overflow-hidden rounded-full bg-gray-700 text-white flex items-center justify-center font-bold flex-shrink-0 text-lg hover:ring-2 hover:ring-primary-yellow transition-all">
+                                        <img src={comment.avatar_url ? `http://localhost:3000${comment.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                     </Link>
                                     <div className="flex-1">
                                         <div className="bg-primary-navy border border-gray-700 rounded-xl rounded-tl-none p-4 relative">

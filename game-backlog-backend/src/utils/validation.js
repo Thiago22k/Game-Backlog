@@ -37,6 +37,11 @@ const sanitizeString = (str) => {
   return str ? str.trim().toLowerCase() : '';
 };
 
+// Sanitizar username (eliminar espacios pero preservar mayúsculas/minúsculas)
+const sanitizeUsernameAndPreserveCase = (str) => {
+  return str ? str.trim() : '';
+};
+
 module.exports = {
   isValidEmail,
   isValidPassword,
@@ -45,4 +50,5 @@ module.exports = {
   isValidGameStatus,
   isPositiveInteger,
   sanitizeString,
+  sanitizeUsernameAndPreserveCase,
 };

@@ -6,6 +6,7 @@ const { authenticateToken, optionalAuth } = require('../middlewares/auth'); // M
 // Middleware opcional (si existe en tu app) para extraer el usuario del token sin bloquear la petición si no hay token.
 // Si no tienes uno, podemos saltarlo y depender de la validación en el controlador, pero usaremos authenticateToken donde sea obligatorio.
 
+router.get('/explore', optionalAuth, collectionsController.getExploreCollections);
 router.get('/user/:username', optionalAuth, collectionsController.getUserCollections); // Opcionalmente publico
 router.get('/:id', optionalAuth, collectionsController.getCollectionDetails);       // Opcionalmente publico
 router.get('/:id/comments', optionalAuth, collectionsController.getComments);

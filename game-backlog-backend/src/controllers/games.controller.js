@@ -113,6 +113,7 @@ const getUserGames = async (req, res) => {
     let targetUserId;
     let isProfilePublic = true;
     let targetUsername = null;
+    let targetAvatarUrl = null;
 
     if (username) {
       // Buscar el ID del usuario por nombre
@@ -123,6 +124,7 @@ const getUserGames = async (req, res) => {
       targetUserId = user.id;
       isProfilePublic = user.is_profile_public;
       targetUsername = user.username;
+      targetAvatarUrl = user.avatar_url;
 
       // Si el perfil es privado y no es el dueño
       if (!isProfilePublic && targetUserId !== requestingUserId) {
@@ -161,7 +163,8 @@ const getUserGames = async (req, res) => {
       games: gamesWithDetails,
       total: gamesWithDetails.length,
       is_profile_public: isProfilePublic,
-      username: targetUsername || req.user?.username
+      username: targetUsername || req.user?.username,
+      avatar_url: targetAvatarUrl
     });
 
   } catch (error) {

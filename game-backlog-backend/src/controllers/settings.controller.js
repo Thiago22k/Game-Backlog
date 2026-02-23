@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user.model');
-const { isValidEmail, isValidPassword, isValidUsername } = require('../utils/validation');
+const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
 const pool = require('../config/database');
 
 // Cambiar contraseña
@@ -66,7 +66,8 @@ const changePassword = async (req, res) => {
 const updateEmail = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { newEmail, password } = req.body;
+    let { newEmail, password } = req.body;
+    newEmail = sanitizeString(newEmail);
 
     // Validar que vengan los campos
     if (!newEmail || !password) {
@@ -129,7 +130,8 @@ const updateEmail = async (req, res) => {
 const updateUsername = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { newUsername, password } = req.body;
+    let { newUsername, password } = req.body;
+    newUsername = sanitizeUsernameAndPreserveCase(newUsername);
 
     // Validar que vengan los campos
     if (!newUsername || !password) {
@@ -145,9 +147,9 @@ const updateUsername = async (req, res) => {
       });
     }
 
-    // Verificar que el username no esté en uso
+    // Verificar que el username no esté en uso (excluyendo al propio usuario)
     const existingUsername = await User.findByUsername(newUsername);
-    if (existingUsername) {
+    if (existingUsername && existingUsername.id !== userId) {
       return res.status(409).json({
         error: 'Este username ya está en uso'
       });

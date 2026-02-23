@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const User = require('../models/user.model');
-const { isValidEmail, isValidPassword, isValidUsername } = require('../utils/validation');
+const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
 
 // Configurar transportador de nodemailer (Ethereal para desarrollo)
 let transporter;
@@ -35,7 +35,9 @@ const generateToken = (userId, username) => {
 // Registro de usuario
 const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    let { username, email, password } = req.body;
+    username = sanitizeUsernameAndPreserveCase(username);
+    email = sanitizeString(email);
 
     // Validar que vengan todos los campos
     if (!username || !email || !password) {
@@ -114,7 +116,12 @@ const register = async (req, res) => {
 // Login de usuario
 const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body; // Acepta email o username
+    let { identifier, password } = req.body; // Acepta email o username
+    identifier = sanitizeUsernameAndPreserveCase(identifier);
+
+    if (identifier && identifier.includes('@')) {
+      identifier = identifier.toLowerCase();
+    }
 
     // Validar que vengan los campos
     if (!identifier || !password) {
@@ -193,7 +200,8 @@ const getProfile = async (req, res) => {
 // Solicitar restablecimiento de contraseña
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
+    email = sanitizeString(email);
 
     if (!email) {
       return res.status(400).json({ error: 'El email es requerido' });

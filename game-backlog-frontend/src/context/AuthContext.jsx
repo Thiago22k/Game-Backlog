@@ -18,10 +18,10 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN);
-      
+
       if (savedToken) {
         setToken(savedToken);
-        
+
         try {
           // Verificar que el token sea válido
           const response = await axios.get(ENDPOINTS.AUTH.ME);
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
           setToken(null);
         }
       }
-      
+
       setIsLoading(false);
     };
 
@@ -103,6 +103,11 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Función para actualizar datos del usuario
+  const updateUser = (updatedData) => {
+    setUser((prev) => ({ ...prev, ...updatedData }));
+  };
+
   // Valor del contexto
   const value = {
     user,
@@ -112,6 +117,7 @@ export const AuthProvider = ({ children }) => {
     register,
     login,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

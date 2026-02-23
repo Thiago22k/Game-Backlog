@@ -66,19 +66,30 @@ const getUserCollections = async (req, res) => {
         const collections = await Collection.getUserCollections(requestingUserId, targetUserId);
 
         // Para cada colección, obtener hasta 3 carátulas para el collage
+        const collectionsGamesMap = {};
+        const allTopGameIdsSet = new Set();
+
         for (let collection of collections) {
             const dbGames = await Collection.getCollectionGames(collection.id);
-
-            // Tomar solo los primeros 3
             const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
+            collectionsGamesMap[collection.id] = top3Ids;
+            top3Ids.forEach(id => allTopGameIdsSet.add(id));
+        }
 
-            if (top3Ids.length > 0) {
-                const gamesDetails = await igdbService.getGamesByIds(top3Ids);
+        const allTopGameIds = Array.from(allTopGameIdsSet);
+
+        if (allTopGameIds.length > 0) {
+            const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+
+            for (let collection of collections) {
+                const top3Ids = collectionsGamesMap[collection.id];
                 collection.preview_games = top3Ids.map(id => {
                     const det = gamesDetails.find(g => g.id === id);
                     return det ? { id: det.id, cover: det.cover } : null;
                 }).filter(g => g !== null);
-            } else {
+            }
+        } else {
+            for (let collection of collections) {
                 collection.preview_games = [];
             }
         }
@@ -311,6 +322,67 @@ const checkGameInCollections = async (req, res) => {
     }
 };
 
+const getExploreCollections = async (req, res) => {
+    try {
+        const limit = 8;
+
+        // Fetch categories
+        const recent = await Collection.getExploreCollections('recent', limit);
+        const popular = await Collection.getExploreCollections('popular', limit);
+        const interactive = await Collection.getExploreCollections('interactive', limit);
+
+        const allCollections = [...recent, ...popular, ...interactive];
+        const uniqueIds = [...new Set(allCollections.map(c => c.id))];
+
+        // Recopilar todos los juegos de todas las colecciones únicas primero
+        const collectionsGamesMap = {};
+        const allTopGameIdsSet = new Set();
+
+        for (const collId of uniqueIds) {
+            const dbGames = await Collection.getCollectionGames(collId);
+            const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
+            collectionsGamesMap[collId] = top3Ids;
+            top3Ids.forEach(id => allTopGameIdsSet.add(id));
+        }
+
+        const allTopGameIds = Array.from(allTopGameIdsSet);
+        const collectionPreviews = {};
+
+        // Hacer UNA sola petición a IGDB con todos los IDs requeridos
+        if (allTopGameIds.length > 0) {
+            const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+
+            for (const collId of uniqueIds) {
+                const top3Ids = collectionsGamesMap[collId];
+                collectionPreviews[collId] = top3Ids.map(id => {
+                    const det = gamesDetails.find(g => g.id === id);
+                    return det ? { id: det.id, cover: det.cover } : null;
+                }).filter(g => g !== null);
+            }
+        } else {
+            for (const collId of uniqueIds) {
+                collectionPreviews[collId] = [];
+            }
+        }
+
+        // Attach previews to results
+        const attachPreviews = (colls) => colls.map(c => ({
+            ...c,
+            preview_games: collectionPreviews[c.id] || []
+        }));
+
+        res.json({
+            recent: attachPreviews(recent),
+            popular: attachPreviews(popular),
+            interactive: attachPreviews(interactive)
+        });
+
+    } catch (error) {
+        console.error('Error en getExploreCollections:', error);
+        res.status(500).json({ error: 'Error al obtener colecciones explorables' });
+    }
+};
+
 module.exports = {
     createCollection,
     getUserCollections,
@@ -322,5 +394,6 @@ module.exports = {
     addComment,
     deleteComment,
     addGameToCollection,
-    checkGameInCollections
+    checkGameInCollections,
+    getExploreCollections
 };

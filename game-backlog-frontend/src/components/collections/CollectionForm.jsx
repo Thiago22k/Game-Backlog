@@ -6,8 +6,10 @@ import { useCollections } from '../../hooks/useCollections';
 import axios from '../../api/axios';
 import { getGameCover } from '../../utils/formatters';
 import Navbar from '../layout/Navbar';
+import { useAuth } from '../../context/AuthContext';
 
 const CollectionForm = () => {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const { id } = useParams();
     const isEditing = !!id;
@@ -124,7 +126,7 @@ const CollectionForm = () => {
 
         if (result.success) {
             toast.success(`Collection ${isEditing ? 'updated' : 'created'} successfully!`);
-            navigate('/profile/Thiagok/collections'); // Mejor navegar a la lista
+            navigate(`/profile/${user?.username}/collections`);
         }
     };
 
@@ -133,7 +135,7 @@ const CollectionForm = () => {
             const result = await deleteCollection(id);
             if (result.success) {
                 toast.success('Collection deleted successfully');
-                navigate('/profile/Thiagok/collections');
+                navigate(`/profile/${user?.username}/collections`);
             } else {
                 toast.error(result.error || 'Failed to delete collection');
             }

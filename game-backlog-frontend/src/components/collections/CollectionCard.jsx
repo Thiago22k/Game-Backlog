@@ -1,8 +1,9 @@
-import { Library, Edit3, Heart, Lock, Globe } from 'lucide-react';
+import { Library, Edit3, Heart, Lock, Globe, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getGameCover } from '../../utils/formatters';
+import defaultAvatar from '../../assets/default_avatar.png';
 
-const CollectionCard = ({ collection, isOwner }) => {
+const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy = true }) => {
     const navigate = useNavigate();
 
     // collection.preview_games será un array de hasta 3 ids/covers
@@ -109,24 +110,48 @@ const CollectionCard = ({ collection, isOwner }) => {
                             <Library size={14} className="mr-1.5" />
                             <span>{totalGames} game{totalGames !== 1 ? 's' : ''}</span>
                         </div>
-                        {collection.is_public ? (
-                            <div className="flex items-center text-gray-500" title="Public Collection">
-                                <Globe size={14} className="mr-1" />
-                                <span className="text-[10px] uppercase font-bold tracking-wider">Public</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center text-primary-yellow/70" title="Private Collection">
-                                <Lock size={14} className="mr-1" />
-                                <span className="text-[10px] uppercase font-bold tracking-wider">Private</span>
-                            </div>
+                        {showPrivacy && (
+                            collection.is_public ? (
+                                <div className="flex items-center text-gray-500" title="Public Collection">
+                                    <Globe size={14} className="mr-1" />
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Public</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center text-primary-yellow/70" title="Private Collection">
+                                    <Lock size={14} className="mr-1" />
+                                    <span className="text-[10px] uppercase font-bold tracking-wider">Private</span>
+                                </div>
+                            )
                         )}
                     </div>
 
-                    <div className="flex items-center text-gray-400 text-sm">
-                        <Heart size={14} className="mr-1.5" />
-                        <span>{collection.likes_count || 0}</span>
+                    <div className="flex items-center gap-3 text-gray-400 text-sm">
+                        <div className="flex items-center">
+                            <MessageSquare size={14} className="mr-1.5" />
+                            <span>{collection.comments_count || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <Heart size={14} className="mr-1.5" />
+                            <span>{collection.likes_count || 0}</span>
+                        </div>
                     </div>
                 </div>
+
+                {/* Creator Info */}
+                {showCreator && (
+                    <div className="mt-4 pt-3 border-t border-gray-700/50 flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-600 bg-primary-navy flex-shrink-0">
+                            <img
+                                src={collection.creator_avatar_url ? `http://localhost:3000${collection.creator_avatar_url}` : defaultAvatar}
+                                alt={collection.creator_username}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                        <span className="text-sm text-gray-400 truncate">
+                            by <span className="text-gray-200 font-medium hover:text-primary-yellow transition-colors">{collection.creator_username}</span>
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );

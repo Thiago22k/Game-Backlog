@@ -22,6 +22,10 @@ app.use(cors());
 app.use(express.json());
 app.use(requestLogger); // Log de todas las peticiones
 
+// Servir archivos estáticos (como el avatar)
+const path = require('path');
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
 // Rate limiting general
 app.use('/api', generalLimiter);
 
@@ -40,12 +44,14 @@ const authRoutes = require('./src/routes/auth.routes');
 const gamesRoutes = require('./src/routes/games.routes');
 const settingsRoutes = require('./src/routes/settings.routes');
 const collectionsRoutes = require('./src/routes/collections.routes');
+const uploadRoutes = require('./src/routes/upload.routes');
 
 // Usar rutas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit más estricto para auth
 app.use('/api/games', gamesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/collections', collectionsRoutes);
+app.use('/api/users', uploadRoutes); // Mapeamos users/avatar a nuestros uploadRoutes
 
 // Debug: Ver rutas registradas
 console.log('📋 Rutas registradas:');

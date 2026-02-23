@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Check } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
+import toast from 'react-hot-toast';
 
 const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, showWishlistButton = true }) => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
 
     if (!interactive) {
       localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
-      navigate('/login');
+      toast.error('Log in to add games to your wishlist');
       return;
     }
 
