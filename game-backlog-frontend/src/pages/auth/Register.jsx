@@ -77,7 +77,7 @@ const Register = () => {
       <div className="relative z-10">
         <Navbar />
 
-        <div className="flex items-center justify-center px-4 py-12 min-h-[calc(100vh-7rem)]">
+        <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
 
           {/* CONTENEDOR FLEX: Tres tarjetas */}
           <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-6xl relative">

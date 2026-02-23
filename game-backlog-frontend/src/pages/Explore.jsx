@@ -27,14 +27,17 @@ const Explore = () => {
   }, [searchParams]);
 
   // Estados
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const initialSearch = searchParams.get('search') || '';
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
   const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
-  const [isAnticipatedMode, setIsAnticipatedMode] = useState(searchParams.get('anticipated') === 'true');
+  const [isAnticipatedMode, setIsAnticipatedMode] = useState(
+    initialSearch ? false : searchParams.get('anticipated') === 'true'
+  );
 
   // Refs para cerrar al hacer click fuera
   const genreDropdownRef = useRef(null);
@@ -289,6 +292,9 @@ const Explore = () => {
 
   const applyQuickFilter = useCallback((filter) => {
     setIsAnticipatedMode(!!filter.isAnticipated);
+    if (filter.isAnticipated) {
+      setSearchQuery('');
+    }
     setSortBy(filter.sort ?? 'relevance');
     setTimeRange(filter.time ?? 'all');
     setSelectedGenres(filter.genre ? [filter.genre] : []);
@@ -319,7 +325,7 @@ const Explore = () => {
     <div className="min-h-screen bg-primary-navy">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto pt-32 pb-6 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Explore Games</h1>
@@ -334,7 +340,12 @@ const Explore = () => {
               type="text"
               placeholder="Search games..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                if (e.target.value.trim() !== '') {
+                  setIsAnticipatedMode(false);
+                }
+              }}
               className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
             />
             {searchQuery && (

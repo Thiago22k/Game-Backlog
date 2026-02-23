@@ -55,7 +55,7 @@ const ForgotPassword = () => {
             <div className="relative z-10">
                 <Navbar />
 
-                <div className="flex items-center justify-center px-4 py-12 min-h-[calc(100vh-7rem)]">
+                <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
                     <div className="w-full max-w-md z-10">
                         <div className="bg-primary-navy-ultra-dark rounded-2xl p-10 shadow-2xl h-full">
                             <h2 className="text-primary-yellow font-bold text-3xl mb-8 text-center uppercase tracking-wide">

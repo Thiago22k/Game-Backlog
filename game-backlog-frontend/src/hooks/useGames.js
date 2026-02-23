@@ -8,6 +8,7 @@ export const useGames = () => {
   const [error, setError] = useState(null);
   const [isProfilePublic, setIsProfilePublic] = useState(true);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
+  const [profileBannerUrl, setProfileBannerUrl] = useState(null);
 
   // Obtener juegos del usuario (puede ser propio o de otro por username)
   const getUserGames = useCallback(async (username = null, status = null, showLoader = true) => {
@@ -31,7 +32,10 @@ export const useGames = () => {
       if (response.data.avatar_url !== undefined) {
         setProfileAvatarUrl(response.data.avatar_url);
       }
-      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public, profileAvatarUrl: response.data.avatar_url };
+      if (response.data.banner_url !== undefined) {
+        setProfileBannerUrl(response.data.banner_url);
+      }
+      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public, profileAvatarUrl: response.data.avatar_url, profileBannerUrl: response.data.banner_url };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al obtener juegos';
       setError(errorMsg);
@@ -124,6 +128,7 @@ export const useGames = () => {
     error,
     isProfilePublic,
     profileAvatarUrl,
+    profileBannerUrl,
     getUserGames,
     searchGames,
     addGame,

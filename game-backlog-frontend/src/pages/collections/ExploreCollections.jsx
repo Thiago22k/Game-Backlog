@@ -68,7 +68,7 @@ const ExploreCollections = () => {
         <div className="min-h-screen bg-primary-navy">
             <Navbar />
 
-            <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto pt-32 pb-12 px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-16">
                     <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
                         Discover User <span className="text-primary-yellow">Collections</span>

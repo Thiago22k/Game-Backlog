@@ -23,7 +23,7 @@ const isValidRating = (rating) => {
 
 // Validar status de juego
 const isValidGameStatus = (status) => {
-  const validStatuses = ['completed', 'playing', 'wishlist', 'dropped'];
+  const validStatuses = ['completed', 'playing', 'wishlist', 'dropped', 'backlog'];
   return validStatuses.includes(status);
 };
 

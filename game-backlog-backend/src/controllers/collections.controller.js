@@ -55,7 +55,9 @@ const getUserCollections = async (req, res) => {
                 return res.json({
                     collections: [],
                     is_profile_public: false,
-                    username: targetUsername
+                    username: targetUsername,
+                    avatar_url: user.avatar_url,
+                    banner_url: user.banner_url
                 });
             }
         } else {
@@ -97,7 +99,9 @@ const getUserCollections = async (req, res) => {
         res.json({
             collections,
             is_profile_public: isProfilePublic,
-            username: targetUsername || req.user?.username
+            username: targetUsername || req.user?.username,
+            avatar_url: username ? (await User.findByUsername(username)).avatar_url : undefined,
+            banner_url: username ? (await User.findByUsername(username)).banner_url : undefined
         });
     } catch (error) {
         console.error('Error en getUserCollections:', error);
@@ -245,12 +249,16 @@ const addComment = async (req, res) => {
 
         const newComment = await Collection.addComment(id, userId, content.trim());
 
+        // Obtener avatar_url del usuario en DB para inyectarlo en la respuesta
+        const user = await User.findById(userId);
+
         // Devolver también la info del usuario para pintar el UI inmediatamente
         res.status(201).json({
             message: 'Comentario añadido',
             comment: {
                 ...newComment,
-                username: req.user.username || 'User' // Idealmente buscarlo si no está en el token
+                username: req.user.username || user?.username || 'User',
+                avatar_url: user?.avatar_url || null
             }
         });
     } catch (error) {

@@ -107,8 +107,93 @@ const deleteAvatar = async (req, res) => {
     }
 };
 
+// Asegurar que exista el directorio para banners
+const bannerUploadDir = 'public/uploads/banners';
+if (!fs.existsSync(bannerUploadDir)) {
+    fs.mkdirSync(bannerUploadDir, { recursive: true });
+}
+
+// Controlador para subir y actualizar banner
+const uploadBanner = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se subió ningún archivo' });
+        }
+
+        const userId = req.user.userId;
+
+        // Generar nombre de archivo único (.webp)
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const fileName = `banner-${userId}-${uniqueSuffix}.webp`;
+        const filePath = path.join(bannerUploadDir, fileName);
+        const bannerUrl = `/uploads/banners/${fileName}`;
+
+        // Procesar imagen con sharp: 1920x400 (aspect ratio super panorámico), crop center, convert to webp
+        await sharp(req.file.buffer)
+            .resize(1920, 480, {
+                fit: 'cover',
+                position: 'center'
+            })
+            .webp({ quality: 80 })
+            .toFile(filePath);
+
+        // Obtener el usuario actual para borrar su banner anterior si existe
+        const user = await User.findById(userId);
+        if (user.banner_url) {
+            const oldBannerPath = path.join(__dirname, '..', '..', 'public', user.banner_url.replace('/uploads/', 'uploads/'));
+            if (fs.existsSync(oldBannerPath)) {
+                fs.unlinkSync(oldBannerPath);
+            }
+        }
+
+        // Actualizar base de datos
+        const updatedUser = await User.updateBanner(userId, bannerUrl);
+
+        res.json({
+            message: 'Banner actualizado y optimizado exitosamente',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Error en uploadBanner:', error);
+        res.status(500).json({ error: 'Error al procesar y subir el banner' });
+    }
+};
+
+// Controlador para eliminar el banner
+const deleteBanner = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const user = await User.findById(userId);
+
+        if (!user.banner_url) {
+            return res.status(400).json({ error: 'No tienes un banner personalizado para eliminar' });
+        }
+
+        // Borrar archivo físico si existe
+        const bannerPath = path.join(__dirname, '..', '..', 'public', user.banner_url.replace('/uploads/', 'uploads/'));
+        if (fs.existsSync(bannerPath)) {
+            fs.unlinkSync(bannerPath);
+        }
+
+        // Actualizar base de datos a null
+        const updatedUser = await User.updateBanner(userId, null);
+
+        res.json({
+            message: 'Banner eliminado exitosamente',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Error en deleteBanner:', error);
+        res.status(500).json({ error: 'Error al eliminar el banner' });
+    }
+};
+
 module.exports = {
     upload,
     uploadAvatar,
-    deleteAvatar
+    deleteAvatar,
+    uploadBanner,
+    deleteBanner
 };

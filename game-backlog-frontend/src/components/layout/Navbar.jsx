@@ -5,8 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Logo from '../../assets/stackd.svg?react';
 import SearchModal from './SearchModal';
 import defaultAvatar from '../../assets/default_avatar.png';
-
-const Navbar = () => {
+const Navbar = ({ transparentMode = true }) => {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,9 +44,9 @@ const Navbar = () => {
 
   return (
     <>
-      <div className="relative w-full flex justify-center mb-8 z-[200]">
-        <div className="absolute top-0 left-0 w-full h-12 bg-primary-navy-dark z-0 shadow-sm"></div>
-        <nav className="relative z-10 bg-primary-navy-dark rounded-b-[2.5rem] rounded-t-none mx-auto mt-0 shadow-lg w-full max-w-3xl">
+      <div className={`${transparentMode ? 'absolute top-0 left-0 w-full z-[200]' : 'relative w-full mb-8 z-[200]'} flex justify-center`}>
+        {!transparentMode && <div className="absolute top-0 left-0 w-full h-12 bg-primary-navy-dark z-0 shadow-sm"></div>}
+        <nav className={`relative z-10 rounded-b-[2.5rem] rounded-t-none mx-auto mt-0 shadow-lg w-full max-w-3xl ${transparentMode ? 'bg-primary-navy-dark/70 backdrop-blur-md border border-gray-700/50' : 'bg-primary-navy-dark'}`}>
           <div className="px-8">
             <div className="flex justify-between items-center h-20">
 

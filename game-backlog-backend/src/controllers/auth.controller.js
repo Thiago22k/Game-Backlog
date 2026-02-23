@@ -101,6 +101,8 @@ const register = async (req, res) => {
         username: newUser.username,
         email: newUser.email,
         is_profile_public: newUser.is_profile_public,
+        avatar_url: newUser.avatar_url,
+        banner_url: newUser.banner_url,
       },
       token,
     });
@@ -163,6 +165,8 @@ const login = async (req, res) => {
         username: user.username,
         email: user.email,
         is_profile_public: user.is_profile_public,
+        avatar_url: user.avatar_url,
+        banner_url: user.banner_url,
       },
       token,
     });

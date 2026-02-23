@@ -1,5 +1,5 @@
 import { useOutletContext, useParams } from 'react-router-dom';
-import { Gamepad2, Trophy, Star, Clock, XCircle } from 'lucide-react';
+import { Gamepad2, Trophy, Star, Clock, XCircle, Archive } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
     <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-6 flex items-center justify-between">
@@ -29,6 +29,7 @@ const ProfileStats = () => {
     const playing = games.filter(g => g.status === 'playing').length;
     const dropped = games.filter(g => g.status === 'dropped').length;
     const wishlist = games.filter(g => g.status === 'wishlist').length;
+    const backlog = games.filter(g => g.status === 'backlog').length;
     const ratedGames = games.filter(g => g.rating);
     const avgRating = ratedGames.length > 0
         ? (ratedGames.reduce((sum, g) => sum + g.rating, 0) / ratedGames.length).toFixed(1)
@@ -91,6 +92,13 @@ const ProfileStats = () => {
                                 <span>Wishlist</span>
                             </div>
                             <span className="font-semibold text-white">{wishlist}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center text-gray-300">
+                                <Archive size={18} className="text-purple-400 mr-2" />
+                                <span>Backlog</span>
+                            </div>
+                            <span className="font-semibold text-white">{backlog}</span>
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center text-gray-300">

@@ -29,7 +29,7 @@ CREATE TABLE user_games (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_user_game UNIQUE(user_id, igdb_game_id),
-    CONSTRAINT valid_status CHECK (status IN ('completed', 'playing', 'wishlist', 'dropped'))
+    CONSTRAINT valid_status CHECK (status IN ('completed', 'playing', 'wishlist', 'dropped', 'backlog'))
 );
 
 -- Índices para mejorar performance
@@ -41,7 +41,7 @@ CREATE INDEX idx_user_games_status ON user_games(status);
 COMMENT ON TABLE users IS 'Tabla de usuarios registrados en la aplicación';
 COMMENT ON TABLE user_games IS 'Relación entre usuarios y juegos de IGDB con estado y calificación personal';
 COMMENT ON COLUMN user_games.igdb_game_id IS 'ID del juego en la API de IGDB';
-COMMENT ON COLUMN user_games.status IS 'Estado del juego: completed, playing, wishlist, dropped';
+COMMENT ON COLUMN user_games.status IS 'Estado del juego: completed, playing, wishlist, dropped, backlog';
 COMMENT ON COLUMN user_games.rating IS 'Calificación personal del 1 al 5';
 
 -- Tabla de colecciones

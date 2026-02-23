@@ -135,7 +135,7 @@ const Settings = () => {
     <div className="min-h-screen bg-primary-navy">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto pt-32 pb-6 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Settings</h1>

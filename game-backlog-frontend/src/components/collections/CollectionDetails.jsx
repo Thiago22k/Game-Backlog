@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
@@ -7,11 +7,14 @@ import { useGames } from '../../hooks/useGames';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../layout/Navbar';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
+import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
+import NotFound from '../../pages/NotFound';
 import defaultAvatar from '../../assets/default_avatar.png';
 
 const CollectionDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { user } = useAuth();
     const { getCollectionDetails, toggleLike, getComments, addComment, deleteComment, loading } = useCollections();
     const { addGame, updateGame, deleteGame, getUserGames, userGames } = useGames();
@@ -25,6 +28,7 @@ const CollectionDetails = () => {
     const [likesCount, setLikesCount] = useState(0);
     const [isLiked, setIsLiked] = useState(false);
     const [isPrivateError, setIsPrivateError] = useState(false);
+    const [notFound, setNotFound] = useState(false);
 
     // Comentarios
     const [comments, setComments] = useState([]);
@@ -33,7 +37,7 @@ const CollectionDetails = () => {
 
     // Paginación
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 8; // Usaremos 8 para colecciones (2 filas de 4) o 12 (3 filas de 4). El usuario dijo "como my games", que usa 12.
+    const itemsPerPage = 12; // 3 rows of 4
 
 
     useEffect(() => {
@@ -75,11 +79,10 @@ const CollectionDetails = () => {
                     setComments(commentsRes.data || []);
                 }
             } else {
-                if (result.error === 'No tienes permiso para ver esta colección' || result.error === 'Colección no encontrada o no tienes permisos' || result.error?.includes('permiso')) {
+                if (result.error?.includes('permiso')) {
                     setIsPrivateError(true);
                 } else {
-                    toast.error('Could not load collection details');
-                    navigate(-1);
+                    setNotFound(true);
                 }
             }
         };
@@ -115,6 +118,7 @@ const CollectionDetails = () => {
         completed: 'Completed',
         playing: 'Playing',
         wishlist: 'Wishlist',
+        backlog: 'Backlog',
         dropped: 'Dropped',
     };
 
@@ -129,6 +133,30 @@ const CollectionDetails = () => {
             return cg;
         }));
     };
+
+    const handleWishlistToggle = useCallback(async (gameId, newStatus) => {
+        if (!user) return;
+
+        const existingGame = userGamesRef.current.find((g) => g.igdb_game_id === gameId);
+
+        if (newStatus === null && existingGame) {
+            const result = await deleteGame(gameId);
+            if (result.success) {
+                toast.success('Removed from your wishlist');
+                updateCollectionGame(gameId, { status: null, user_rating: 0 });
+            } else {
+                toast.error('Error removing from your wishlist');
+            }
+        } else if (newStatus === 'wishlist') {
+            const result = await addGame(gameId, 'wishlist');
+            if (result.success) {
+                toast.success('Added to your wishlist!');
+                updateCollectionGame(gameId, { status: 'wishlist', user_rating: 0 });
+            } else {
+                toast.error('Error adding to your wishlist');
+            }
+        }
+    }, [user, addGame, deleteGame]); // updateCollectionGame is not a dependency if it's not wrapped in useCallback, but it's defined in the component. Actually updateCollectionGame should be wrapped too or defined inside. I'll just add it to deps for now or skip it if it doesn't change.
 
     const handleStatusChange = async (gameId, newStatus, currentRating = 0) => {
         if (!user) return;
@@ -262,7 +290,7 @@ const CollectionDetails = () => {
         return (
             <div className="min-h-screen bg-primary-navy">
                 <Navbar />
-                <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <main className="max-w-7xl mx-auto pt-32 pb-8 px-4 sm:px-6 lg:px-8">
                     <button
                         onClick={() => navigate(-1)}
                         className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
@@ -286,6 +314,8 @@ const CollectionDetails = () => {
         );
     }
 
+    if (notFound) return <NotFound />;
+
     if (!collection) return null;
 
     const isOwner = user && user.id === collection.user_id;
@@ -293,7 +323,7 @@ const CollectionDetails = () => {
     return (
         <div className="min-h-screen bg-primary-navy">
             <Navbar />
-            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto pt-32 pb-8 px-4 sm:px-6 lg:px-8">
                 {/* Back Button */}
                 <button
                     onClick={() => navigate(-1)}
@@ -345,6 +375,7 @@ const CollectionDetails = () => {
                             {isOwner && (
                                 <Link
                                     to={`/collections/${collection.id}/edit`}
+                                    state={{ from: location.pathname }}
                                     className="flex items-center px-4 py-2 bg-gray-800/50 hover:bg-gray-700 text-white rounded-full transition-colors border border-gray-700/50 text-sm font-medium"
                                 >
                                     <Edit3 size={16} className="mr-2" />
@@ -398,49 +429,86 @@ const CollectionDetails = () => {
                     {collectionGames && collectionGames.length > 0 ? (
                         <>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
-                                {paginatedGames.map((cg) => (
-                                    <div key={cg.id} className="relative group">
-                                        <InteractiveGameCard
-                                            game={{ ...cg.game_details, id: cg.igdb_game_id }}
-                                            interactive={!!user}
-                                            showStatus={true}
-                                            onStatusChange={handleStatusChange}
-                                            onRatingChange={handleRatingChange}
-                                        />
-                                    </div>
-                                ))}
+                                {paginatedGames.map((cg) => {
+                                    const releaseDate = cg.game_details?.first_release_date ? new Date(cg.game_details.first_release_date * 1000) : null;
+                                    const isUnreleased = !releaseDate || releaseDate > new Date();
+
+                                    const mappedGame = { ...cg.game_details, id: cg.igdb_game_id, status: cg.game_details.status, user_rating: cg.game_details.user_rating };
+
+                                    return (
+                                        <div key={cg.id} className="relative group h-full">
+                                            {isUnreleased ? (
+                                                <AnticipatedGameCard
+                                                    game={mappedGame}
+                                                    interactive={!!user}
+                                                    showWishlistButton={!!user}
+                                                    onWishlistToggle={handleWishlistToggle}
+                                                />
+                                            ) : (
+                                                <InteractiveGameCard
+                                                    game={mappedGame}
+                                                    interactive={!!user}
+                                                    showStatus={true}
+                                                    onStatusChange={handleStatusChange}
+                                                    onRatingChange={handleRatingChange}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
-                            {/* Paginación */}
+                            {/* Pagination Controls */}
                             {totalPages > 1 && (
-                                <div className="flex justify-center items-center space-x-2 mt-12 pb-8">
+                                <div className="flex justify-center items-center gap-2 mt-8 flex-wrap pb-8">
                                     <button
                                         onClick={() => handlePageChange(currentPage - 1)}
                                         disabled={currentPage === 1}
-                                        className="p-2 rounded-lg bg-primary-navy-dark border border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary-yellow transition-colors"
+                                        className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentPage === 1
+                                            ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                            : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                            }`}
                                     >
                                         Prev
                                     </button>
 
-                                    <div className="flex space-x-1">
-                                        {[...Array(totalPages)].map((_, i) => (
-                                            <button
-                                                key={i + 1}
-                                                onClick={() => handlePageChange(i + 1)}
-                                                className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${currentPage === i + 1
-                                                    ? 'bg-primary-yellow text-primary-navy-dark'
-                                                    : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
-                                                    }`}
-                                            >
-                                                {i + 1}
-                                            </button>
-                                        ))}
+                                    <div className="flex items-center gap-1 mx-2">
+                                        {Array.from({ length: totalPages }).map((_, idx) => {
+                                            const pageNum = idx + 1;
+                                            if (
+                                                pageNum === 1 ||
+                                                pageNum === totalPages ||
+                                                (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                            ) {
+                                                return (
+                                                    <button
+                                                        key={pageNum}
+                                                        onClick={() => handlePageChange(pageNum)}
+                                                        className={`w-10 h-10 rounded-full font-medium transition-all flex items-center justify-center text-sm border ${currentPage === pageNum
+                                                            ? 'bg-primary-yellow text-primary-navy-dark border-primary-yellow scale-110 shadow-sm'
+                                                            : 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white backdrop-blur-sm'
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                pageNum === currentPage - 2 ||
+                                                pageNum === currentPage + 2
+                                            ) {
+                                                return <span key={pageNum} className="text-gray-500 px-1">...</span>;
+                                            }
+                                            return null;
+                                        })}
                                     </div>
 
                                     <button
                                         onClick={() => handlePageChange(currentPage + 1)}
                                         disabled={currentPage === totalPages}
-                                        className="p-2 rounded-lg bg-primary-navy-dark border border-gray-700 text-white disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary-yellow transition-colors"
+                                        className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentPage === totalPages
+                                            ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                            : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                            }`}
                                     >
                                         Next
                                     </button>

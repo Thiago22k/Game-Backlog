@@ -1,18 +1,20 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Check, Play, ShoppingCart, Trash2, Calendar, Clock, Tag, Building2, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Star, Check, Play, ShoppingCart, Trash2, Calendar, Clock, Tag, Building2, ExternalLink, Archive } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
+import NotFound from '../pages/NotFound';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 // ─── Constants ───────────────────────────────────────────────────────────────
 const STATUSES = [
   { id: 'playing', label: 'Playing', Icon: Play, color: 'bg-blue-600 hover:bg-blue-500', activeRing: 'ring-blue-400' },
   { id: 'completed', label: 'Completed', Icon: Check, color: 'bg-green-600 hover:bg-green-500', activeRing: 'ring-green-400' },
   { id: 'wishlist', label: 'Wishlist', Icon: ShoppingCart, color: 'bg-cyan-600 hover:bg-cyan-500', activeRing: 'ring-cyan-400' },
+  { id: 'backlog', label: 'Backlog', Icon: Archive, color: 'bg-purple-600 hover:bg-purple-500', activeRing: 'ring-purple-400' },
   { id: 'dropped', label: 'Dropped', Icon: Trash2, color: 'bg-red-600 hover:bg-red-500', activeRing: 'ring-red-400' },
 ];
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -66,6 +68,7 @@ const GameDetails = () => {
   const [userGame, setUserGame] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [banner, setBanner] = useState(null);
@@ -85,7 +88,8 @@ const GameDetails = () => {
       } catch (err) {
         if (!isMounted) return;
         console.error('Error loading game:', err);
-        setError('Could not load game information');
+        // Assuming any fetch failure means game wasn't found in DB/IGDB
+        setNotFound(true);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -238,7 +242,7 @@ const GameDetails = () => {
           </div>
         )}
         {!banner && <div className="absolute inset-0 bg-primary-navy-dark" />}
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
           {/* Back button */}
           <button
             onClick={() => navigate(-1)}
@@ -500,9 +504,14 @@ const GameDetails = () => {
                 <InfoRow label="Platforms">
                   <div className="flex flex-wrap gap-1.5 mt-0.5">
                     {game.platforms.slice(0, 6).map((p) => (
-                      <span key={p.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
+                      <button
+                        key={p.id}
+                        onClick={() => navigate(`/explore?platforms=${p.id}`)}
+                        className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors cursor-pointer text-xs rounded border border-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-yellow"
+                        title={`Explore games on ${p.name}`}
+                      >
                         {p.name}
-                      </span>
+                      </button>
                     ))}
                     {game.platforms.length > 6 && (
                       <span className="text-xs text-gray-500">+{game.platforms.length - 6} more</span>

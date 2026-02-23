@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { Search, Plus, Trash2, ArrowLeft, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
@@ -11,8 +11,12 @@ import { useAuth } from '../../context/AuthContext';
 const CollectionForm = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const { id } = useParams();
     const isEditing = !!id;
+
+    // Define adónde enviar al usuario tras crear, editar o eliminar
+    const from = location.state?.from || `/profile/${user?.username}/collections`;
 
     const { createCollection, updateCollection, getCollectionDetails, deleteCollection, loading: saving } = useCollections();
 
@@ -126,7 +130,7 @@ const CollectionForm = () => {
 
         if (result.success) {
             toast.success(`Collection ${isEditing ? 'updated' : 'created'} successfully!`);
-            navigate(`/profile/${user?.username}/collections`);
+            navigate(from);
         }
     };
 
@@ -135,7 +139,9 @@ const CollectionForm = () => {
             const result = await deleteCollection(id);
             if (result.success) {
                 toast.success('Collection deleted successfully');
-                navigate(`/profile/${user?.username}/collections`);
+                // Si la eliminamos y el "from" era sus detalles, saltaría error 404. Así que la vista normal
+                const isFromDetails = from.includes(id);
+                navigate(isFromDetails ? `/profile/${user?.username}/collections` : from);
             } else {
                 toast.error(result.error || 'Failed to delete collection');
             }
@@ -145,7 +151,7 @@ const CollectionForm = () => {
     return (
         <div className="min-h-screen bg-primary-navy">
             <Navbar />
-            <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-4xl mx-auto pt-32 pb-8 px-4 sm:px-6 lg:px-8">
                 <button
                     onClick={() => navigate(-1)}
                     className="flex items-center text-gray-400 hover:text-white mb-6 transition-colors"
@@ -311,7 +317,7 @@ const CollectionForm = () => {
                         <div className="flex gap-4">
                             <button
                                 type="button"
-                                onClick={() => navigate(-1)}
+                                onClick={() => navigate(from)}
                                 className="px-6 py-2 bg-transparent border border-gray-600 text-white rounded-lg hover:border-gray-400 transition-colors"
                             >
                                 Cancel

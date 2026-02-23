@@ -1,10 +1,11 @@
 import { Library, Edit3, Heart, Lock, Globe, MessageSquare } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { getGameCover } from '../../utils/formatters';
 import defaultAvatar from '../../assets/default_avatar.png';
 
 const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy = true }) => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     // collection.preview_games será un array de hasta 3 ids/covers
     const covers = collection.preview_games || [];
@@ -85,7 +86,7 @@ const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy 
                     <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/collections/${collection.id}/edit`);
+                            navigate(`/collections/${collection.id}/edit`, { state: { from: location.pathname } });
                         }}
                         className="absolute top-2 right-2 p-2 bg-primary-navy-dark/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary-yellow hover:text-black shadow-md"
                         title="Edit Collection"
@@ -139,16 +140,19 @@ const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy 
 
                 {/* Creator Info */}
                 {showCreator && (
-                    <div className="mt-4 pt-3 border-t border-gray-700/50 flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-600 bg-primary-navy flex-shrink-0">
+                    <div
+                        className="mt-4 pt-3 border-t border-gray-700/50 flex items-center gap-2"
+                        onClick={(e) => e.stopPropagation()} // Detener bubbling para que no abra la colección
+                    >
+                        <Link to={`/profile/${collection.creator_username}`} className="w-6 h-6 rounded-full overflow-hidden border border-gray-600 bg-primary-navy flex-shrink-0 hover:ring-2 hover:ring-primary-yellow transition-all">
                             <img
                                 src={collection.creator_avatar_url ? `http://localhost:3000${collection.creator_avatar_url}` : defaultAvatar}
                                 alt={collection.creator_username}
                                 className="w-full h-full object-cover"
                             />
-                        </div>
+                        </Link>
                         <span className="text-sm text-gray-400 truncate">
-                            by <span className="text-gray-200 font-medium hover:text-primary-yellow transition-colors">{collection.creator_username}</span>
+                            by <Link to={`/profile/${collection.creator_username}`} className="text-gray-200 font-medium hover:text-primary-yellow transition-colors">{collection.creator_username}</Link>
                         </span>
                     </div>
                 )}

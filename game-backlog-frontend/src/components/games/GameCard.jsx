@@ -30,6 +30,7 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
     playing: 'Jugando',
     wishlist: 'Lista de deseos',
     dropped: 'Abandonado',
+    backlog: 'Backlog',
   };
 
   return (
@@ -69,7 +70,8 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
             <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${status === 'completed' ? 'bg-green-100 text-green-800' :
               status === 'playing' ? 'bg-blue-100 text-blue-800' :
                 status === 'wishlist' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
+                  status === 'backlog' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
               }`}>
               {statusLabels[status]}
             </span>

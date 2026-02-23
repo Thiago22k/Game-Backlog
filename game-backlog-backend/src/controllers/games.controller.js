@@ -65,7 +65,7 @@ const addGameToUser = async (req, res) => {
     }
 
     // Validar status si viene
-    const validStatuses = ['completed', 'playing', 'wishlist', 'dropped'];
+    const validStatuses = ['completed', 'playing', 'wishlist', 'dropped', 'backlog'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
         error: `Status debe ser uno de: ${validStatuses.join(', ')}`
@@ -125,6 +125,7 @@ const getUserGames = async (req, res) => {
       isProfilePublic = user.is_profile_public;
       targetUsername = user.username;
       targetAvatarUrl = user.avatar_url;
+      targetBannerUrl = user.banner_url; // Assign banner_url
 
       // Si el perfil es privado y no es el dueño
       if (!isProfilePublic && targetUserId !== requestingUserId) {
@@ -132,12 +133,20 @@ const getUserGames = async (req, res) => {
           games: [],
           total: 0,
           is_profile_public: false,
-          username: targetUsername
+          username: targetUsername,
+          avatar_url: targetAvatarUrl,
+          banner_url: targetBannerUrl // Include banner_url here
         });
       }
     } else {
       // Si no hay username, es la ruta /user (protegida por authenticateToken)
       targetUserId = requestingUserId;
+      // For the current user, get their profile details if not already set
+      if (req.user) {
+        targetUsername = req.user.username;
+        targetAvatarUrl = req.user.avatar_url;
+        targetBannerUrl = req.user.banner_url;
+      }
     }
 
     if (!targetUserId) {
@@ -147,7 +156,14 @@ const getUserGames = async (req, res) => {
     const userGames = await Game.getUserGames(targetUserId, status);
 
     if (userGames.length === 0) {
-      return res.json({ games: [], total: 0 });
+      return res.json({
+        games: [],
+        total: 0,
+        is_profile_public: isProfilePublic,
+        username: targetUsername || req.user?.username,
+        avatar_url: targetAvatarUrl,
+        banner_url: targetBannerUrl // Include banner_url here
+      });
     }
 
     const igdbGameIds = [...new Set(userGames.map(g => g.igdb_game_id))];
@@ -164,7 +180,8 @@ const getUserGames = async (req, res) => {
       total: gamesWithDetails.length,
       is_profile_public: isProfilePublic,
       username: targetUsername || req.user?.username,
-      avatar_url: targetAvatarUrl
+      avatar_url: targetAvatarUrl,
+      banner_url: targetBannerUrl // Include banner_url here
     });
 
   } catch (error) {
@@ -189,7 +206,7 @@ const updateUserGame = async (req, res) => {
     }
 
     // Validar status si viene
-    const validStatuses = ['completed', 'playing', 'wishlist', 'dropped'];
+    const validStatuses = ['completed', 'playing', 'wishlist', 'dropped', 'backlog'];
     if (status && !validStatuses.includes(status)) {
       return res.status(400).json({
         error: `Status debe ser uno de: ${validStatuses.join(', ')}`

@@ -6,7 +6,7 @@ const User = {
     const query = `
       INSERT INTO users (username, email, password)
       VALUES ($1, $2, $3)
-      RETURNING id, username, email, is_profile_public, avatar_url, created_at
+      RETURNING id, username, email, is_profile_public, avatar_url, banner_url, created_at
     `;
     const values = [username, email, hashedPassword];
     const result = await pool.query(query, values);
@@ -29,7 +29,7 @@ const User = {
 
   // Buscar usuario por ID
   async findById(id) {
-    const query = 'SELECT id, username, email, is_profile_public, avatar_url, created_at FROM users WHERE id = $1';
+    const query = 'SELECT id, username, email, is_profile_public, avatar_url, banner_url, created_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0];
   },
@@ -102,9 +102,21 @@ const User = {
       UPDATE users 
       SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP 
       WHERE id = $2
-      RETURNING id, username, email, avatar_url
+      RETURNING id, username, email, avatar_url, banner_url
     `;
     const result = await pool.query(query, [avatarUrl, userId]);
+    return result.rows[0];
+  },
+
+  // Actualizar banner
+  async updateBanner(userId, bannerUrl) {
+    const query = `
+      UPDATE users 
+      SET banner_url = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+      RETURNING id, username, email, avatar_url, banner_url
+    `;
+    const result = await pool.query(query, [bannerUrl, userId]);
     return result.rows[0];
   },
 };

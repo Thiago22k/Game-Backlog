@@ -10,14 +10,16 @@ const GameHero = ({ game, userGame, onAction }) => {
     completed: 'Completado',
     playing: 'Jugando',
     wishlist: 'Lista de deseos',
+    wishlist: 'Lista de deseos',
     dropped: 'Abandonado',
+    backlog: 'Backlog',
   };
 
   return (
     <div className="relative bg-gray-900">
       {/* Banner de fondo */}
       {banner && (
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-30 blur-sm"
           style={{ backgroundImage: `url(${banner})` }}
         />
@@ -60,12 +62,12 @@ const GameHero = ({ game, userGame, onAction }) => {
             <div className="flex items-center space-x-4">
               {userGame ? (
                 <>
-                  <span className={`inline-block px-4 py-2 text-sm font-semibold rounded ${
-                    userGame.status === 'completed' ? 'bg-green-600' :
-                    userGame.status === 'playing' ? 'bg-blue-600' :
-                    userGame.status === 'wishlist' ? 'bg-yellow-600' :
-                    'bg-gray-600'
-                  }`}>
+                  <span className={`inline-block px-4 py-2 text-sm font-semibold rounded ${userGame.status === 'completed' ? 'bg-green-600' :
+                      userGame.status === 'playing' ? 'bg-blue-600' :
+                        userGame.status === 'wishlist' ? 'bg-yellow-600' :
+                          userGame.status === 'backlog' ? 'bg-purple-600' :
+                            'bg-gray-600'
+                    }`}>
                     {statusLabels[userGame.status]}
                   </span>
                   <button

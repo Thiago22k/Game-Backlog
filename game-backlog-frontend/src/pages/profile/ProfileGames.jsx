@@ -278,6 +278,7 @@ const ProfileGames = () => {
                                         { value: 'completed', label: 'Completed' },
                                         { value: 'playing', label: 'Playing' },
                                         { value: 'wishlist', label: 'Wishlist' },
+                                        { value: 'backlog', label: 'Backlog' },
                                         { value: 'dropped', label: 'Dropped' },
                                     ].map(status => (
                                         <button

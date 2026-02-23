@@ -17,6 +17,7 @@ const STATUS_LABELS = {
   completed: 'Completed',
   playing: 'Playing',
   wishlist: 'Wishlist',
+  backlog: 'Backlog',
   dropped: 'Dropped',
 };
 
@@ -132,9 +133,9 @@ const Landing = () => {
         // Cargar juegos del usuario (si autenticado) y los tres feeds en paralelo
         const [userResult, popularRes, bestOfYearRes, anticipatedRes] = await Promise.all([
           isAuthenticated ? getUserGames() : Promise.resolve({ success: false, data: [] }),
-          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=12`),
-          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=12`),
-          axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=12`),
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=8`),
+          axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=8`),
+          axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=8`),
         ]);
 
         const userGamesData = userResult.success ? userResult.data : [];
@@ -171,7 +172,7 @@ const Landing = () => {
 
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white">
             Stack<span className="text-primary-yellow">d</span>
           </h1>

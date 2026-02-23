@@ -18,7 +18,8 @@ const Collection = {
         let query = `
       SELECT c.*, 
              COUNT(DISTINCT cg.id) as game_count,
-             COUNT(DISTINCT cl.id) as likes_count
+             COUNT(DISTINCT cl.id) as likes_count,
+             (SELECT COUNT(*) FROM collection_comments cc WHERE cc.collection_id = c.id) as comments_count
       FROM collections c
       LEFT JOIN collection_games cg ON c.id = cg.collection_id
       LEFT JOIN collection_likes cl ON c.id = cl.collection_id

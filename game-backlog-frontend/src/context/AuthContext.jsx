@@ -40,6 +40,43 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // Escuchar cambios en localStorage (para sincronizar entre pestañas)
+  useEffect(() => {
+    const handleStorageChange = async (event) => {
+      // Si el cambio fue en nuestro token de sesión
+      if (event.key === STORAGE_KEYS.TOKEN) {
+        // Otra pestaña cerró la sesión (borró el token)
+        if (event.newValue === null) {
+          setToken(null);
+          setUser(null);
+        }
+        // Otra pestaña inició sesión (hay un nuevo token)
+        else if (event.newValue !== null) {
+          setToken(event.newValue);
+          try {
+            // Validar silenciosamente el nuevo token para recuperar el usuario
+            const response = await axios.get(ENDPOINTS.AUTH.ME, {
+              headers: { Authorization: `Bearer ${event.newValue}` }
+            });
+            setUser(response.data.user);
+          } catch (error) {
+            console.error('Error sincronizando nueva sesión:', error);
+            // Si el token es inválido, forzamos cierre de nuevo
+            localStorage.removeItem(STORAGE_KEYS.TOKEN);
+            setToken(null);
+            setUser(null);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   // Función de registro
   const register = async (username, email, password) => {
     try {

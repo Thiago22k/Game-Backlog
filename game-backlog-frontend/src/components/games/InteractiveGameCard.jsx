@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus } from 'lucide-react';
+import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreVertical, Archive } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
-import RatingBadge from '../common/RatingBadge';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -13,6 +12,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
   // Estados locales
@@ -99,6 +99,8 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         return { Icon: Play, color: 'bg-blue-600' };
       case 'wishlist':
         return { Icon: ShoppingCart, color: 'bg-cyan-600' };
+      case 'backlog':
+        return { Icon: Archive, color: 'bg-purple-600' };
       case 'dropped':
         return { Icon: Trash2, color: 'bg-red-600' };
       default:
@@ -109,11 +111,11 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const { Icon: StatusIcon, color: statusColor } = getStatusIcon();
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       {/* Card Container - Mismo estilo que AnticipatedGameCard */}
       <div
         onClick={() => navigate(`/game/${game.slug || game.id}`)}
-        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group"
+        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group h-full flex flex-col"
       >
         {/* Header con Status y Rating */}
         <div className="h-12 px-4 relative flex items-center justify-center w-full">
@@ -144,9 +146,50 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             </div>
           )}
 
-          {/* IGDB Rating (derecha) */}
-          <div className="absolute right-4">
-            <RatingBadge rating={game.rating} size="sm" />
+          {/* Options Menu Button (derecha) */}
+          <div className="absolute right-2 z-30">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowOptionsMenu(!showOptionsMenu);
+              }}
+              className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <MoreVertical size={20} />
+            </button>
+
+            {/* Options Dropdown */}
+            {showOptionsMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOptionsMenu(false);
+                  }}
+                />
+                <div
+                  className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {showAddButton && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        setShowOptionsMenu(false);
+                        handleAddToCollectionClick(e);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
+                    >
+                      <FolderPlus size={16} />
+                      <span>Add to Collection</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -172,27 +215,15 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         </div>
 
         {/* Info del juego */}
-        <div className="px-4 pb-5 text-center relative">
+        <div className="px-4 pb-5 text-center relative flex flex-col flex-grow">
           <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem] px-6" title={game.name}>
             {game.name}
           </h3>
-          <p className="text-gray-400 text-sm">
-            {genre} • {year}
-          </p>
-
-          {/* Add to Collection Button (Floating Bottom Right) */}
-          {showAddButton && (
-            <div className="absolute bottom-2 right-2 flex items-center justify-center">
-              <button
-                type="button"
-                onClick={handleAddToCollectionClick}
-                className={`p-2 rounded-full text-gray-500 md:opacity-0 group-hover:opacity-100 hover:text-primary-yellow hover:bg-gray-800 transition-all ${interactive ? 'hover:scale-110' : ''}`}
-                title="Add to Collection"
-              >
-                <FolderPlus size={20} />
-              </button>
-            </div>
-          )}
+          <div className="mt-auto">
+            <p className="text-gray-400 text-sm">
+              {genre} • {year}
+            </p>
+          </div>
         </div>
       </div>
 

@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Check } from 'lucide-react';
+import { Clock, Plus, Check, MoreVertical, FolderPlus } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../context/AuthContext';
+import AddToCollectionModal from '../collections/AddToCollectionModal';
 
-const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, showWishlistButton = true }) => {
+const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, showWishlistButton = true, showAddButton = true }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(game.status === 'wishlist');
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
   // Sincronizar con props cuando cambien
   useEffect(() => {
@@ -57,6 +62,19 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
     }
   };
 
+  const handleAddToCollectionClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!user) {
+      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      toast.error('Log in to add games to your collection');
+      return;
+    }
+
+    setIsCollectionModalOpen(true);
+  };
+
   // Obtener artwork (banner superior)
   const artwork = game.screenshots?.[0]?.url || game.artworks?.[0]?.url || game.cover?.url;
   const artworkUrl = artwork
@@ -73,78 +91,139 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
     : 'TBA';
 
   return (
-    <div
-      onClick={() => navigate(`/game/${game.slug || game.id}`)}
-      className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group relative"
-    >
-      {/* Header con Countdown */}
-      <div className="h-12 flex items-center justify-between px-4">
-        {/* Countdown Badge */}
-        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${countdown.color}`}>
-          <Clock size={14} />
-          {countdown.text}
-        </div>
+    <div className="relative h-full">
+      <div
+        onClick={() => navigate(`/game/${game.slug || game.id}`)}
+        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group h-full flex flex-col"
+      >
+        {/* Header con Countdown */}
+        <div className="h-12 flex items-center px-4 relative w-full">
+          {/* Countdown Badge */}
+          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${countdown.color}`}>
+            <Clock size={14} />
+            {countdown.text}
+          </div>
 
-        {/* IGDB Rating (si existe) */}
-        {game.rating && (
-          <RatingBadge rating={game.rating} size="sm" />
-        )}
-      </div>
+          {/* IGDB Rating (si existe) */}
+          {game.rating && (
+            <div className="ml-auto mr-8">
+              <RatingBadge rating={game.rating} size="sm" />
+            </div>
+          )}
 
-      {/* Artwork Banner */}
-      <div className="mx-4 mb-8">
-        <img
-          src={artworkUrl}
-          alt={game.name}
-          className="w-full h-32 object-cover rounded-lg"
-          onError={(e) => {
-            e.target.src = coverUrl;
-          }}
-        />
-      </div>
+          {/* Options Menu Button (derecha) */}
+          <div className="absolute right-2 z-30">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowOptionsMenu(!showOptionsMenu);
+              }}
+              className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <MoreVertical size={20} />
+            </button>
 
-      {/* Cover Circular (mitad incrustado) */}
-      <div className="flex justify-center -mt-12 mb-3">
-        <img
-          src={coverUrl}
-          alt={game.name}
-          className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
-        />
-      </div>
-
-      {/* Info del juego */}
-      <div className="px-4 pb-4 text-center">
-        <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem]">
-          {game.name}
-        </h3>
-        <p className="text-gray-400 text-sm mb-3">
-          {genre} • {year}
-        </p>
-
-        {/* Botón Wishlist */}
-        {showWishlistButton && (
-          <button
-            type="button"
-            onClick={handleWishlistClick}
-            className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${isInWishlist
-              ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
-              : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
-              }`}
-          >
-            {isInWishlist ? (
+            {/* Options Dropdown */}
+            {showOptionsMenu && (
               <>
-                <Check size={16} />
-                In Wishlist
-              </>
-            ) : (
-              <>
-                <Plus size={16} />
-                Add to Wishlist
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowOptionsMenu(false);
+                  }}
+                />
+                <div
+                  className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {showAddButton && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        setShowOptionsMenu(false);
+                        handleAddToCollectionClick(e);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
+                    >
+                      <FolderPlus size={16} />
+                      <span>Add to Collection</span>
+                    </button>
+                  )}
+                </div>
               </>
             )}
-          </button>
-        )}
+          </div>
+        </div>
+
+        {/* Artwork Banner */}
+        <div className="mx-4 mb-8">
+          <img
+            src={artworkUrl}
+            alt={game.name}
+            className="w-full h-32 object-cover rounded-lg"
+            onError={(e) => {
+              e.target.src = coverUrl;
+            }}
+          />
+        </div>
+
+        {/* Cover Circular (mitad incrustado) */}
+        <div className="flex justify-center -mt-12 mb-3">
+          <img
+            src={coverUrl}
+            alt={game.name}
+            className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
+          />
+        </div>
+
+        {/* Info del juego */}
+        <div className="px-4 pb-4 text-center flex flex-col flex-grow">
+          <h3 className="text-white font-bold text-base mb-1 line-clamp-2 min-h-[3rem]">
+            {game.name}
+          </h3>
+          <p className="text-gray-400 text-sm mb-3">
+            {genre} • {year}
+          </p>
+
+          {/* Botón Wishlist */}
+          <div className="mt-auto">
+            {showWishlistButton && (
+              <button
+                type="button"
+                onClick={handleWishlistClick}
+                className={`w-full py-2 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${isInWishlist
+                  ? 'bg-primary-yellow/20 text-primary-yellow border border-primary-yellow hover:bg-primary-yellow/30'
+                  : 'bg-gray-700 text-white hover:bg-gray-600 border border-gray-600'
+                  }`}
+              >
+                {isInWishlist ? (
+                  <>
+                    <Check size={16} />
+                    In Wishlist
+                  </>
+                ) : (
+                  <>
+                    <Plus size={16} />
+                    Add to Wishlist
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Add to Collection Modal */}
+      {isCollectionModalOpen && (
+        <AddToCollectionModal
+          isOpen={isCollectionModalOpen}
+          onClose={() => setIsCollectionModalOpen(false)}
+          game={game}
+        />
+      )}
     </div>
   );
 };

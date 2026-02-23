@@ -16,6 +16,7 @@ import Settings from '../pages/Settings';
 import Explore from '../pages/Explore';
 import ExploreCollections from '../pages/collections/ExploreCollections';
 import GameDetails from '../pages/GameDetails';
+import NotFound from '../pages/NotFound';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 
@@ -133,8 +134,8 @@ const AppRoutes = () => {
           }
         />
 
-        {/* 404 */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        {/* 404 Not Found Page */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
