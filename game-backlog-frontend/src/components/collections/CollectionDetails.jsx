@@ -529,7 +529,7 @@ const CollectionDetails = () => {
                 </div>
 
                 {/* Comments Section */}
-                <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6 md:p-8">
+                <div className="bg-primary-navy-dark rounded-2xl p-6 md:p-8">
                     <h2 className="text-2xl font-bold text-white mb-8 border-b border-gray-700 pb-4">
                         Comments ({comments.length})
                     </h2>

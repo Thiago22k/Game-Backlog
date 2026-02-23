@@ -10,6 +10,7 @@ import ProfileLayout from '../pages/profile/ProfileLayout';
 import ProfileGames from '../pages/profile/ProfileGames';
 import ProfileStats from '../pages/profile/ProfileStats';
 import ProfileCollections from '../pages/profile/ProfileCollections';
+import ProfileActivity from '../pages/profile/ProfileActivity';
 import CollectionForm from '../components/collections/CollectionForm';
 import CollectionDetails from '../components/collections/CollectionDetails';
 import Settings from '../pages/Settings';
@@ -101,10 +102,12 @@ const AppRoutes = () => {
         {/* Rutas protegidas */}
         <Route path="/profile" element={<ProfileRedirect />} />
 
+        {/* Profile Routes con Layout Anidado */}
         <Route path="/profile/:username" element={<ProfileLayout />}>
           <Route index element={<ProfileStats />} />
           <Route path="games" element={<ProfileGames />} />
           <Route path="collections" element={<ProfileCollections />} />
+          <Route path="activity" element={<ProfileActivity />} />
         </Route>
 
         <Route

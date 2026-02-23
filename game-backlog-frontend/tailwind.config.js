@@ -8,12 +8,12 @@ export default {
     extend: {
 
       fontFamily: {
-        sans: ['Radio Canada', 'Ubuntu', 'sans-serif'], // ← Agregar aquí
+        sans: ['Radio Canada', 'Ubuntu', 'sans-serif'], // ← Agregar aquí 1a2332
       },
 
       colors: {
         primary: {
-          navy: '#1a2332',
+          navy: '#121823',
           'navy-dark': '#12141d',
           'navy-ultra-dark': '#08090d',
           cyan: '#4dd4ac',

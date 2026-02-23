@@ -187,7 +187,7 @@ const ProfileGames = () => {
                         placeholder={isOwner ? "Search your games..." : "Search games..."}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
+                        className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
                     />
                 </div>
             </div>
@@ -286,7 +286,7 @@ const ProfileGames = () => {
                                             onClick={() => setStatusFilter(status.value)}
                                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === status.value
                                                 ? 'bg-primary-yellow text-primary-navy-dark'
-                                                : 'bg-primary-navy-dark text-gray-400 hover:text-white border border-gray-700'
+                                                : 'bg-primary-navy-dark text-gray-400 hover:text-white'
                                                 }`}
                                         >
                                             {status.label}
@@ -299,7 +299,7 @@ const ProfileGames = () => {
                                         <select
                                             value={sortBy}
                                             onChange={(e) => setSortBy(e.target.value)}
-                                            className="bg-primary-navy-dark border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-yellow"
+                                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
                                         >
                                             <option value="recent">Recently Added</option>
                                             <option value="name">Name (A-Z)</option>

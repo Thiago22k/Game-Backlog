@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Check, MoreVertical, FolderPlus } from 'lucide-react';
+import { Clock, Plus, Check, MoreVertical, FolderPlus, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
+import { useGameLikes } from '../../hooks/useGameLikes';
+import { useCardMenu } from '../../hooks/useCardMenu';
 
 const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, showWishlistButton = true, showAddButton = true }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(game.status === 'wishlist');
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(`anticipated-${game.id}`);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const { liked, likesCount, toggling, toggleLike } = useGameLikes(game.id);
 
   // Sincronizar con props cuando cambien
   useEffect(() => {
@@ -118,7 +121,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setShowOptionsMenu(!showOptionsMenu);
+                toggleOptionsMenu();
               }}
               className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             >
@@ -132,18 +135,41 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
                   className="fixed inset-0 z-40"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowOptionsMenu(false);
+                    closeOptionsMenu();
                   }}
                 />
                 <div
                   className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Like option */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeOptionsMenu();
+                      if (!user) {
+                        toast.error('Log in to like games');
+                        return;
+                      }
+                      toggleLike(game.name, game.cover?.image_id);
+                    }}
+                    disabled={toggling}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${liked
+                      ? 'text-pink-400 hover:bg-gray-800'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-pink-400'
+                      } ${toggling ? 'opacity-60 cursor-wait' : ''}`}
+                  >
+                    <Heart size={16} className={liked ? 'fill-pink-400' : ''} />
+                    <span>{liked ? `Unlike${likesCount > 0 ? ` (${likesCount})` : ''}` : `Like${likesCount > 0 ? ` (${likesCount})` : ''}`}</span>
+                  </button>
+
                   {showAddButton && (
                     <button
                       type="button"
                       onClick={(e) => {
-                        setShowOptionsMenu(false);
+                        closeOptionsMenu();
                         handleAddToCollectionClick(e);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"

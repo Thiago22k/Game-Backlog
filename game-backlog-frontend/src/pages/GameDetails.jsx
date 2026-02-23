@@ -8,6 +8,7 @@ import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import NotFound from '../pages/NotFound';
+import GameLikeButton from '../components/games/GameLikeButton';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 // ─── Constants ───────────────────────────────────────────────────────────────
 const STATUSES = [
@@ -230,9 +231,9 @@ const GameDetails = () => {
   return (
     <div className="min-h-screen bg-primary-navy">
       <Navbar />
+
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden">
-        {/* Blurred banner background */}
         {banner && (
           <div
             className="absolute inset-0 bg-cover bg-center scale-105"
@@ -242,8 +243,8 @@ const GameDetails = () => {
           </div>
         )}
         {!banner && <div className="absolute inset-0 bg-primary-navy-dark" />}
+
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
-          {/* Back button */}
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition mb-8 text-sm"
@@ -251,22 +252,41 @@ const GameDetails = () => {
             <ArrowLeft size={16} />
             Back
           </button>
+
           <div className="flex flex-col md:flex-row gap-8 items-start">
-            {/* Cover */}
-            <div className="shrink-0">
+            {/* Cover with translucent action bar */}
+            <div className="shrink-0 relative">
               <img
                 src={cover}
                 alt={game.name}
                 className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10"
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
               />
+              {/* Translucent bottom bar: Like (left) + IGDB score (right) */}
+              <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-black/50 backdrop-blur-sm px-3 py-2 flex items-center justify-between">
+                <GameLikeButton
+                  igdbGameId={game.id}
+                  gameName={game.name}
+                  coverUrl={game.cover?.image_id}
+                  size="sm"
+                  showCount={true}
+                />
+                {igdbScore && (
+                  <div className="flex flex-col items-center">
+                    <span className="text-lg font-bold text-primary-yellow leading-none">{igdbScore}</span>
+                    <span className="text-[10px] text-gray-400 leading-none mt-0.5">IGDB</span>
+                  </div>
+                )}
+              </div>
             </div>
+
             {/* Title & meta */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
+              <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-3">
                 {game.name}
               </h1>
-              {/* Genres pills + Upcoming badge */}
+
+              {/* Genre pills + Upcoming badge */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {isUnreleased && (
                   <button
@@ -287,58 +307,162 @@ const GameDetails = () => {
                   </button>
                 ))}
               </div>
-              {/* IGDB Score */}
-              {igdbScore && (
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Star className="text-primary-yellow fill-primary-yellow" size={18} />
-                    <span className="text-white font-bold text-xl">{igdbScore}</span>
-                    <span className="text-gray-400 text-sm">/100 IGDB</span>
-                  </div>
-                  <div className="flex-1 max-w-xs bg-gray-700/60 rounded-full h-2">
-                    <div
-                      className="bg-primary-yellow h-2 rounded-full transition-all"
-                      style={{ width: `${igdbScore}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-              {/* Release date & companies */}
-              <div className="flex flex-wrap gap-4 text-sm text-gray-400 mb-6">
+
+              {/* Compact meta line: dev · publisher · date */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-400 mb-4">
+                {developer && (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      <Building2 size={13} className="text-gray-500" />
+                      {developer}
+                    </span>
+                    <span className="text-gray-600">·</span>
+                  </>
+                )}
+                {publisher && publisher !== developer && (
+                  <>
+                    <span>{publisher}</span>
+                    <span className="text-gray-600">·</span>
+                  </>
+                )}
                 {game.first_release_date && (
                   <span className="flex items-center gap-1.5">
-                    <Calendar size={14} />
+                    <Calendar size={13} className="text-gray-500" />
                     {formatReleaseDate(game.first_release_date)}
                   </span>
                 )}
-                {developer && (
-                  <span className="flex items-center gap-1.5" title="Developer">
-                    <Building2 size={14} />
-                    {developer}
-                  </span>
-                )}
-                {publisher && publisher !== developer && (
-                  <span className="flex items-center gap-1.5" title="Publisher">
-                    <Building2 size={14} />
-                    {publisher}
-                  </span>
-                )}
               </div>
+
+
+              {/* Platforms */}
+              {game.platforms?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {game.platforms.slice(0, 8).map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => navigate(`/explore?platforms=${p.id}`)}
+                      className="px-2 py-0.5 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-xs rounded border border-gray-700 focus:outline-none"
+                      title={`Explore games on ${p.name}`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                  {game.platforms.length > 8 && (
+                    <span className="text-xs text-gray-500 self-center">+{game.platforms.length - 8} more</span>
+                  )}
+                </div>
+              )}
+
+              {/* Description — plain text, no box, flush with platforms */}
+              {summary && (
+                <InlineSummary summary={summary} />
+              )}
             </div>
           </div>
         </div>
       </div>
+
       {/* ── MAIN CONTENT ────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
           {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Summary */}
-            {summary && <SummarySection summary={summary} />}
+
+            {/* My Library — Status + Rating + Like */}
+            <div className="bg-primary-navy-dark rounded-2xl overflow-hidden">
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">My Status</p>
+
+                {isAuthenticated ? (
+                  <div className={saving ? 'opacity-60 pointer-events-none' : ''}>
+                    {isUnreleased ? (
+                      <div className="space-y-3">
+                        <p className="text-xs text-gray-400 text-center">
+                          This game hasn't released yet. Add it to your wishlist to keep track of it.
+                        </p>
+                        <button
+                          onClick={() => handleStatusSelect(userGame?.status === 'wishlist' ? null : 'wishlist')}
+                          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold text-white transition-all ${userGame?.status === 'wishlist'
+                            ? 'bg-cyan-600 ring-2 ring-cyan-400 scale-[1.01]'
+                            : 'bg-gray-700 hover:bg-cyan-600 border border-gray-600'
+                            }`}
+                        >
+                          <ShoppingCart size={16} />
+                          {userGame?.status === 'wishlist' ? 'In Wishlist ✓' : 'Add to Wishlist'}
+                        </button>
+                        {userGame?.status === 'wishlist' && (
+                          <button
+                            onClick={() => handleStatusSelect(null)}
+                            className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center"
+                          >
+                            Remove from my list
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* Status grid — wider on left column, 5 cols */}
+                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+                          {STATUSES.map(({ id: sid, label, Icon, color, activeRing }) => {
+                            const isActive = userGame?.status === sid;
+                            return (
+                              <button
+                                key={sid}
+                                onClick={() => handleStatusSelect(isActive ? null : sid)}
+                                className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-xs font-semibold text-white transition-all ${color} ${isActive ? `ring-2 ${activeRing} scale-[1.03]` : 'opacity-60 hover:opacity-100'}`}
+                              >
+                                <Icon size={18} />
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Remove */}
+                        {userGame && (
+                          <button
+                            onClick={() => handleStatusSelect(null)}
+                            className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center mb-4"
+                          >
+                            Remove from my list
+                          </button>
+                        )}
+
+                        {/* Rating */}
+                        {userGame ? (
+                          <div>
+                            <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-3">My Rating</p>
+                            <InlineStarRating
+                              rating={userGame.rating || 0}
+                              onRate={handleRatingChange}
+                              interactive={true}
+                            />
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 text-center">Add this game to your list to rate it</p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400 text-sm mb-4">Sign in to track this game and rate it</p>
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="w-full bg-primary-yellow text-primary-navy-dark py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition"
+                    >
+                      Sign In
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Screenshots */}
             {screenshots.length > 0 && (
-              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
-                <SectionTitle>Screenshots</SectionTitle>
+              <div className="bg-primary-navy-dark rounded-2xl p-6">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">Screenshots</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {screenshots.map((s) => (
                     <img
@@ -352,10 +476,11 @@ const GameDetails = () => {
                 </div>
               </div>
             )}
+
             {/* Similar games */}
             {similarGames.length > 0 && (
-              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
-                <SectionTitle>Similar Games</SectionTitle>
+              <div className="bg-primary-navy-dark rounded-2xl p-6">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">You Might Also Like</p>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                   {similarGames.map((sg) => (
                     <div
@@ -378,195 +503,58 @@ const GameDetails = () => {
               </div>
             )}
           </div>
+
           {/* ── RIGHT SIDEBAR ─────────────────────────────────────────── */}
-          <div className="space-y-6">
-            {/* Status & Rating panel */}
-            <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
-              <SectionTitle>My Status</SectionTitle>
-              {isAuthenticated ? (
-                <div className={saving ? 'opacity-60 pointer-events-none' : ''}>
-                  {isUnreleased ? (
-                    /* ── UNRELEASED: wishlist-only ─────────────────────── */
-                    <div className="space-y-3">
-                      <p className="text-xs text-gray-400 text-center">
-                        This game hasn't released yet. Add it to your wishlist to keep track of it.
-                      </p>
-                      <button
-                        onClick={() => handleStatusSelect(userGame?.status === 'wishlist' ? null : 'wishlist')}
-                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold text-white transition-all ${userGame?.status === 'wishlist'
-                          ? 'bg-cyan-600 ring-2 ring-cyan-400 scale-[1.01]'
-                          : 'bg-gray-700 hover:bg-cyan-600 border border-gray-600'
-                          }`}
-                      >
-                        <ShoppingCart size={16} />
-                        {userGame?.status === 'wishlist' ? 'In Wishlist ✓' : 'Add to Wishlist'}
-                      </button>
-                      {userGame?.status === 'wishlist' && (
-                        <button
-                          onClick={() => handleStatusSelect(null)}
-                          className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center"
-                        >
-                          Remove from my list
-                        </button>
-                      )}
+          <div className="space-y-5">
+
+            {/* ── DETAILS — only non-duplicate info ─────────────────── */}
+            {(game.game_modes?.length > 0 || game.websites?.find((w) => w.category === 1)) && (
+              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-5 space-y-4">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Details</p>
+
+                {game.game_modes?.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Game Modes</span>
+                    <div className="flex flex-wrap gap-1.5 mt-0.5">
+                      {game.game_modes.map((m) => (
+                        <span key={m.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
+                          {m.name}
+                        </span>
+                      ))}
                     </div>
-                  ) : (
-                    /* ── RELEASED: full status + rating ────────────────── */
-                    <>
-                      {/* Status buttons */}
-                      <div className="grid grid-cols-2 gap-2 mb-5">
-                        {STATUSES.map(({ id: sid, label, Icon, color, activeRing }) => {
-                          const isActive = userGame?.status === sid;
-                          return (
-                            <button
-                              key={sid}
-                              onClick={() => handleStatusSelect(isActive ? null : sid)}
-                              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-white transition-all ${color} ${isActive ? `ring-2 ${activeRing} scale-[1.02]` : 'opacity-70 hover:opacity-100'
-                                }`}
-                            >
-                              <Icon size={15} />
-                              {label}
-                              {isActive && <Check size={13} className="ml-auto" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {/* Remove from list button */}
-                      {userGame && (
-                        <button
-                          onClick={() => handleStatusSelect(null)}
-                          className="w-full text-xs text-gray-500 hover:text-red-400 transition-colors text-center mb-5"
-                        >
-                          Remove from my list
-                        </button>
-                      )}
-                      {/* Rating */}
-                      {userGame ? (
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-3">My Rating</p>
-                          <InlineStarRating
-                            rating={userGame.rating || 0}
-                            onRate={handleRatingChange}
-                            interactive={true}
-                          />
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-500 text-center">
-                          Add this game to your list to rate it
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-400 text-sm mb-4">Sign in to track this game and rate it</p>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="w-full bg-primary-yellow text-primary-navy-dark py-2.5 rounded-lg font-bold text-sm hover:opacity-90 transition"
-                  >
-                    Sign In
-                  </button>
-                </div>
-              )}
-            </div>
-            {/* Game Info */}
-            <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6 space-y-5">
-              <SectionTitle>
-                <Tag size={16} className="text-primary-yellow" />
-                Game Info
-              </SectionTitle>
-              {game.first_release_date && (
-                <InfoRow label="Release Date">
-                  <span className="flex items-center gap-1.5">
-                    <Calendar size={14} className="text-gray-500" />
-                    {formatReleaseDate(game.first_release_date)}
-                  </span>
-                </InfoRow>
-              )}
-              {developer && (
-                <InfoRow label="Developer">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 size={14} className="text-gray-500" />
-                    {developer}
-                  </span>
-                </InfoRow>
-              )}
-              {publisher && (
-                <InfoRow label="Publisher">
-                  <span className="flex items-center gap-1.5">
-                    <Building2 size={14} className="text-gray-500" />
-                    {publisher}
-                  </span>
-                </InfoRow>
-              )}
-              {game.platforms?.length > 0 && (
-                <InfoRow label="Platforms">
-                  <div className="flex flex-wrap gap-1.5 mt-0.5">
-                    {game.platforms.slice(0, 6).map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => navigate(`/explore?platforms=${p.id}`)}
-                        className="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-colors cursor-pointer text-xs rounded border border-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-yellow"
-                        title={`Explore games on ${p.name}`}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                    {game.platforms.length > 6 && (
-                      <span className="text-xs text-gray-500">+{game.platforms.length - 6} more</span>
-                    )}
                   </div>
-                </InfoRow>
-              )}
-              {igdbScore && (
-                <InfoRow label="IGDB Score">
-                  <div className="flex items-center gap-2">
-                    <Star size={14} className="text-primary-yellow fill-primary-yellow" />
-                    <span className="font-bold text-white">{igdbScore}</span>
-                    <span className="text-gray-500">/100</span>
+                )}
+
+                {game.websites?.find((w) => w.category === 1) && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Official Site</span>
+                    <a
+                      href={game.websites.find((w) => w.category === 1).url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-primary-yellow hover:underline text-sm"
+                    >
+                      <ExternalLink size={13} />
+                      Visit website
+                    </a>
                   </div>
-                </InfoRow>
-              )}
-              {game.game_modes?.length > 0 && (
-                <InfoRow label="Game Modes">
-                  <div className="flex flex-wrap gap-1.5 mt-0.5">
-                    {game.game_modes.map((m) => (
-                      <span key={m.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
-                        {m.name}
-                      </span>
-                    ))}
-                  </div>
-                </InfoRow>
-              )}
-              {game.websites?.find((w) => w.category === 1) && (
-                <InfoRow label="Website">
-                  <a
-                    href={game.websites.find((w) => w.category === 1).url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-primary-yellow hover:underline"
-                  >
-                    <ExternalLink size={13} />
-                    Official Site
-                  </a>
-                </InfoRow>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-// ─── Summary with expand/collapse ────────────────────────────────────────────
-const SummarySection = ({ summary }) => {
+
+// ─── Description with expand/collapse (no header label) ───────────────────────
+const DescriptionSection = ({ summary }) => {
   const [expanded, setExpanded] = useState(false);
   const isLong = summary.length > 350;
   const display = expanded || !isLong ? summary : `${summary.slice(0, 350)}…`;
   return (
     <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
-      <SectionTitle>Summary</SectionTitle>
       <p className="text-gray-300 leading-relaxed whitespace-pre-line text-sm">{display}</p>
       {isLong && (
         <button
@@ -579,4 +567,25 @@ const SummarySection = ({ summary }) => {
     </div>
   );
 };
+
 export default GameDetails;
+
+// ─── Inline description in the Hero — no card, raw text ────────────────────
+const InlineSummary = ({ summary }) => {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = summary.length > 300;
+  const display = expanded || !isLong ? summary : `${summary.slice(0, 300)}…`;
+  return (
+    <div className="mt-5">
+      <p className="text-gray-400 leading-relaxed text-sm whitespace-pre-line">{display}</p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 text-primary-yellow hover:underline text-xs font-medium"
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
+};

@@ -1,6 +1,7 @@
 const Game = require('../models/game.model');
 const igdbService = require('../services/igdb.service');
 const User = require('../models/user.model');
+const Activity = require('../models/activity.model');
 
 // Buscar juegos en IGDB
 const searchGames = async (req, res) => {
@@ -90,6 +91,15 @@ const addGameToUser = async (req, res) => {
     // Agregar juego
     const newGame = await Game.addGame(userId, igdb_game_id, status || 'completed', rating);
 
+    // Registrar actividad en el log
+    const gameDetails = await igdbService.getGameById(igdb_game_id);
+    await Activity.logActivity(userId, 'ADDED_GAME', 'GAME', igdb_game_id, {
+      game_name: gameDetails?.name || 'Unknown Game',
+      status: status || 'completed',
+      rating: rating || null,
+      cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
+    });
+
     res.status(201).json({
       message: 'Juego agregado exitosamente',
       game: newGame
@@ -114,6 +124,7 @@ const getUserGames = async (req, res) => {
     let isProfilePublic = true;
     let targetUsername = null;
     let targetAvatarUrl = null;
+    let targetBannerUrl = null;
 
     if (username) {
       // Buscar el ID del usuario por nombre
@@ -222,6 +233,21 @@ const updateUserGame = async (req, res) => {
 
     // Actualizar
     const updatedGame = await Game.updateGame(userId, igdb_game_id, status, rating);
+
+    // Registrar actividad en el log (solo si hubo un cambio intencional)
+    const gameDetails = await igdbService.getGameById(igdb_game_id);
+    const metadata = {
+      game_name: gameDetails?.name || 'Unknown Game',
+      cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
+    };
+
+    if (status && status !== game.status) {
+      metadata.new_status = status;
+      await Activity.logActivity(userId, 'STATUS_CHANGED', 'GAME', igdb_game_id, metadata);
+    } else if (rating && rating !== game.rating) {
+      metadata.new_rating = rating;
+      await Activity.logActivity(userId, 'RATED_GAME', 'GAME', igdb_game_id, metadata);
+    }
 
     res.json({
       message: 'Juego actualizado exitosamente',

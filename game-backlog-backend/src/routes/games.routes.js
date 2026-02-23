@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const gamesController = require('../controllers/games.controller');
+const likesController = require('../controllers/likes.controller');
 const { authenticateToken, optionalAuth } = require('../middlewares/auth');
 
 // Rutas públicas (búsqueda de juegos en IGDB)
@@ -9,10 +10,15 @@ router.get('/igdb/:id', gamesController.getGameDetails);
 router.get('/popular', gamesController.getPopularGames);
 router.get('/recent', gamesController.getRecentGames);
 router.get('/anticipated', gamesController.getMostAnticipated);
-router.get('/explore', gamesController.exploreGames);     // ← Nuevo
-router.get('/genres', gamesController.getGenres);         // ← Nuevo
-router.get('/platforms', gamesController.getPlatforms);   // ← Nuevo
-router.get('/user/:username', optionalAuth, gamesController.getUserGames); // ← Nuevo: Perfil público
+router.get('/explore', gamesController.exploreGames);
+router.get('/genres', gamesController.getGenres);
+router.get('/platforms', gamesController.getPlatforms);
+router.get('/user/:username', optionalAuth, gamesController.getUserGames);
+
+// Likes routes — /api/games/likes/...
+router.get('/likes/user/:userId', optionalAuth, likesController.getUserLikedGames);
+router.get('/likes/:igdb_game_id', optionalAuth, likesController.getGameLikeStatus);
+router.post('/likes/:igdb_game_id', authenticateToken, likesController.toggleGameLike);
 
 // Rutas protegidas (requieren autenticación)
 router.post('/user', authenticateToken, gamesController.addGameToUser);

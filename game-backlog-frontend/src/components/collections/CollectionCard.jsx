@@ -75,7 +75,7 @@ const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy 
     return (
         <div
             onClick={() => navigate(`/collections/${collection.id}`)}
-            className="bg-primary-navy-dark border border-gray-700 rounded-xl overflow-hidden hover:border-primary-yellow transition-all group flex flex-col h-full cursor-pointer relative"
+            className="bg-primary-navy-dark rounded-xl overflow-hidden border border-transparent hover:border-primary-yellow transition-all group flex flex-col h-full cursor-pointer relative"
         >
             {/* Collage Area */}
             <div className="h-48 w-full bg-primary-navy relative">

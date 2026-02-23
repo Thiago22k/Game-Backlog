@@ -346,7 +346,7 @@ const Explore = () => {
                   setIsAnticipatedMode(false);
                 }
               }}
-              className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-yellow transition-colors"
+              className="w-full pl-10 pr-4 py-3 bg-primary-navy-dark rounded-lg text-white placeholder-gray-400 focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
@@ -367,7 +367,7 @@ const Explore = () => {
               <button
                 key={filter.label}
                 onClick={() => applyQuickFilter(filter)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-navy-dark border border-gray-700 rounded-lg text-white hover:border-primary-yellow hover:text-primary-yellow transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-primary-navy-dark border border-transparent rounded-lg text-white hover:border-primary-yellow hover:text-primary-yellow transition-all"
               >
                 <Icon size={16} />
                 {filter.label}
@@ -394,7 +394,7 @@ const Explore = () => {
 
         {/* Filtros principales */}
         {!isAnticipatedMode && (
-          <div className="mb-6 bg-primary-navy-dark border border-gray-700 rounded-lg p-4">
+          <div className="mb-6 bg-primary-navy-dark rounded-lg p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Sort */}
               <div>
@@ -402,7 +402,7 @@ const Explore = () => {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 focus:outline-none"
                 >
                   <option value="relevance">Relevance</option>
                   <option value="popular">Popular</option>
@@ -417,7 +417,7 @@ const Explore = () => {
                 <select
                   value={timeRange}
                   onChange={(e) => setTimeRange(e.target.value)}
-                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 focus:outline-none"
                 >
                   <option value="all">All Time</option>
                   <option value="last_month">Last Month</option>
@@ -432,7 +432,7 @@ const Explore = () => {
                 <label className="block text-sm text-gray-400 mb-2">Genres</label>
                 <button
                   onClick={() => setGenreDropdownOpen((o) => !o)}
-                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none focus:border-primary-yellow"
+                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
                 >
                   <span>{selectedGenres.length === 0 ? 'All Genres' : `${selectedGenres.length} selected`}</span>
                   <ChevronDown size={16} />
@@ -459,7 +459,7 @@ const Explore = () => {
                 <label className="block text-sm text-gray-400 mb-2">Platforms</label>
                 <button
                   onClick={() => setPlatformDropdownOpen((o) => !o)}
-                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none focus:border-primary-yellow"
+                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
                 >
                   <span>{selectedPlatforms.length === 0 ? 'All Platforms' : `${selectedPlatforms.length} selected`}</span>
                   <ChevronDown size={16} />

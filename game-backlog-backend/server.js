@@ -45,6 +45,7 @@ const gamesRoutes = require('./src/routes/games.routes');
 const settingsRoutes = require('./src/routes/settings.routes');
 const collectionsRoutes = require('./src/routes/collections.routes');
 const uploadRoutes = require('./src/routes/upload.routes');
+const activityRoutes = require('./src/routes/activity.routes');
 
 // Usar rutas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit más estricto para auth
@@ -52,6 +53,7 @@ app.use('/api/games', gamesRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/collections', collectionsRoutes);
 app.use('/api/users', uploadRoutes); // Mapeamos users/avatar a nuestros uploadRoutes
+app.use('/api/activity', activityRoutes); // Mount activity feeds
 
 // Debug: Ver rutas registradas
 console.log('📋 Rutas registradas:');

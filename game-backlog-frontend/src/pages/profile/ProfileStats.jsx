@@ -2,7 +2,7 @@ import { useOutletContext, useParams } from 'react-router-dom';
 import { Gamepad2, Trophy, Star, Clock, XCircle, Archive } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-    <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-6 flex items-center justify-between">
+    <div className="bg-primary-navy-dark rounded-xl p-6 flex items-center justify-between">
         <div>
             <p className="text-gray-400 text-sm font-medium mb-1">{title}</p>
             <p className="text-3xl font-bold text-white">{value}</p>
@@ -34,6 +34,13 @@ const ProfileStats = () => {
     const avgRating = ratedGames.length > 0
         ? (ratedGames.reduce((sum, g) => sum + g.rating, 0) / ratedGames.length).toFixed(1)
         : 0;
+
+    // Rating distribution: count games per star value (1–5)
+    const ratingDistribution = [1, 2, 3, 4, 5].map(star => ({
+        star,
+        count: games.filter(g => g.rating === star).length,
+    }));
+    const maxRatingCount = Math.max(...ratingDistribution.map(r => r.count), 1);
 
     return (
         <div className="space-y-6">
@@ -69,7 +76,8 @@ const ProfileStats = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-6">
+                {/* Status Breakdown */}
+                <div className="bg-primary-navy-dark rounded-xl p-6">
                     <h4 className="text-lg font-semibold text-white mb-4">Status Breakdown</h4>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
@@ -108,6 +116,45 @@ const ProfileStats = () => {
                             <span className="font-semibold text-white">{dropped}</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Rating Distribution */}
+                <div className="bg-primary-navy-dark rounded-xl p-6">
+                    <h4 className="text-lg font-semibold text-white mb-4">Rating Distribution</h4>
+                    {ratedGames.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-6">No ratings yet</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {[5, 4, 3, 2, 1].map(star => {
+                                const entry = ratingDistribution.find(r => r.star === star);
+                                const pct = Math.round((entry.count / maxRatingCount) * 100);
+                                return (
+                                    <div key={star} className="flex items-center gap-3">
+                                        {/* Star label */}
+                                        <div className="flex items-center gap-0.5 w-20 shrink-0">
+                                            {Array.from({ length: star }).map((_, i) => (
+                                                <Star key={i} size={11} className="fill-primary-yellow text-primary-yellow" />
+                                            ))}
+                                        </div>
+                                        {/* Bar */}
+                                        <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full bg-primary-yellow transition-all duration-500"
+                                                style={{ width: `${pct}%` }}
+                                            />
+                                        </div>
+                                        {/* Count */}
+                                        <span className="text-gray-400 text-xs w-5 text-right shrink-0">{entry.count}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {ratedGames.length > 0 && (
+                        <p className="text-gray-500 text-xs mt-4 text-right">
+                            {ratedGames.length} rated game{ratedGames.length !== 1 ? 's' : ''}
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

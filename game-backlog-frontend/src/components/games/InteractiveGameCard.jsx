@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreVertical, Archive } from 'lucide-react';
+import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreVertical, Archive, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
+import { useGameLikes } from '../../hooks/useGameLikes';
+import { useCardMenu } from '../../hooks/useCardMenu';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -12,8 +14,9 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(`interactive-${game.id}`);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const { liked, likesCount, toggling, toggleLike } = useGameLikes(game.id);
 
   // Estados locales
   const [localStatus, setLocalStatus] = useState(game.status || null);
@@ -153,7 +156,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setShowOptionsMenu(!showOptionsMenu);
+                toggleOptionsMenu();
               }}
               className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             >
@@ -167,18 +170,41 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
                   className="fixed inset-0 z-40"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowOptionsMenu(false);
+                    closeOptionsMenu();
                   }}
                 />
                 <div
                   className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
+                  {/* Like option */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeOptionsMenu();
+                      if (!user) {
+                        toast.error('Log in to like games');
+                        return;
+                      }
+                      toggleLike(game.name, game.cover?.image_id);
+                    }}
+                    disabled={toggling}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${liked
+                      ? 'text-pink-400 hover:bg-gray-800'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-pink-400'
+                      } ${toggling ? 'opacity-60 cursor-wait' : ''}`}
+                  >
+                    <Heart size={16} className={liked ? 'fill-pink-400' : ''} />
+                    <span>{liked ? `Unlike${likesCount > 0 ? ` (${likesCount})` : ''}` : `Like${likesCount > 0 ? ` (${likesCount})` : ''}`}</span>
+                  </button>
+
                   {showAddButton && (
                     <button
                       type="button"
                       onClick={(e) => {
-                        setShowOptionsMenu(false);
+                        closeOptionsMenu();
                         handleAddToCollectionClick(e);
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"

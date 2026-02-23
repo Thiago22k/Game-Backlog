@@ -1,6 +1,7 @@
 const Collection = require('../models/collection.model');
 const igdbService = require('../services/igdb.service');
-const User = require('../models/user.model'); // Asumiendo que existe o usando una query simple. Si no existe User.findByUsername, usaremos pool directamente o lo buscaremos. En este caso enviaremos username por params.
+const User = require('../models/user.model');
+const Activity = require('../models/activity.model');
 
 // En lugar del workaround, usaremos User.findByUsername
 
@@ -21,6 +22,12 @@ const createCollection = async (req, res) => {
         if (games && Array.isArray(games) && games.length > 0) {
             await Collection.syncCollectionGames(collection.id, games);
         }
+
+        // Registrar actividad
+        await Activity.logActivity(userId, 'CREATED_COLLECTION', 'COLLECTION', collection.id, {
+            collection_name: title,
+            is_public: is_public !== undefined ? is_public : true
+        });
 
         res.status(201).json({
             message: 'Colección creada exitosamente',
@@ -214,6 +221,20 @@ const toggleLike = async (req, res) => {
         const result = await Collection.toggleLike(id, userId);
         const newCount = await Collection.getLikeCount(id);
 
+        // Fetch collection details for metadata naming
+        const collection = await Collection.getCollectionById(id);
+
+        // Log Activity only if it was a "Like" (not unlike)
+        if (result.liked && collection) {
+            await Activity.logActivity(
+                userId,
+                'LIKED_COLLECTION',
+                'collection',
+                id,
+                { collection_name: collection.title }
+            );
+        }
+
         res.json({
             liked: result.liked,
             likes_count: newCount
@@ -251,6 +272,23 @@ const addComment = async (req, res) => {
 
         // Obtener avatar_url del usuario en DB para inyectarlo en la respuesta
         const user = await User.findById(userId);
+
+        // Fetch collection details for metadata naming
+        const collection = await Collection.getCollectionById(id);
+
+        // Log Activity for comment
+        if (collection) {
+            await Activity.logActivity(
+                userId,
+                'COMMENTED_COLLECTION',
+                'collection',
+                id,
+                {
+                    collection_name: collection.title,
+                    comment_preview: content.trim().substring(0, 50) + (content.trim().length > 50 ? '...' : '')
+                }
+            );
+        }
 
         // Devolver también la info del usuario para pintar el UI inmediatamente
         res.status(201).json({
