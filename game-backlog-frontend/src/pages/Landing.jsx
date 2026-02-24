@@ -266,7 +266,7 @@ const Landing = () => {
                   onClick={() => navigate('/explore?timeRange=last_month')}
                   className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
-                  View All →
+                  View all
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -293,7 +293,7 @@ const Landing = () => {
                   onClick={() => navigate('/explore?anticipated=true')}
                   className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
-                  View All →
+                  View all
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -319,7 +319,7 @@ const Landing = () => {
                   to="/explore?sort=popular&timeRange=last_year"
                   className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
-                  View All →
+                  View all
                 </Link>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">

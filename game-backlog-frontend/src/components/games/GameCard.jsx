@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import RatingBadge from '../common/RatingBadge';
+import { getGameCover, PLACEHOLDER_COVER } from '../../utils/formatters';
 
 const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   const navigate = useNavigate();
@@ -20,9 +21,7 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
   const userRating = isUserGame ? game.rating : null;
 
   // Formatear URL de cover
-  const coverUrl = cover
-    ? `https:${cover.replace('t_thumb', 't_cover_big')}`
-    : 'https://via.placeholder.com/264x374?text=No+Cover';
+  const coverUrl = getGameCover(game);
 
   // Traducir status
   const statusLabels = {
@@ -45,7 +44,7 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
           alt={name}
           className="w-full h-64 object-cover"
           onError={(e) => {
-            e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover';
+            e.target.src = PLACEHOLDER_COVER;
           }}
         />
       </div>

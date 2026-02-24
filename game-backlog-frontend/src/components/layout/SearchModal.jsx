@@ -3,7 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import axios from '../../api/axios';
 import { ENDPOINTS } from '../../utils/constants';
-import { getGameCover } from '../../utils/formatters';
+import { getGameCover, PLACEHOLDER_COVER } from '../../utils/formatters';
+
+const CATEGORIES = {
+  0: 'Main Game',
+  1: 'DLC / Addon',
+  2: 'Expansion',
+  3: 'Bundle',
+  4: 'Standalone Expansion',
+  5: 'Mod',
+  6: 'Episode',
+  7: 'Season',
+  8: 'Remake',
+  9: 'Remaster',
+  10: 'Expanded Game',
+  11: 'Port',
+  12: 'Fork',
+  13: 'Pack',
+  14: 'Update'
+};
 
 const SearchModal = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
@@ -99,7 +117,7 @@ const SearchModal = ({ isOpen, onClose }) => {
         </div>
 
         {/* Results */}
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto custom-scrollbar">
           {loading && (
             <div className="py-8 text-center text-gray-400">
               Searching...
@@ -125,11 +143,24 @@ const SearchModal = ({ isOpen, onClose }) => {
                     alt={game.name}
                     className="w-12 h-16 object-cover rounded"
                     onError={(e) => {
-                      e.target.src = 'https://via.placeholder.com/48x64?text=?';
+                      e.target.src = PLACEHOLDER_COVER;
                     }}
                   />
                   <div className="ml-4 flex-1">
-                    <p className="text-white font-medium">{game.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-medium">{game.name}</p>
+                      {(game.game_type === 0 || game.game_type === undefined) ? (
+                        <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
+                          Main Game
+                        </span>
+                      ) : (
+                        CATEGORIES[game.game_type] && (
+                          <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
+                            {CATEGORIES[game.game_type]}
+                          </span>
+                        )
+                      )}
+                    </div>
                     {game.rating && (
                       <p className="text-sm text-gray-400">
                         Rating: {Math.round(game.rating)}/100

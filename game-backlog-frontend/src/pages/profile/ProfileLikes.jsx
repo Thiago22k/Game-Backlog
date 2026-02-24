@@ -106,7 +106,7 @@ const ProfileLikes = () => {
                         to={`/profile/${username}/likes/games`}
                         className="text-sm text-gray-400 hover:text-primary-yellow transition-colors flex items-center gap-1"
                     >
-                        View all →
+                        View all
                     </Link>
                 </div>
 
@@ -148,7 +148,7 @@ const ProfileLikes = () => {
                         to={`/profile/${username}/likes/collections`}
                         className="text-sm text-gray-400 hover:text-primary-yellow transition-colors flex items-center gap-1"
                     >
-                        View all →
+                        View all
                     </Link>
                 </div>
 

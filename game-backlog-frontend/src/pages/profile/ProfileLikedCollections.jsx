@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Library, ChevronDown, ArrowLeft } from 'lucide-react';
 import CollectionCard from '../../components/collections/CollectionCard';
@@ -13,6 +13,7 @@ const ProfileLikedCollections = () => {
     const [allCollections, setAllCollections] = useState([]);
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [loading, setLoading] = useState(true);
+    const [sortBy, setSortBy] = useState('recent');
 
     usePageTitle(`${username}'s Liked Collections`);
 
@@ -32,19 +33,45 @@ const ProfileLikedCollections = () => {
         fetch();
     }, [username]);
 
-    const visibleCollections = allCollections.slice(0, visibleCount);
-    const hasMore = visibleCount < allCollections.length;
+    // Ordenar colecciones
+    const sortedCollections = useMemo(() => {
+        let result = [...allCollections];
+
+        switch (sortBy) {
+            case 'likes':
+                result.sort((a, b) => (parseInt(b.likes_count) || 0) - (parseInt(a.likes_count) || 0));
+                break;
+            case 'comments':
+                result.sort((a, b) => (parseInt(b.comments_count) || 0) - (parseInt(a.comments_count) || 0));
+                break;
+            case 'games-high':
+                result.sort((a, b) => (parseInt(b.game_count) || 0) - (parseInt(a.game_count) || 0));
+                break;
+            case 'games-low':
+                result.sort((a, b) => (parseInt(a.game_count) || 0) - (parseInt(b.game_count) || 0));
+                break;
+            case 'recent':
+            default:
+                // El servidor ya las devuelve por fecha de like descendente para 'recent'
+                break;
+        }
+
+        return result;
+    }, [allCollections, sortBy]);
+
+    const visibleCollections = sortedCollections.slice(0, visibleCount);
+    const hasMore = visibleCount < sortedCollections.length;
 
     return (
         <div>
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <h3 className="text-xl font-semibold text-white flex items-center gap-2">
                     <Library size={20} className="text-primary-yellow" />
                     Liked Collections
                     {!loading && (
                         <span className="text-sm font-normal text-gray-500 ml-1">
-                            ({allCollections.length})
+                            ({sortedCollections.length})
                         </span>
                     )}
                 </h3>
@@ -56,6 +83,29 @@ const ProfileLikedCollections = () => {
                     Back to Likes
                 </Link>
             </div>
+
+            {/* Sort Controls - Estilo igual a ProfileCollections/Games */}
+            {!loading && allCollections.length > 0 && (
+                <div className="mb-8 flex flex-wrap gap-4 items-center">
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">Sort by:</span>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => {
+                                setSortBy(e.target.value);
+                                setVisibleCount(PAGE_SIZE);
+                            }}
+                            className="bg-primary-navy-dark text-white rounded-lg px-4 py-2 text-sm focus:outline-none border border-gray-700 focus:border-primary-yellow transition-colors cursor-pointer"
+                        >
+                            <option value="recent">Recently Liked</option>
+                            <option value="likes">Most Liked</option>
+                            <option value="comments">Most Commented</option>
+                            <option value="games-high">Games (High-Low)</option>
+                            <option value="games-low">Games (Low-High)</option>
+                        </select>
+                    </div>
+                </div>
+            )}
 
             {loading ? (
                 <div className="flex justify-center items-center py-12">
@@ -85,7 +135,7 @@ const ProfileLikedCollections = () => {
                                 className="flex items-center gap-2 px-6 py-2.5 bg-primary-navy-dark border border-gray-700 hover:border-primary-yellow text-white hover:text-primary-yellow rounded-full font-medium transition-all text-sm"
                             >
                                 <ChevronDown size={16} />
-                                Load more ({allCollections.length - visibleCount} remaining)
+                                Load more ({sortedCollections.length - visibleCount} remaining)
                             </button>
                         </div>
                     )}

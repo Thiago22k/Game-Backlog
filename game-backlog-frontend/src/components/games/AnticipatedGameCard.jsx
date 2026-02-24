@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Check, MoreVertical, FolderPlus, Heart } from 'lucide-react';
-import { getGameCover, formatIGDBImage } from '../../utils/formatters';
+import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -192,7 +192,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
             alt={game.name}
             className="w-full h-32 object-cover rounded-lg"
             onError={(e) => {
-              e.target.src = coverUrl;
+              e.target.src = PLACEHOLDER_COVER;
             }}
           />
         </div>

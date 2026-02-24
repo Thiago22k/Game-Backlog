@@ -4,9 +4,27 @@ import { Search, Plus, Trash2, ArrowLeft, GripVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
 import axios from '../../api/axios';
-import { getGameCover } from '../../utils/formatters';
+import { getGameCover, PLACEHOLDER_COVER } from '../../utils/formatters';
 import Navbar from '../layout/Navbar';
 import { useAuth } from '../../context/AuthContext';
+
+const CATEGORIES = {
+    0: 'Main Game',
+    1: 'DLC / Addon',
+    2: 'Expansion',
+    3: 'Bundle',
+    4: 'Standalone Expansion',
+    5: 'Mod',
+    6: 'Episode',
+    7: 'Season',
+    8: 'Remake',
+    9: 'Remaster',
+    10: 'Expanded Game',
+    11: 'Port',
+    12: 'Fork',
+    13: 'Pack',
+    14: 'Update'
+};
 
 const CollectionForm = () => {
     const { user } = useAuth();
@@ -166,7 +184,7 @@ const CollectionForm = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-8">
                     {/* General Info */}
-                    <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-6 space-y-4">
+                    <div className="bg-primary-navy-dark rounded-xl p-6 space-y-4">
                         <h2 className="text-xl font-semibold text-white mb-4">General Information</h2>
 
                         <div>
@@ -207,7 +225,7 @@ const CollectionForm = () => {
                     </div>
 
                     {/* Games Selection */}
-                    <div className="bg-primary-navy-dark border border-gray-700 rounded-xl p-6">
+                    <div className="bg-primary-navy-dark rounded-xl p-6">
                         <h2 className="text-xl font-semibold text-white mb-4">Games</h2>
 
                         {/* Search Input */}
@@ -225,7 +243,7 @@ const CollectionForm = () => {
 
                             {/* Search Results Dropdown */}
                             {searchQuery.trim().length > 2 && (
-                                <div className="absolute z-10 w-full mt-1 bg-primary-navy border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                                <div className="absolute z-10 w-full mt-1 bg-primary-navy border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
                                     {isSearching ? (
                                         <div className="p-4 text-center text-gray-400">Searching...</div>
                                     ) : searchResults.length > 0 ? (
@@ -236,7 +254,20 @@ const CollectionForm = () => {
                                                 className="flex items-center justify-between p-3 hover:bg-gray-800 cursor-pointer border-b border-gray-800 last:border-0"
                                             >
                                                 <div className="flex flex-col">
-                                                    <span className="text-white font-medium">{game.name}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-white font-medium">{game.name}</span>
+                                                        {(game.game_type === 0 || game.game_type === undefined) ? (
+                                                            <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
+                                                                Main Game
+                                                            </span>
+                                                        ) : (
+                                                            CATEGORIES[game.game_type] && (
+                                                                <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
+                                                                    {CATEGORIES[game.game_type]}
+                                                                </span>
+                                                            )
+                                                        )}
+                                                    </div>
                                                     <span className="text-xs text-gray-400">
                                                         {game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : 'TBA'}
                                                     </span>
@@ -271,7 +302,7 @@ const CollectionForm = () => {
                                                 alt={game.name}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => {
-                                                    e.target.src = 'https://via.placeholder.com/48x64?text=?';
+                                                    e.target.src = PLACEHOLDER_COVER;
                                                 }}
                                             />
                                         </div>

@@ -36,7 +36,7 @@ const searchGames = async (query, limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name;
+        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type;
         search "${query}";
         limit ${limit};
       `,

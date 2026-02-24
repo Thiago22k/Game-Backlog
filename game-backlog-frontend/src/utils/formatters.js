@@ -1,3 +1,6 @@
+import noCoverAsset from '../assets/no_cover.png';
+export const PLACEHOLDER_COVER = noCoverAsset;
+
 // Formatear fecha de timestamp a texto legible
 export const formatReleaseDate = (timestamp) => {
   if (!timestamp) return 'Fecha desconocida';
@@ -9,7 +12,7 @@ export const formatReleaseDate = (timestamp) => {
 
 // Formatear URL de imagen de IGDB
 export const formatIGDBImage = (url, size = 't_1080p') => {
-  if (!url) return null;
+  if (!url) return PLACEHOLDER_COVER;
 
   // Reemplazar tamaño
   const formattedUrl = url.replace(/t_\w+/, size);
@@ -19,7 +22,7 @@ export const formatIGDBImage = (url, size = 't_1080p') => {
 };
 
 export const getGameBanner = (game) => {
-  if (!game) return null;
+  if (!game) return PLACEHOLDER_COVER;
 
   // Prioridad 1: Screenshot Aleatorio
   if (game.screenshots && game.screenshots.length > 0) {
@@ -38,11 +41,11 @@ export const getGameBanner = (game) => {
     return formatIGDBImage(game.cover.url, 't_1080p');
   }
 
-  return null;
+  return PLACEHOLDER_COVER;
 };
 
 // Obtener cover del juego
 export const getGameCover = (game) => {
-  if (!game.cover) return 'https://via.placeholder.com/264x374?text=No+Cover';
+  if (!game?.cover?.url) return PLACEHOLDER_COVER;
   return formatIGDBImage(game.cover.url, 't_cover_big');
 };

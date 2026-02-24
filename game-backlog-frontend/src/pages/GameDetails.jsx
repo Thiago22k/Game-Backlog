@@ -331,7 +331,6 @@ const GameDetails = () => {
                 src={cover}
                 alt={game.name}
                 className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10"
-                onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
               />
               {/* Translucent bottom bar: Like (left) + IGDB score (right) */}
               <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-black/50 backdrop-blur-sm px-3 py-2 flex items-center justify-between">

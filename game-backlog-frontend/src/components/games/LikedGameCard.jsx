@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, MoreVertical } from 'lucide-react';
-import { getGameCover, formatIGDBImage } from '../../utils/formatters';
+import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import GameLikeButton from './GameLikeButton';
 import StarRating from './StarRating';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
@@ -133,7 +133,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                         alt={game.name}
                         className="w-full h-32 object-cover rounded-lg"
                         onError={(e) => {
-                            e.target.src = coverUrl;
+                            e.target.src = PLACEHOLDER_COVER;
                         }}
                     />
                 </div>

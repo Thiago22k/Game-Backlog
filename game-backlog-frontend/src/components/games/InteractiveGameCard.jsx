@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreVertical, Archive, Heart } from 'lucide-react';
-import { getGameCover, formatIGDBImage } from '../../utils/formatters';
+import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
@@ -227,7 +227,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             alt={game.name}
             className="w-full h-32 object-cover rounded-lg"
             onError={(e) => {
-              e.target.src = coverUrl;
+              e.target.src = PLACEHOLDER_COVER;
             }}
           />
         </div>

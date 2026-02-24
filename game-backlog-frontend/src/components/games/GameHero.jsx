@@ -1,4 +1,4 @@
-import { getGameBanner, getGameCover } from '../../utils/formatters';
+import { getGameBanner, getGameCover, PLACEHOLDER_COVER } from '../../utils/formatters';
 
 const GameHero = ({ game, userGame, onAction }) => {
   const banner = getGameBanner(game);
@@ -34,7 +34,7 @@ const GameHero = ({ game, userGame, onAction }) => {
             alt={game.name}
             className="w-48 h-64 object-cover rounded-lg shadow-2xl"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover';
+              e.target.src = PLACEHOLDER_COVER;
             }}
           />
 
@@ -63,10 +63,10 @@ const GameHero = ({ game, userGame, onAction }) => {
               {userGame ? (
                 <>
                   <span className={`inline-block px-4 py-2 text-sm font-semibold rounded ${userGame.status === 'completed' ? 'bg-green-600' :
-                      userGame.status === 'playing' ? 'bg-blue-600' :
-                        userGame.status === 'wishlist' ? 'bg-yellow-600' :
-                          userGame.status === 'backlog' ? 'bg-purple-600' :
-                            'bg-gray-600'
+                    userGame.status === 'playing' ? 'bg-blue-600' :
+                      userGame.status === 'wishlist' ? 'bg-yellow-600' :
+                        userGame.status === 'backlog' ? 'bg-purple-600' :
+                          'bg-gray-600'
                     }`}>
                     {statusLabels[userGame.status]}
                   </span>
