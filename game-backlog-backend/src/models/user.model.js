@@ -29,7 +29,7 @@ const User = {
 
   // Buscar usuario por ID
   async findById(id) {
-    const query = 'SELECT id, username, email, is_profile_public, avatar_url, banner_url, created_at FROM users WHERE id = $1';
+    const query = 'SELECT id, username, email, is_profile_public, avatar_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0];
   },
@@ -117,6 +117,18 @@ const User = {
       RETURNING id, username, email, avatar_url, banner_url
     `;
     const result = await pool.query(query, [bannerUrl, userId]);
+    return result.rows[0];
+  },
+
+  // Actualizar bio y redes sociales
+  async updateProfile(userId, { bio, social_twitch, social_discord, social_steam }) {
+    const query = `
+      UPDATE users
+      SET bio = $1, social_twitch = $2, social_discord = $3, social_steam = $4, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5
+      RETURNING id, username, email, bio, social_twitch, social_discord, social_steam
+    `;
+    const result = await pool.query(query, [bio || null, social_twitch || null, social_discord || null, social_steam || null, userId]);
     return result.rows[0];
   },
 };

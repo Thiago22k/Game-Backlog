@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     UPDATE_EMAIL: '/settings/update-email',
     UPDATE_USERNAME: '/settings/update-username',
     UPDATE_PROFILE_VISIBILITY: '/settings/update-profile-visibility',
+    UPDATE_PROFILE: '/settings/update-profile',
     DELETE_ACCOUNT: '/settings/delete-account',
   },
 };

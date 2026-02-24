@@ -1,35 +1,89 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Menu, X, User, LogOut } from 'lucide-react';
+import { Search, Menu, X, User, LogOut, Bell } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import Logo from '../../assets/stackd.svg?react';
+import { useNotifications } from '../../hooks/useNotifications';
+import Logo from '../../assets/logo.svg?react';
 import SearchModal from './SearchModal';
 import defaultAvatar from '../../assets/default_avatar.png';
+
+// ─── Helper: format relative time ────────────────────────────────────────────
+const relativeTime = (dateStr) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
+
+// ─── Helper: notification message ────────────────────────────────────────────
+const notifMessage = (notif) => {
+  const actor = notif.metadata?.actor_username || 'Someone';
+  const colName = notif.metadata?.collection_name || 'your collection';
+  if (notif.type === 'LIKED_COLLECTION') {
+    return <><span className="font-semibold text-white">@{actor}</span>{' liked your collection '}<span className="italic">«{colName}»</span></>;
+  }
+  if (notif.type === 'COMMENTED_COLLECTION') {
+    const preview = notif.metadata?.comment_preview;
+    return <><span className="font-semibold text-white">@{actor}</span>{' commented on '}<span className="italic">«{colName}»</span>{preview ? <><br /><span className="text-gray-500 text-xs">"{preview}"</span></> : null}</>;
+  }
+  return 'New notification';
+};
+
+// ─── Single notification row ──────────────────────────────────────────────────
+const NotifItem = ({ notif, onRead }) => (
+  <button
+    onClick={onRead}
+    className={`w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-primary-navy transition-colors border-b border-gray-800 last:border-0 ${!notif.is_read ? 'bg-primary-navy/40' : ''}`}
+  >
+    <img
+      src={notif.actor_avatar_url ? `http://localhost:3000${notif.actor_avatar_url}` : defaultAvatar}
+      alt={notif.actor_username}
+      className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
+    />
+    <div className="flex-1 min-w-0">
+      <p className="text-gray-300 text-xs leading-snug">{notifMessage(notif)}</p>
+      <p className="text-gray-600 text-[11px] mt-1">{relativeTime(notif.created_at)}</p>
+    </div>
+    {!notif.is_read && <span className="w-2 h-2 rounded-full bg-primary-yellow flex-shrink-0 mt-1.5" />}
+  </button>
+);
+
 const Navbar = ({ transparentMode = true }) => {
+
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
 
+  const { notifications, unreadCount, markAllRead, markOneRead } = useNotifications();
+
   const dropdownRef = useRef(null);
+  const notifRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setProfileDropdownOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotifPanelOpen(false);
+      }
     };
 
-    if (profileDropdownOpen) {
+    if (profileDropdownOpen || notifPanelOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [profileDropdownOpen]);
+  }, [profileDropdownOpen, notifPanelOpen]);
 
   // Detectar si estamos en páginas de autenticación
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
@@ -86,7 +140,7 @@ const Navbar = ({ transparentMode = true }) => {
 
                 {/* Center: Logo */}
                 <Link to="/" className="flex items-center absolute left-1/2 transform -translate-x-1/2">
-                  <Logo className="h-5 w-auto text-white" />
+                  <Logo className="h-8 w-auto text-white" /><span className="text-white text-2xl font-bold px-2 pb-1 transition-all">Stackd</span>
                 </Link>
 
                 {/* Right: Search + Auth */}
@@ -100,6 +154,60 @@ const Navbar = ({ transparentMode = true }) => {
                       <span>Search</span>
                       <Search size={18} />
                     </button>
+                  )}
+
+                  {/* Bell notification icon — only for logged-in users */}
+                  {isAuthenticated && !isAuthPage && (
+                    <div className="relative" ref={notifRef}>
+                      <button
+                        onClick={() => setNotifPanelOpen(prev => !prev)}
+                        className="relative text-white hover:text-gray-300 transition-colors p-1"
+                        aria-label="Notifications"
+                      >
+                        <Bell size={20} />
+                        {unreadCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
+                      </button>
+
+                      {notifPanelOpen && (
+                        <div className="absolute right-0 mt-2 w-80 bg-primary-navy-dark border border-gray-700 rounded-xl shadow-2xl z-[200] flex flex-col max-h-[460px]">
+                          {/* Header */}
+                          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                            <span className="text-white font-semibold text-sm">Notifications</span>
+                            {unreadCount > 0 && (
+                              <button
+                                onClick={markAllRead}
+                                className="text-xs text-primary-yellow hover:opacity-80 transition"
+                              >
+                                Mark all read
+                              </button>
+                            )}
+                          </div>
+
+                          {/* List */}
+                          <div className="overflow-y-auto flex-1">
+                            {notifications.length === 0 ? (
+                              <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
+                            ) : (
+                              notifications.map(notif => (
+                                <NotifItem
+                                  key={notif.id}
+                                  notif={notif}
+                                  onRead={() => {
+                                    markOneRead(notif.id);
+                                    navigate(`/collections/${notif.entity_id}`);
+                                    setNotifPanelOpen(false);
+                                  }}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {isAuthenticated ? (

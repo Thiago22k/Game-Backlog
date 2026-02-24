@@ -11,6 +11,7 @@ import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
+import usePageTitle from '../hooks/usePageTitle';
 
 const TOP_PLATFORMS = [6, 167, 48, 169, 49, 130];
 
@@ -29,6 +30,10 @@ const Explore = () => {
   // Estados
   const initialSearch = searchParams.get('search') || '';
   const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [showFilters, setShowFilters] = useState(false);
+
+  usePageTitle('Explore');
+
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
@@ -438,7 +443,7 @@ const Explore = () => {
                   <ChevronDown size={16} />
                 </button>
                 {genreDropdownOpen && (
-                  <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
                     {availableGenres.map((genre) => (
                       <label key={genre.id} className="flex items-center px-3 py-2 hover:bg-primary-navy cursor-pointer">
                         <input
@@ -465,7 +470,7 @@ const Explore = () => {
                   <ChevronDown size={16} />
                 </button>
                 {platformDropdownOpen && (
-                  <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
                     {availablePlatforms.map((platform) => (
                       <label key={platform.id} className="flex items-center px-3 py-2 hover:bg-primary-navy cursor-pointer">
                         <input

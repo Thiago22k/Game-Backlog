@@ -126,9 +126,12 @@ const getUserGames = async (req, res) => {
     let targetUsername = null;
     let targetAvatarUrl = null;
     let targetBannerUrl = null;
+    let targetBio = null;
+    let targetSocialTwitch = null;
+    let targetSocialDiscord = null;
+    let targetSocialSteam = null;
 
     if (username) {
-      // Buscar el ID del usuario por nombre
       const user = await User.findByUsername(username);
       if (!user) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -137,9 +140,12 @@ const getUserGames = async (req, res) => {
       isProfilePublic = user.is_profile_public;
       targetUsername = user.username;
       targetAvatarUrl = user.avatar_url;
-      targetBannerUrl = user.banner_url; // Assign banner_url
+      targetBannerUrl = user.banner_url;
+      targetBio = user.bio;
+      targetSocialTwitch = user.social_twitch;
+      targetSocialDiscord = user.social_discord;
+      targetSocialSteam = user.social_steam;
 
-      // Si el perfil es privado y no es el dueño
       if (!isProfilePublic && targetUserId !== requestingUserId) {
         return res.json({
           games: [],
@@ -147,7 +153,11 @@ const getUserGames = async (req, res) => {
           is_profile_public: false,
           username: targetUsername,
           avatar_url: targetAvatarUrl,
-          banner_url: targetBannerUrl // Include banner_url here
+          banner_url: targetBannerUrl,
+          bio: targetBio,
+          social_twitch: targetSocialTwitch,
+          social_discord: targetSocialDiscord,
+          social_steam: targetSocialSteam,
         });
       }
     } else {
@@ -174,7 +184,11 @@ const getUserGames = async (req, res) => {
         is_profile_public: isProfilePublic,
         username: targetUsername || req.user?.username,
         avatar_url: targetAvatarUrl,
-        banner_url: targetBannerUrl // Include banner_url here
+        banner_url: targetBannerUrl,
+        bio: targetBio,
+        social_twitch: targetSocialTwitch,
+        social_discord: targetSocialDiscord,
+        social_steam: targetSocialSteam,
       });
     }
 
@@ -193,7 +207,11 @@ const getUserGames = async (req, res) => {
       is_profile_public: isProfilePublic,
       username: targetUsername || req.user?.username,
       avatar_url: targetAvatarUrl,
-      banner_url: targetBannerUrl // Include banner_url here
+      banner_url: targetBannerUrl,
+      bio: targetBio,
+      social_twitch: targetSocialTwitch,
+      social_discord: targetSocialDiscord,
+      social_steam: targetSocialSteam,
     });
 
   } catch (error) {

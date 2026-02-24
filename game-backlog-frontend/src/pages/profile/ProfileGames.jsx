@@ -100,6 +100,12 @@ const ProfileGames = () => {
             case 'rating-low':
                 result.sort((a, b) => (a.rating || 0) - (b.rating || 0));
                 break;
+            case 'release-new':
+                result.sort((a, b) => (b.game_details?.first_release_date || 0) - (a.game_details?.first_release_date || 0));
+                break;
+            case 'release-old':
+                result.sort((a, b) => (a.game_details?.first_release_date || 0) - (b.game_details?.first_release_date || 0));
+                break;
             case 'recent':
             default:
                 result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -341,6 +347,8 @@ const ProfileGames = () => {
                                             <option value="name">Name (A-Z)</option>
                                             <option value="rating-high">Rating (High-Low)</option>
                                             <option value="rating-low">Rating (Low-High)</option>
+                                            <option value="release-new">Release Date (Newest)</option>
+                                            <option value="release-old">Release Date (Oldest)</option>
                                         </select>
                                     </div>
                                 </div>

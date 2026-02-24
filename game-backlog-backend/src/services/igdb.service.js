@@ -90,7 +90,14 @@ const getGameById = async (slugOrId) => {
           similar_games.rating,
           involved_companies.company.name,
           involved_companies.developer,
-          involved_companies.publisher;
+          involved_companies.publisher,
+          game_type,
+          parent_game.name,
+          parent_game.slug,
+          parent_game.first_release_date,
+          version_parent.name,
+          version_parent.slug,
+          version_parent.first_release_date;
         where ${whereClause};
       `,
       {

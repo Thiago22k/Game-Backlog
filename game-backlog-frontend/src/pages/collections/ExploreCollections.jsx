@@ -4,6 +4,7 @@ import Navbar from '../../components/layout/Navbar';
 import CollectionCard from '../../components/collections/CollectionCard';
 import { Library, TrendingUp, Sparkles, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const ExploreCollections = () => {
     const [collections, setCollections] = useState({
@@ -12,6 +13,8 @@ const ExploreCollections = () => {
         interactive: []
     });
     const [loading, setLoading] = useState(true);
+
+    usePageTitle('Collections');
 
     useEffect(() => {
         const fetchCollections = async () => {

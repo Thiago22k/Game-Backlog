@@ -8,6 +8,7 @@ router.put('/change-password', authenticateToken, settingsController.changePassw
 router.put('/update-email', authenticateToken, settingsController.updateEmail);
 router.put('/update-username', authenticateToken, settingsController.updateUsername);
 router.put('/update-profile-visibility', authenticateToken, settingsController.updateProfileVisibility);
+router.put('/update-profile', authenticateToken, settingsController.updateProfile);
 router.delete('/delete-account', authenticateToken, settingsController.deleteAccount);
 
 module.exports = router;

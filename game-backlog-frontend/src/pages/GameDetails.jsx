@@ -1,13 +1,15 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Check, Play, ShoppingCart, Trash2, Calendar, Clock, Tag, Building2, ExternalLink, Archive } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
+import usePageTitle from '../hooks/usePageTitle';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import NotFound from '../pages/NotFound';
+import StarRating from '../components/games/StarRating';
 import GameLikeButton from '../components/games/GameLikeButton';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -110,6 +112,8 @@ const GameDetails = () => {
   const [saving, setSaving] = useState(false);
 
   const [banner, setBanner] = useState(null);
+
+  usePageTitle(game?.name);
 
   // ── Fetch Game Data ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -235,6 +239,36 @@ const GameDetails = () => {
   // A game is "unreleased" if it has no release date yet, or its release date is in the future
   const isUnreleased = useMemo(() => !game?.first_release_date || game.first_release_date > Date.now() / 1000, [game]);
 
+  // Derived category and parent game
+  const categoryName = useMemo(() => {
+    if (!game) return null;
+    const categories = {
+      0: 'Main Game',
+      1: 'DLC / Addon',
+      2: 'Expansion',
+      3: 'Bundle',
+      4: 'Standalone Expansion',
+      5: 'Mod',
+      6: 'Episode',
+      7: 'Season',
+      8: 'Remake',
+      9: 'Remaster',
+      10: 'Expanded Game',
+      11: 'Port',
+      12: 'Fork',
+      13: 'Pack',
+      14: 'Update'
+    };
+    return categories[game.game_type] || null;
+  }, [game]);
+
+  const parentGame = useMemo(() => {
+    // Determine the main game link, prioritizing version_parent over parent_game
+    return game?.version_parent || game?.parent_game || null;
+  }, [game]);
+
+
+
   // ── Loading / error states (After all React hooks have been called) ───────────
   if (loading) {
     return (
@@ -319,9 +353,26 @@ const GameDetails = () => {
 
             {/* Title & meta */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight mb-3">
-                {game.name}
-              </h1>
+              <div className="flex items-center flex-wrap gap-3 mb-3">
+                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
+                  {game.name}
+                </h1>
+                {categoryName && categoryName !== 'Main Game' && (
+                  parentGame ? (
+                    <Link
+                      to={`/game/${parentGame.slug || parentGame.id}`}
+                      className="px-2 py-0.5 bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors text-sm rounded border border-gray-700 self-center mt-1 focus:outline-none"
+                      title={`A ${categoryName.toLowerCase()} of ${parentGame.name} (${parentGame.first_release_date ? new Date(parentGame.first_release_date * 1000).getFullYear() : 'Unknown'})`}
+                    >
+                      {categoryName}
+                    </Link>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-gray-800/80 text-gray-300 text-sm rounded border border-gray-700 self-center mt-1">
+                      {categoryName}
+                    </span>
+                  )
+                )}
+              </div>
 
               {/* Genre pills + Upcoming badge */}
               <div className="flex flex-wrap gap-2 mb-4">
@@ -426,7 +477,7 @@ const GameDetails = () => {
                             }`}
                         >
                           <ShoppingCart size={16} />
-                          {userGame?.status === 'wishlist' ? 'In Wishlist ✓' : 'Add to Wishlist'}
+                          {userGame?.status === 'wishlist' ? 'In Wishlist' : 'Add to Wishlist'}
                         </button>
                         {userGame?.status === 'wishlist' && (
                           <button
@@ -545,9 +596,19 @@ const GameDetails = () => {
           <div className="space-y-5">
 
             {/* ── DETAILS — only non-duplicate info ─────────────────── */}
-            {(game.game_modes?.length > 0 || game.websites?.find((w) => w.category === 1)) && (
+            {!parentGame && (game.game_modes?.length > 0 || game.websites?.find((w) => w.category === 1)) && (
               <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-5 space-y-4">
                 <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Details</p>
+
+                {parentGame && (
+                  <div className="flex flex-col gap-1 mt-0.5">
+                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Original Game</span>
+                    <Link to={`/game/${parentGame.slug || parentGame.id}`} className="text-sm font-medium text-primary-yellow hover:underline flex items-center gap-1 group w-max">
+                      <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                      {parentGame.name}
+                    </Link>
+                  </div>
+                )}
 
                 {game.game_modes?.length > 0 && (
                   <div className="flex flex-col gap-1">

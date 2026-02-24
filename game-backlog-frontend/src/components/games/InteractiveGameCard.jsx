@@ -44,6 +44,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
 
   // Género y año
   const genre = game.genres?.[0]?.name || 'Unknown';
+  const genreId = game.genres?.[0]?.id;
   const year = game.first_release_date
     ? new Date(game.first_release_date * 1000).getFullYear()
     : 'TBA';
@@ -246,8 +247,20 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             {game.name}
           </h3>
           <div className="mt-auto">
-            <p className="text-gray-400 text-sm">
-              {genre} • {year}
+            <p className="text-gray-400 text-sm relative z-20">
+              {genreId ? (
+                <span
+                  className="hover:text-primary-yellow hover:underline transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/explore?genres=${genreId}`);
+                  }}
+                >
+                  {genre}
+                </span>
+              ) : (
+                genre
+              )} • {year}
             </p>
           </div>
         </div>

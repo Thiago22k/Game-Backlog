@@ -4,11 +4,15 @@ import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2,
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
+import TwitchIcon from '../../assets/twitch-icon.svg?react';
+import DiscordIcon from '../../assets/discord-icon.svg?react';
+import SteamIcon from '../../assets/steam-icon.svg?react';
 import Navbar from '../../components/layout/Navbar';
 import NotFound from '../NotFound';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 import defaultAvatar from '../../assets/default_avatar.png';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const ProfileLayout = () => {
     const { user, updateUser } = useAuth();
@@ -22,6 +26,15 @@ const ProfileLayout = () => {
     const [isCustomizationModalOpen, setIsCustomizationModalOpen] = useState(false);
 
     const isOwner = user?.username === username;
+    const displayUsername = isOwner ? user?.username : username;
+
+    // Bio and social links — from context for owner, from hook for visitors
+    const profileBio = isOwner ? user?.bio : gamesHook.profileBio;
+    const profileSocialTwitch = isOwner ? user?.social_twitch : gamesHook.profileSocialTwitch;
+    const profileSocialDiscord = isOwner ? user?.social_discord : gamesHook.profileSocialDiscord;
+    const profileSocialSteam = isOwner ? user?.social_steam : gamesHook.profileSocialSteam;
+
+    usePageTitle(`${displayUsername}'s Profile`);
 
     useEffect(() => {
         if (username) {
@@ -284,6 +297,50 @@ const ProfileLayout = () => {
                                     </span>
                                 )}
                             </div>
+
+                            {/* Bio */}
+                            {profileBio && (
+                                <p className="mt-2 text-sm text-gray-300/80 italic max-w-sm drop-shadow-sm line-clamp-2">{profileBio}</p>
+                            )}
+
+                            {/* Social Links */}
+                            {(profileSocialTwitch || profileSocialDiscord || profileSocialSteam) && (
+                                <div className="flex items-center gap-2 mt-2">
+                                    {profileSocialTwitch && (
+                                        <a
+                                            href={`https://twitch.tv/${profileSocialTwitch}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={`Twitch: ${profileSocialTwitch}`}
+                                            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white text-xs font-medium transition-colors"
+                                        >
+                                            <TwitchIcon className="w-4 h-4" />
+                                            {profileSocialTwitch}
+                                        </a>
+                                    )}
+                                    {profileSocialDiscord && (
+                                        <span
+                                            title={`Discord: ${profileSocialDiscord}`}
+                                            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium cursor-default select-all"
+                                        >
+                                            <DiscordIcon className="w-4 h-4" />
+                                            {profileSocialDiscord}
+                                        </span>
+                                    )}
+                                    {profileSocialSteam && (
+                                        <a
+                                            href={`https://steamcommunity.com/id/${profileSocialSteam}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            title={`Steam: ${profileSocialSteam}`}
+                                            className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white text-xs font-medium transition-colors"
+                                        >
+                                            <SteamIcon className="w-4 h-4" />
+                                            {profileSocialSteam}
+                                        </a>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 

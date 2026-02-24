@@ -10,6 +10,7 @@ import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import NotFound from '../../pages/NotFound';
 import defaultAvatar from '../../assets/default_avatar.png';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const CollectionDetails = () => {
     const { id } = useParams();
@@ -22,6 +23,8 @@ const CollectionDetails = () => {
 
     const [collection, setCollection] = useState(null);
     const [collectionGames, setCollectionGames] = useState([]);
+
+    usePageTitle(collection?.title);
     const userGamesRef = useRef(userGames);
     useEffect(() => { userGamesRef.current = userGames; }, [userGames]);
 

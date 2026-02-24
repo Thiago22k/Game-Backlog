@@ -167,6 +167,10 @@ const login = async (req, res) => {
         is_profile_public: user.is_profile_public,
         avatar_url: user.avatar_url,
         banner_url: user.banner_url,
+        bio: user.bio,
+        social_twitch: user.social_twitch,
+        social_discord: user.social_discord,
+        social_steam: user.social_steam,
       },
       token,
     });

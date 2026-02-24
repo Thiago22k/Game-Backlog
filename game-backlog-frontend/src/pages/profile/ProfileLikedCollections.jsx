@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Library, ChevronDown, ArrowLeft } from 'lucide-react';
 import CollectionCard from '../../components/collections/CollectionCard';
 import axios from '../../api/axios';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const PAGE_SIZE = 20;
 
@@ -12,6 +13,8 @@ const ProfileLikedCollections = () => {
     const [allCollections, setAllCollections] = useState([]);
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [loading, setLoading] = useState(true);
+
+    usePageTitle(`${username}'s Liked Collections`);
 
     useEffect(() => {
         if (!username) return;

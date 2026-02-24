@@ -9,6 +9,10 @@ export const useGames = () => {
   const [isProfilePublic, setIsProfilePublic] = useState(true);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
   const [profileBannerUrl, setProfileBannerUrl] = useState(null);
+  const [profileBio, setProfileBio] = useState(null);
+  const [profileSocialTwitch, setProfileSocialTwitch] = useState(null);
+  const [profileSocialDiscord, setProfileSocialDiscord] = useState(null);
+  const [profileSocialSteam, setProfileSocialSteam] = useState(null);
 
   // Obtener juegos del usuario (puede ser propio o de otro por username)
   const getUserGames = useCallback(async (username = null, status = null, showLoader = true) => {
@@ -34,6 +38,18 @@ export const useGames = () => {
       }
       if (response.data.banner_url !== undefined) {
         setProfileBannerUrl(response.data.banner_url);
+      }
+      if (response.data.bio !== undefined) {
+        setProfileBio(response.data.bio);
+      }
+      if (response.data.social_twitch !== undefined) {
+        setProfileSocialTwitch(response.data.social_twitch);
+      }
+      if (response.data.social_discord !== undefined) {
+        setProfileSocialDiscord(response.data.social_discord);
+      }
+      if (response.data.social_steam !== undefined) {
+        setProfileSocialSteam(response.data.social_steam);
       }
       return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public, profileAvatarUrl: response.data.avatar_url, profileBannerUrl: response.data.banner_url };
     } catch (err) {
@@ -123,12 +139,16 @@ export const useGames = () => {
 
   return {
     games,
-    userGames: games, // Alias para compatibilidad con Landing.jsx
+    userGames: games,
     loading,
     error,
     isProfilePublic,
     profileAvatarUrl,
     profileBannerUrl,
+    profileBio,
+    profileSocialTwitch,
+    profileSocialDiscord,
+    profileSocialSteam,
     getUserGames,
     searchGames,
     addGame,

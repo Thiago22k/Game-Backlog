@@ -275,10 +275,37 @@ const updateProfileVisibility = async (req, res) => {
   }
 };
 
+// Actualizar bio y redes sociales
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    let { bio, social_twitch, social_discord, social_steam } = req.body;
+
+    // Validate bio length
+    if (bio && bio.length > 200) {
+      return res.status(400).json({ error: 'Bio debe tener máximo 200 caracteres' });
+    }
+
+    // Trim values
+    bio = bio?.trim() || null;
+    social_twitch = social_twitch?.trim() || null;
+    social_discord = social_discord?.trim() || null;
+    social_steam = social_steam?.trim() || null;
+
+    const updatedUser = await User.updateProfile(userId, { bio, social_twitch, social_discord, social_steam });
+
+    res.json({ message: 'Perfil actualizado exitosamente', user: updatedUser });
+  } catch (error) {
+    console.error('Error en updateProfile:', error);
+    res.status(500).json({ error: 'Error al actualizar perfil' });
+  }
+};
+
 module.exports = {
   changePassword,
   updateEmail,
   updateUsername,
   deleteAccount,
   updateProfileVisibility,
+  updateProfile,
 };

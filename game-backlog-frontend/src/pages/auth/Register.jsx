@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+
+  usePageTitle('Sign Up');
 
   const [formData, setFormData] = useState({
     username: '',

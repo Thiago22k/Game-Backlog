@@ -10,6 +10,7 @@ import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
 import { useGames } from '../hooks/useGames';
+import usePageTitle from '../hooks/usePageTitle';
 import toast from 'react-hot-toast';
 
 // Constante a nivel de módulo — no se recrea en cada render
@@ -30,6 +31,8 @@ const Landing = () => {
   const [bestOfYearGames, setBestOfYearGames] = useState([]);
   const [anticipatedGames, setAnticipatedGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  usePageTitle(''); // Uses default 'Stackd'
 
   // Ref para tener siempre los userGames frescos dentro de los handlers
   const userGamesRef = useRef(userGames);

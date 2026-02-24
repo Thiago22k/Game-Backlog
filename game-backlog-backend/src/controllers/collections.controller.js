@@ -2,6 +2,7 @@ const Collection = require('../models/collection.model');
 const igdbService = require('../services/igdb.service');
 const User = require('../models/user.model');
 const Activity = require('../models/activity.model');
+const Notification = require('../models/notification.model');
 
 // En lugar del workaround, usaremos User.findByUsername
 
@@ -233,6 +234,17 @@ const toggleLike = async (req, res) => {
                 id,
                 { collection_name: collection.title }
             );
+            // Create notification for the collection owner
+            await Notification.createNotification({
+                recipientId: collection.user_id,
+                actorId: userId,
+                type: 'LIKED_COLLECTION',
+                entityId: String(id),
+                metadata: {
+                    collection_name: collection.title,
+                    actor_username: req.user.username,
+                }
+            });
         }
 
         res.json({
@@ -288,6 +300,18 @@ const addComment = async (req, res) => {
                     comment_preview: content.trim().substring(0, 50) + (content.trim().length > 50 ? '...' : '')
                 }
             );
+            // Create notification for the collection owner
+            await Notification.createNotification({
+                recipientId: collection.user_id,
+                actorId: userId,
+                type: 'COMMENTED_COLLECTION',
+                entityId: String(id),
+                metadata: {
+                    collection_name: collection.title,
+                    actor_username: req.user.username,
+                    comment_preview: content.trim().substring(0, 60) + (content.trim().length > 60 ? '...' : ''),
+                }
+            });
         }
 
         // Devolver también la info del usuario para pintar el UI inmediatamente

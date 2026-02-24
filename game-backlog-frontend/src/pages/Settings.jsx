@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Mail, User as UserIcon, Lock, AlertTriangle, Calendar, X } from 'lucide-react';
+import { Mail, User as UserIcon, Lock, AlertTriangle, Calendar, X, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
+import TwitchIcon from '../assets/twitch-icon.svg?react';
+import DiscordIcon from '../assets/discord-icon.svg?react';
+import SteamIcon from '../assets/steam-icon.svg?react';
 import Navbar from '../components/layout/Navbar';
+import usePageTitle from '../hooks/usePageTitle';
 
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const navigate = useNavigate();
 
   // Estados para modals
@@ -23,8 +27,18 @@ const Settings = () => {
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [deleteData, setDeleteData] = useState({ password: '', confirmText: '' });
 
+  // Profile data (bio + social links)
+  const [profileData, setProfileData] = useState({
+    bio: user?.bio || '',
+    social_twitch: user?.social_twitch || '',
+    social_discord: user?.social_discord || '',
+    social_steam: user?.social_steam || '',
+  });
+
   // Loading states
   const [loading, setLoading] = useState(false);
+
+  usePageTitle('Settings');
 
   // Profile Privacy State
   const [isProfilePublic, setIsProfilePublic] = useState(user?.is_profile_public ?? true);
@@ -112,6 +126,20 @@ const Settings = () => {
     }
   };
 
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await axios.put(ENDPOINTS.SETTINGS.UPDATE_PROFILE, profileData);
+      updateUser(res.data.user);
+      toast.success('Profile updated!');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Error updating profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTogglePrivacy = async () => {
     setLoading(true);
     try {
@@ -143,7 +171,7 @@ const Settings = () => {
         </div>
 
         {/* Account Info Stats */}
-        <div className="mb-8 bg-primary-navy-dark border border-gray-700 rounded-lg p-6">
+        <div className="mb-8 bg-primary-navy-dark rounded-lg p-6">
           <div className="flex items-center gap-2 mb-3">
             <Calendar className="text-primary-yellow" size={20} />
             <h2 className="text-lg font-semibold text-white">Account Information</h2>
@@ -164,10 +192,88 @@ const Settings = () => {
           </div>
         </div>
 
+        {/* Profile Card — Bio & Social Links */}
+        <div className="mb-8 bg-primary-navy-dark rounded-lg p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-3 bg-green-500/20 rounded-lg">
+              <FileText className="text-green-400" size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Public Profile</h3>
+              <p className="text-sm text-gray-400">Bio and gaming social links shown on your profile</p>
+            </div>
+          </div>
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
+            {/* Bio */}
+            <div>
+              <div className="flex justify-between mb-2">
+                <label className="text-sm font-medium text-gray-400">Bio</label>
+                <span className={`text-xs ${profileData.bio.length > 190 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {profileData.bio.length}/200
+                </span>
+              </div>
+              <textarea
+                maxLength={200}
+                rows={3}
+                value={profileData.bio}
+                onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                placeholder="Tell other gamers a bit about yourself..."
+                className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow resize-none text-sm"
+              />
+            </div>
+            {/* Social Links */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-purple-400 mb-2">
+                  <TwitchIcon className="w-4 h-4 fill-current" /> Twitch
+                </label>
+                <input
+                  type="text"
+                  value={profileData.social_twitch}
+                  onChange={(e) => setProfileData({ ...profileData, social_twitch: e.target.value })}
+                  placeholder="username"
+                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow text-sm"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-indigo-400 mb-2">
+                  <DiscordIcon className="w-4 h-4 fill-current" /> Discord
+                </label>
+                <input
+                  type="text"
+                  value={profileData.social_discord}
+                  onChange={(e) => setProfileData({ ...profileData, social_discord: e.target.value })}
+                  placeholder="username"
+                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow text-sm"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-sm font-medium text-blue-400 mb-2">
+                  <SteamIcon className="w-4 h-4 fill-current" /> Steam
+                </label>
+                <input
+                  type="text"
+                  value={profileData.social_steam}
+                  onChange={(e) => setProfileData({ ...profileData, social_steam: e.target.value })}
+                  placeholder="username"
+                  className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow text-sm"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : 'Save Profile'}
+            </button>
+          </form>
+        </div>
+
         {/* Settings Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Email Card */}
-          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors">
+          <div className="bg-primary-navy-dark rounded-lg p-6 transition-colors">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-blue-500/20 rounded-lg">
                 <Mail className="text-blue-400" size={24} />
@@ -187,7 +293,7 @@ const Settings = () => {
           </div>
 
           {/* Username Card */}
-          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors">
+          <div className="bg-primary-navy-dark rounded-lg p-6 transition-colors">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-cyan-500/20 rounded-lg">
                 <UserIcon className="text-cyan-400" size={24} />
@@ -210,7 +316,7 @@ const Settings = () => {
         {/* Third Row: Privacy and Password */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Privacy Card */}
-          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors flex flex-col justify-between">
+          <div className="bg-primary-navy-dark rounded-lg p-6 transition-colors flex flex-col justify-between">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 bg-purple-500/20 rounded-lg">
                 <Lock className="text-purple-400" size={24} />
@@ -221,7 +327,7 @@ const Settings = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between bg-primary-navy border border-gray-700 p-4 rounded-lg mt-auto">
+            <div className="flex items-center justify-between bg-primary-navy p-4 rounded-lg mt-auto">
               <span className="text-sm text-gray-300">
                 {isProfilePublic ? 'Public Profile (Visible to everyone)' : 'Private Profile (Only visible to you)'}
               </span>
@@ -241,7 +347,7 @@ const Settings = () => {
           </div>
 
           {/* Password Card (Changed from full width to half size inside the grid above) */}
-          <div className="bg-primary-navy-dark border border-gray-700 rounded-lg p-6 hover:border-primary-yellow transition-colors flex flex-col justify-between">
+          <div className="bg-primary-navy-dark rounded-lg p-6 transition-colors flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-3 bg-primary-yellow/20 rounded-lg">
@@ -264,7 +370,7 @@ const Settings = () => {
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-6">
+        <div className="bg-red-500/10 rounded-lg p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="p-3 bg-red-500/20 rounded-lg">
               <AlertTriangle className="text-red-400" size={24} />

@@ -1,10 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Gamepad2, ChevronDown, ArrowLeft } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useParams, Link, useOutletContext } from 'react-router-dom';
+import { Gamepad2, ChevronDown, ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
+import usePageTitle from '../../hooks/usePageTitle';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
+import LikedGameCard from '../../components/games/LikedGameCard';
 import axios from '../../api/axios';
 
 const PAGE_SIZE = 20;
@@ -12,12 +14,33 @@ const PAGE_SIZE = 20;
 const ProfileLikedGames = () => {
     const { username } = useParams();
     const { user } = useAuth();
-    const { addGame, updateGame, deleteGame, getUserGames } = useGames();
+    const { getUserGames } = useGames();
+    // games from ProfileLayout outlet = always the profile owner's library
+    const { games: ownerGames = [] } = useOutletContext() || {};
 
-    const [allGames, setAllGames] = useState([]);
+    const [rawGames, setRawGames] = useState([]);
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [loading, setLoading] = useState(true);
+    const [sortBy, setSortBy] = useState('recent');
     const userGamesRef = useRef([]);
+
+    usePageTitle(`${username}'s Liked Games`);
+
+    // Reactively merge owner's status/rating into liked games whenever ownerGames updates.
+    const allGames = useMemo(() =>
+        rawGames.map(g => {
+            const ownerEntry = ownerGames.find(og => og.igdb_game_id === g.igdb_game_id);
+            return {
+                ...g,
+                game_details: {
+                    ...g.game_details,
+                    owner_status: ownerEntry?.status ?? null,
+                    owner_rating: ownerEntry?.rating ?? 0,
+                }
+            };
+        }),
+        [rawGames, ownerGames]
+    );
 
     useEffect(() => {
         if (!username) return;
@@ -25,27 +48,15 @@ const ProfileLikedGames = () => {
             setLoading(true);
             try {
                 const res = await axios.get(`/games/likes/by-username/${username}`);
-                let games = res.data.games || [];
+                setRawGames(res.data.games || []);
 
+                // Load viewer's own data into userGamesRef for interactive card actions
                 if (user) {
                     const ugRes = await getUserGames();
-                    const userGamesList = ugRes?.data ?? [];
-                    userGamesRef.current = userGamesList;
-                    games = games.map(g => {
-                        const ug = userGamesList.find(u => u.igdb_game_id === g.igdb_game_id);
-                        return {
-                            ...g,
-                            game_details: {
-                                ...g.game_details,
-                                status: ug?.status ?? null,
-                                user_rating: ug?.rating ?? 0,
-                            }
-                        };
-                    });
+                    userGamesRef.current = ugRes?.data ?? [];
                 }
-                setAllGames(games);
             } catch {
-                setAllGames([]);
+                setRawGames([]);
             } finally {
                 setLoading(false);
             }
@@ -54,86 +65,43 @@ const ProfileLikedGames = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [username, user]);
 
-    // ─── Card handlers ────────────────────────────────────────────────────
-    const updateLocalGame = (igdbGameId, patch) => {
-        setAllGames(prev => prev.map(g =>
-            g.igdb_game_id === igdbGameId
-                ? { ...g, game_details: { ...g.game_details, ...patch } }
-                : g
-        ));
-    };
-
-    const handleWishlistToggle = useCallback(async (gameId, newStatus) => {
-        if (!user) return;
-        const existing = userGamesRef.current.find(g => g.igdb_game_id === gameId);
-        if (newStatus === null && existing) {
-            const res = await deleteGame(gameId);
-            if (res.success) updateLocalGame(gameId, { status: null, user_rating: 0 });
-        } else if (newStatus === 'wishlist') {
-            const res = await addGame(gameId, 'wishlist');
-            if (res.success) updateLocalGame(gameId, { status: 'wishlist', user_rating: 0 });
-        }
-    }, [user, addGame, deleteGame]);
-
-    const handleStatusChange = useCallback(async (gameId, newStatus, currentRating = 0) => {
-        if (!user) return;
-        const existing = userGamesRef.current.find(g => g.igdb_game_id === gameId);
-        const validRating = currentRating >= 1 && currentRating <= 5 ? currentRating : null;
-        if (newStatus === null) {
-            if (!existing) return;
-            const res = await deleteGame(gameId);
-            if (res.success) updateLocalGame(gameId, { status: null, user_rating: 0 });
-            return;
-        }
-        if (existing) {
-            const res = await updateGame(gameId, newStatus, validRating ?? existing.rating);
-            if (res.success) updateLocalGame(gameId, { status: newStatus, user_rating: validRating ?? undefined });
-        } else {
-            const res = await addGame(gameId, newStatus, validRating);
-            if (res.success) updateLocalGame(gameId, { status: newStatus, user_rating: validRating ?? 0 });
-        }
-    }, [user, addGame, updateGame, deleteGame]);
-
-    const handleRatingChange = useCallback(async (gameId, rating) => {
-        if (!user) return;
-        const existing = userGamesRef.current.find(g => g.igdb_game_id === gameId);
-        if (!existing) return;
-        const res = await updateGame(gameId, existing.status, rating);
-        if (res.success) updateLocalGame(gameId, { user_rating: rating });
-    }, [user, updateGame]);
-
     // ─── Card renderer ────────────────────────────────────────────────────
     const renderGameCard = (g) => {
-        const releaseDate = g.game_details?.first_release_date
-            ? new Date(g.game_details.first_release_date * 1000)
-            : null;
-        const isUnreleased = !releaseDate || releaseDate > new Date();
         const mappedGame = {
             ...g.game_details,
             id: g.igdb_game_id,
-            status: g.game_details?.status,
-            user_rating: g.game_details?.user_rating,
         };
-        return isUnreleased ? (
-            <AnticipatedGameCard
-                game={mappedGame}
-                interactive={!!user}
-                showWishlistButton={!!user}
-                onWishlistToggle={handleWishlistToggle}
-            />
-        ) : (
-            <InteractiveGameCard
-                game={mappedGame}
-                interactive={!!user}
-                showStatus={true}
-                onStatusChange={handleStatusChange}
-                onRatingChange={handleRatingChange}
-            />
-        );
+        return <LikedGameCard game={mappedGame} />;
     };
 
-    const visibleGames = allGames.slice(0, visibleCount);
-    const hasMore = visibleCount < allGames.length;
+    const sortedGames = useMemo(() => {
+        const result = [...allGames];
+        switch (sortBy) {
+            case 'name':
+                result.sort((a, b) => (a.game_details?.name || '').localeCompare(b.game_details?.name || ''));
+                break;
+            case 'rating-high':
+                result.sort((a, b) => (b.game_details?.owner_rating || 0) - (a.game_details?.owner_rating || 0));
+                break;
+            case 'rating-low':
+                result.sort((a, b) => (a.game_details?.owner_rating || 0) - (b.game_details?.owner_rating || 0));
+                break;
+            case 'release-new':
+                result.sort((a, b) => (b.game_details?.first_release_date || 0) - (a.game_details?.first_release_date || 0));
+                break;
+            case 'release-old':
+                result.sort((a, b) => (a.game_details?.first_release_date || 0) - (b.game_details?.first_release_date || 0));
+                break;
+            case 'recent':
+            default:
+                // mantiene el orden original del servidor (más reciente primero)
+                break;
+        }
+        return result;
+    }, [allGames, sortBy]);
+
+    const visibleGames = sortedGames.slice(0, visibleCount);
+    const hasMore = visibleCount < sortedGames.length;
 
     return (
         <div>
@@ -148,13 +116,30 @@ const ProfileLikedGames = () => {
                         </span>
                     )}
                 </h3>
-                <Link
-                    to={`/profile/${username}/likes`}
-                    className="text-sm text-gray-400 hover:text-primary-yellow transition-colors flex items-center gap-1"
-                >
-                    <ArrowLeft size={14} />
-                    Back to Likes
-                </Link>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-400 text-sm">Sort by:</span>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => { setSortBy(e.target.value); setVisibleCount(PAGE_SIZE); }}
+                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
+                        >
+                            <option value="recent">Recently Liked</option>
+                            <option value="name">Name (A-Z)</option>
+                            <option value="rating-high">Rating (High-Low)</option>
+                            <option value="rating-low">Rating (Low-High)</option>
+                            <option value="release-new">Release Date (Newest)</option>
+                            <option value="release-old">Release Date (Oldest)</option>
+                        </select>
+                    </div>
+                    <Link
+                        to={`/profile/${username}/likes`}
+                        className="text-sm text-gray-400 hover:text-primary-yellow transition-colors flex items-center gap-1"
+                    >
+                        <ArrowLeft size={14} />
+                        Back to Likes
+                    </Link>
+                </div>
             </div>
 
             {loading ? (

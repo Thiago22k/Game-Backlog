@@ -3,10 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../../components/layout/Navbar';
+import usePageTitle from '../../hooks/usePageTitle';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  usePageTitle('Sign In');
 
   const [formData, setFormData] = useState({
     identifier: '',
