@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, Activity as ActivityIcon } from 'lucide-react';
+import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
@@ -168,7 +168,7 @@ const ProfileLayout = () => {
             total: games.length,
             completed: games.filter(g => g.status === 'completed').length,
             avgRating: ratedGames.length > 0
-                ? (ratedGames.reduce((sum, g) => sum + g.rating, 0) / ratedGames.length).toFixed(1)
+                ? (ratedGames.reduce((sum, g) => sum + Number(g.rating), 0) / ratedGames.length).toFixed(1)
                 : 0,
         };
     }, [games]);
@@ -177,7 +177,8 @@ const ProfileLayout = () => {
         { name: 'Stats', path: `/profile/${username}`, icon: LayoutDashboard },
         { name: 'Games', path: `/profile/${username}/games`, icon: Gamepad2 },
         { name: 'Collections', path: `/profile/${username}/collections`, icon: Library },
-        { name: 'Activity', path: `/profile/${username}/activity`, icon: ActivityIcon },
+        { name: 'Activity', path: `/profile/${username}/activity`, icon: LayoutList },
+        { name: 'Likes', path: `/profile/${username}/likes`, icon: Heart },
     ];
 
     const currentPath = location.pathname;
@@ -276,7 +277,7 @@ const ProfileLayout = () => {
                                     <Trophy size={14} />
                                     {stats.completed} comp
                                 </span>
-                                {stats.avgRating > 0 && (
+                                {Number(stats.avgRating) > 0 && (
                                     <span className="text-primary-yellow bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10 flex items-center gap-1.5">
                                         <Star size={14} fill="currentColor" />
                                         {stats.avgRating} avg

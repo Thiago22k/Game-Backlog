@@ -172,6 +172,30 @@ const Collection = {
 
     // --- LIKES ---
 
+    // Get collections liked by a user (by username) — only public collections
+    async getLikedCollectionsByUsername(username) {
+        const query = `
+            SELECT c.*,
+                   creator.username  AS creator_username,
+                   creator.avatar_url AS creator_avatar_url,
+                   COUNT(DISTINCT cg.id)  AS game_count,
+                   COUNT(DISTINCT cl2.id) AS likes_count,
+                   (SELECT COUNT(*) FROM collection_comments cc WHERE cc.collection_id = c.id) AS comments_count
+            FROM collection_likes cl
+            JOIN users liker         ON cl.user_id         = liker.id
+            JOIN collections c       ON cl.collection_id  = c.id
+            JOIN users creator       ON c.user_id          = creator.id
+            LEFT JOIN collection_games cg  ON c.id = cg.collection_id
+            LEFT JOIN collection_likes cl2 ON c.id = cl2.collection_id
+            WHERE liker.username = $1
+              AND c.is_public    = true
+            GROUP BY c.id, creator.username, creator.avatar_url, cl.created_at
+            ORDER BY cl.created_at DESC
+        `;
+        const result = await pool.query(query, [username]);
+        return result.rows;
+    },
+
     async toggleLike(collectionId, userId) {
         // Verificar si ya existe el like
         const checkQuery = 'SELECT id FROM collection_likes WHERE collection_id = $1 AND user_id = $2';

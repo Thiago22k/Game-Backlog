@@ -62,4 +62,32 @@ const getUserLikedGames = async (req, res) => {
     }
 };
 
-module.exports = { toggleGameLike, getGameLikeStatus, getUserLikedGames };
+// GET /api/games/likes/by-username/:username — Get all liked games for a user by username
+const getUserLikedGamesByUsername = async (req, res) => {
+    try {
+        const igdbService = require('../services/igdb.service');
+        const { username } = req.params;
+        const likedRows = await GameLikes.getLikedGamesByUsername(username);
+
+        if (likedRows.length === 0) {
+            return res.json({ games: [] });
+        }
+
+        const igdbIds = likedRows.map(r => r.igdb_game_id);
+        const gamesDetails = await igdbService.getGamesByIds(igdbIds);
+
+        // Preserve the like order and merge details
+        const games = likedRows.map(row => ({
+            igdb_game_id: row.igdb_game_id,
+            liked_at: row.created_at,
+            game_details: gamesDetails.find(g => g.id === row.igdb_game_id) || null
+        })).filter(g => g.game_details !== null);
+
+        res.json({ games });
+    } catch (error) {
+        console.error('Error en getUserLikedGamesByUsername:', error);
+        res.status(500).json({ error: 'Error al obtener juegos favoritos' });
+    }
+};
+
+module.exports = { toggleGameLike, getGameLikeStatus, getUserLikedGames, getUserLikedGamesByUsername };

@@ -261,7 +261,7 @@ const Landing = () => {
                 </h2>
                 <button
                   onClick={() => navigate('/explore?timeRange=last_month')}
-                  className="text-primary-yellow hover:text-opacity-80 font-medium transition-all"
+                  className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
                   View All →
                 </button>
@@ -288,7 +288,7 @@ const Landing = () => {
                 </h2>
                 <button
                   onClick={() => navigate('/explore?anticipated=true')}
-                  className="text-primary-yellow hover:text-opacity-80 font-medium transition-all"
+                  className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
                   View All →
                 </button>
@@ -314,7 +314,7 @@ const Landing = () => {
                 </h2>
                 <Link
                   to="/explore?sort=popular&timeRange=last_year"
-                  className="text-primary-yellow hover:text-primary-yellow-dark transition-colors"
+                  className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
                 >
                   View All →
                 </Link>

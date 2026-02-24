@@ -1,44 +1,89 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { Star } from 'lucide-react';
 
+/**
+ * Half-star rating component using Lucide's Star icon.
+ * Supports values: 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5
+ */
 const StarRating = ({ rating, onRate, interactive = true }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
-  const stars = [1, 2, 3, 4, 5];
+  const displayRating = hoverRating || rating || 0;
 
-  // Función para determinar el color según el rating
-  const getStarColor = (star, currentRating) => {
-    if (star > currentRating) {
-      return 'bg-gray-600'; // Sin llenar
-    }
-
-    // Determinar color según el rating total
-    if (currentRating === 1) {
-      return 'bg-red-500'; // 1 estrella = rojo
-    } else if (currentRating === 2 || currentRating === 3) {
-      return 'bg-orange-500'; // 2-3 estrellas = naranja
-    } else {
-      return 'bg-green-500'; // 4-5 estrellas = verde
-    }
+  // Color based on the displayed rating value
+  const getColor = (value) => {
+    if (value <= 2) return '#ef4444';      // red-500 — 0.5 to 2
+    if (value <= 3.5) return '#f97316';   // orange-500 — 2.5 to 3.5
+    return '#22c55e';                      // green-500 — 4 to 5
   };
 
+  const accentColor = displayRating > 0 ? getColor(displayRating) : '#6b7280';
+
+  // For each star slot (1–5) determine how filled it should be:
+  //  - 'full'  → rating >= star
+  //  - 'half'  → rating = star - 0.5
+  //  - 'empty' → rating < star - 0.5
+  const getFill = (star) => {
+    if (displayRating >= star) return 'full';
+    if (displayRating >= star - 0.5) return 'half';
+    return 'empty';
+  };
+
+  const handleMouseMove = useCallback((e, star) => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isLeftHalf = e.clientX - rect.left < rect.width / 2;
+    setHoverRating(isLeftHalf ? star - 0.5 : star);
+  }, [interactive]);
+
+  const handleClick = useCallback((e, star) => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isLeftHalf = e.clientX - rect.left < rect.width / 2;
+    const value = isLeftHalf ? star - 0.5 : star;
+    onRate(value);
+  }, [interactive, onRate]);
+
   return (
-    <div className="flex items-center space-x-0.5">
-      {stars.map((star) => {
-        const currentRating = hoverRating || rating || 0;
-        const isFilled = star <= currentRating;
-        const color = getStarColor(star, currentRating);
+    <div
+      className="flex items-center gap-0.5"
+      onMouseLeave={() => interactive && setHoverRating(0)}
+    >
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fill = getFill(star);
 
         return (
-          <button
+          <div
             key={star}
-            disabled={!interactive}
-            onMouseEnter={() => interactive && setHoverRating(star)}
-            onMouseLeave={() => interactive && setHoverRating(0)}
-            onClick={() => interactive && onRate(star)}
-            className={`w-5 h-5 rounded-full transition-all ${color} ${
-              interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'
-            }`}
-          />
+            className={`relative w-5 h-5 ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+            onMouseMove={(e) => handleMouseMove(e, star)}
+            onClick={(e) => handleClick(e, star)}
+          >
+            {/* Base star — always gray */}
+            <Star
+              size={20}
+              className="absolute inset-0 transition-transform duration-100"
+              style={{ color: '#374151' }}
+              fill="#374151"
+            />
+
+            {/* Filled star — clipped based on fill state */}
+            {fill !== 'empty' && (
+              <span
+                className="absolute inset-0 overflow-hidden transition-all duration-100"
+                style={{
+                  clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none',
+                }}
+              >
+                <Star
+                  size={20}
+                  style={{ color: accentColor }}
+                  fill={accentColor}
+                  className={interactive ? 'hover:scale-110 transition-transform duration-100' : ''}
+                />
+              </span>
+            )}
+          </div>
         );
       })}
     </div>

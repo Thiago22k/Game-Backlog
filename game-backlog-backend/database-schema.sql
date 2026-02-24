@@ -24,7 +24,7 @@ CREATE TABLE user_games (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     igdb_game_id INTEGER NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'completed',
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    rating NUMERIC(3,1) CHECK (rating >= 0.5 AND rating <= 5 AND rating * 2 = FLOOR(rating * 2)),
     completed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -42,7 +42,7 @@ COMMENT ON TABLE users IS 'Tabla de usuarios registrados en la aplicación';
 COMMENT ON TABLE user_games IS 'Relación entre usuarios y juegos de IGDB con estado y calificación personal';
 COMMENT ON COLUMN user_games.igdb_game_id IS 'ID del juego en la API de IGDB';
 COMMENT ON COLUMN user_games.status IS 'Estado del juego: completed, playing, wishlist, dropped, backlog';
-COMMENT ON COLUMN user_games.rating IS 'Calificación personal del 1 al 5';
+COMMENT ON COLUMN user_games.rating IS 'Calificación personal de 0.5 a 5 en incrementos de 0.5';
 
 -- Tabla de colecciones
 CREATE TABLE collections (

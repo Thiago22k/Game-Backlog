@@ -429,6 +429,52 @@ const getExploreCollections = async (req, res) => {
     }
 };
 
+// GET /collections/liked/user/:username — Get collections liked by a user
+const getUserLikedCollections = async (req, res) => {
+    try {
+        const { username } = req.params;
+
+        const collections = await Collection.getLikedCollectionsByUsername(username);
+
+        if (collections.length === 0) {
+            return res.json({ collections: [] });
+        }
+
+        // Build preview_games for each collection (same pattern as getUserCollections)
+        const collectionsGamesMap = {};
+        const allTopGameIdsSet = new Set();
+
+        for (const collection of collections) {
+            const dbGames = await Collection.getCollectionGames(collection.id);
+            const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
+            collectionsGamesMap[collection.id] = top3Ids;
+            top3Ids.forEach(id => allTopGameIdsSet.add(id));
+        }
+
+        const allTopGameIds = Array.from(allTopGameIdsSet);
+
+        if (allTopGameIds.length > 0) {
+            const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+            for (const collection of collections) {
+                const top3Ids = collectionsGamesMap[collection.id];
+                collection.preview_games = top3Ids.map(id => {
+                    const det = gamesDetails.find(g => g.id === id);
+                    return det ? { id: det.id, cover: det.cover } : null;
+                }).filter(g => g !== null);
+            }
+        } else {
+            for (const collection of collections) {
+                collection.preview_games = [];
+            }
+        }
+
+        res.json({ collections });
+    } catch (error) {
+        console.error('Error en getUserLikedCollections:', error);
+        res.status(500).json({ error: 'Error al obtener colecciones likeadas' });
+    }
+};
+
 module.exports = {
     createCollection,
     getUserCollections,
@@ -441,5 +487,6 @@ module.exports = {
     deleteComment,
     addGameToCollection,
     checkGameInCollections,
-    getExploreCollections
+    getExploreCollections,
+    getUserLikedCollections
 };

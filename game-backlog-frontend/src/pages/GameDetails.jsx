@@ -28,33 +28,70 @@ const InfoRow = ({ label, children }) => (
     <div className="text-gray-200 text-sm">{children}</div>
   </div>
 );
-/** Star widget — inline dots matching existing StarRating style */
+/** Star widget — Lucide Star with half-star support */
 const InlineStarRating = ({ rating, onRate, interactive }) => {
   const [hovered, setHovered] = useState(0);
-  const active = hovered || rating || 0;
-  const getColor = (star) => {
-    if (star > active) return 'bg-gray-600';
-    if (active === 1) return 'bg-red-500';
-    if (active <= 3) return 'bg-orange-500';
-    return 'bg-green-500';
+  const display = hovered || Number(rating) || 0;
+
+  const getColor = (value) => {
+    if (value <= 2) return '#ef4444';
+    if (value <= 3.5) return '#f97316';
+    return '#22c55e';
   };
+  const accentColor = display > 0 ? getColor(display) : '#6b7280';
+
+  const getFill = (star) => {
+    if (display >= star) return 'full';
+    if (display >= star - 0.5) return 'half';
+    return 'empty';
+  };
+
+  const handleMouseMove = (e, star) => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHovered(e.clientX - rect.left < rect.width / 2 ? star - 0.5 : star);
+  };
+
+  const handleClick = (e, star) => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    onRate(e.clientX - rect.left < rect.width / 2 ? star - 0.5 : star);
+  };
+
   return (
-    <div className="flex items-center gap-1.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <button
-          key={star}
-          disabled={!interactive}
-          onMouseEnter={() => interactive && setHovered(star)}
-          onMouseLeave={() => interactive && setHovered(0)}
-          onClick={() => interactive && onRate(star)}
-          className={`w-6 h-6 rounded-full transition-all ${getColor(star)} ${interactive ? 'cursor-pointer hover:scale-110' : 'cursor-default'
-            }`}
-        />
-      ))}
-      {rating ? (
-        <span className="text-sm text-gray-400 ml-1">{rating}/5</span>
+    <div
+      className="flex items-center gap-2"
+      onMouseLeave={() => interactive && setHovered(0)}
+    >
+      <div className="flex items-center gap-1">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const fill = getFill(star);
+          return (
+            <div
+              key={star}
+              className={`relative w-7 h-7 ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+              onMouseMove={(e) => handleMouseMove(e, star)}
+              onClick={(e) => handleClick(e, star)}
+            >
+              {/* Base — gray */}
+              <Star size={28} className="absolute inset-0" style={{ color: '#374151', fill: '#374151' }} />
+              {/* Filled overlay */}
+              {fill !== 'empty' && (
+                <span
+                  className="absolute inset-0 overflow-hidden transition-all duration-100"
+                  style={{ clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none' }}
+                >
+                  <Star size={28} style={{ color: accentColor, fill: accentColor }} />
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {display > 0 ? (
+        <span className="text-sm text-gray-400">{display}/5</span>
       ) : interactive ? (
-        <span className="text-sm text-gray-500 ml-1">No rating yet</span>
+        <span className="text-sm text-gray-500">No rating yet</span>
       ) : null}
     </div>
   );

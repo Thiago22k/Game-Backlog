@@ -15,7 +15,23 @@ const ProfileGames = () => {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [ratingFilter, setRatingFilter] = useState('all');
     const [sortBy, setSortBy] = useState('recent');
+
+    const RATING_OPTIONS = [
+        { value: 'all', label: 'All' },
+        { value: '5', label: '★ 5' },
+        { value: '4.5', label: '★ 4.5' },
+        { value: '4', label: '★ 4' },
+        { value: '3.5', label: '★ 3.5' },
+        { value: '3', label: '★ 3' },
+        { value: '2.5', label: '★ 2.5' },
+        { value: '2', label: '★ 2' },
+        { value: '1.5', label: '★ 1.5' },
+        { value: '1', label: '★ 1' },
+        { value: '0.5', label: '★ 0.5' },
+        { value: 'none', label: 'Unrated' },
+    ];
 
     // Paginación
     const [currentPage, setCurrentPage] = useState(1);
@@ -24,7 +40,7 @@ const ProfileGames = () => {
     // Resetear a página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, statusFilter, sortBy]);
+    }, [searchQuery, statusFilter, ratingFilter, sortBy]);
 
     const { wishlistComingSoon, myGames } = useMemo(() => {
         const now = new Date();
@@ -66,7 +82,12 @@ const ProfileGames = () => {
             result = result.filter(game => game.status === statusFilter);
         }
 
-
+        if (ratingFilter === 'none') {
+            result = result.filter(game => !game.rating);
+        } else if (ratingFilter !== 'all') {
+            const target = parseFloat(ratingFilter);
+            result = result.filter(game => parseFloat(game.rating) === target);
+        }
 
         result = [...result];
         switch (sortBy) {
@@ -86,7 +107,7 @@ const ProfileGames = () => {
         }
 
         return result;
-    }, [myGames, searchQuery, statusFilter, sortBy]);
+    }, [myGames, searchQuery, statusFilter, ratingFilter, sortBy]);
 
     const totalPages = Math.ceil(processedMyGames.length / itemsPerPage);
 
@@ -271,6 +292,7 @@ const ProfileGames = () => {
                             </div>
 
                             <div className="mb-6 space-y-4">
+                                {/* Status filter */}
                                 <div className="flex flex-wrap gap-2">
                                     <span className="text-gray-400 text-sm self-center mr-2">Status:</span>
                                     {[
@@ -293,7 +315,21 @@ const ProfileGames = () => {
                                         </button>
                                     ))}
                                 </div>
+
+                                {/* Rating & Sort */}
                                 <div className="flex flex-wrap gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-gray-400 text-sm">Rating:</span>
+                                        <select
+                                            value={ratingFilter}
+                                            onChange={(e) => setRatingFilter(e.target.value)}
+                                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
+                                        >
+                                            {RATING_OPTIONS.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-400 text-sm">Sort by:</span>
                                         <select

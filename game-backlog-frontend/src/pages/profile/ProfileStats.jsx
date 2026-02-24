@@ -13,6 +13,31 @@ const StatCard = ({ title, value, icon: Icon, colorClass }) => (
     </div>
 );
 
+// Read-only half-star mini display
+const MiniStars = ({ rating }) => {
+    const value = Number(rating) || 0;
+    return (
+        <div className="flex items-center gap-0.5 mt-2">
+            {[1, 2, 3, 4, 5].map(star => {
+                const fill = value >= star ? 'full' : value >= star - 0.5 ? 'half' : 'empty';
+                return (
+                    <span key={star} className="relative inline-block w-4 h-4">
+                        <Star size={16} className="absolute inset-0" style={{ color: '#374151', fill: '#374151' }} />
+                        {fill !== 'empty' && (
+                            <span
+                                className="absolute inset-0 overflow-hidden"
+                                style={{ clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none' }}
+                            >
+                                <Star size={16} style={{ color: '#EAB308', fill: '#EAB308' }} />
+                            </span>
+                        )}
+                    </span>
+                );
+            })}
+        </div>
+    );
+};
+
 const ProfileStats = () => {
     const { games, loading, isOwner } = useOutletContext();
     const { username } = useParams();
@@ -32,13 +57,14 @@ const ProfileStats = () => {
     const backlog = games.filter(g => g.status === 'backlog').length;
     const ratedGames = games.filter(g => g.rating);
     const avgRating = ratedGames.length > 0
-        ? (ratedGames.reduce((sum, g) => sum + g.rating, 0) / ratedGames.length).toFixed(1)
+        ? (ratedGames.reduce((sum, g) => sum + Number(g.rating), 0) / ratedGames.length).toFixed(1)
         : 0;
 
-    // Rating distribution: count games per star value (1–5)
-    const ratingDistribution = [1, 2, 3, 4, 5].map(star => ({
-        star,
-        count: games.filter(g => g.rating === star).length,
+    // Rating distribution: count games per half-step value (0.5 … 5.0)
+    const STEPS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+    const ratingDistribution = STEPS.map(step => ({
+        value: step,
+        count: games.filter(g => Number(g.rating) === step).length,
     }));
     const maxRatingCount = Math.max(...ratingDistribution.map(r => r.count), 1);
 
@@ -63,7 +89,7 @@ const ProfileStats = () => {
                 />
                 <StatCard
                     title="Average Rating"
-                    value={avgRating}
+                    value={Number(avgRating) > 0 ? avgRating : '—'}
                     icon={Star}
                     colorClass="bg-primary-yellow text-primary-yellow"
                 />
@@ -124,27 +150,36 @@ const ProfileStats = () => {
                     {ratedGames.length === 0 ? (
                         <p className="text-gray-500 text-sm text-center py-6">No ratings yet</p>
                     ) : (
-                        <div className="space-y-3">
-                            {[5, 4, 3, 2, 1].map(star => {
-                                const entry = ratingDistribution.find(r => r.star === star);
-                                const pct = Math.round((entry.count / maxRatingCount) * 100);
+                        <div className="space-y-2">
+                            {[...ratingDistribution].reverse().map(({ value, count }) => {
+                                const pct = Math.round((count / maxRatingCount) * 100);
+                                const isHalf = value % 1 !== 0;
+                                const fullStars = Math.floor(value);
                                 return (
-                                    <div key={star} className="flex items-center gap-3">
-                                        {/* Star label */}
-                                        <div className="flex items-center gap-0.5 w-20 shrink-0">
-                                            {Array.from({ length: star }).map((_, i) => (
-                                                <Star key={i} size={11} className="fill-primary-yellow text-primary-yellow" />
+                                    <div key={value} className="flex items-center gap-3">
+                                        {/* Star label: full stars + optional half */}
+                                        <div className="flex items-center gap-0.5 w-24 shrink-0">
+                                            {Array.from({ length: fullStars }).map((_, i) => (
+                                                <Star key={i} size={10} className="fill-primary-yellow text-primary-yellow" />
                                             ))}
+                                            {isHalf && (
+                                                <span className="relative inline-block w-[10px] h-[10px]">
+                                                    <Star size={10} className="absolute inset-0 fill-gray-600 text-gray-600" />
+                                                    <span className="absolute inset-0 overflow-hidden" style={{ clipPath: 'inset(0 50% 0 0)' }}>
+                                                        <Star size={10} className="fill-primary-yellow text-primary-yellow" />
+                                                    </span>
+                                                </span>
+                                            )}
                                         </div>
                                         {/* Bar */}
-                                        <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full rounded-full bg-primary-yellow transition-all duration-500"
                                                 style={{ width: `${pct}%` }}
                                             />
                                         </div>
                                         {/* Count */}
-                                        <span className="text-gray-400 text-xs w-5 text-right shrink-0">{entry.count}</span>
+                                        <span className="text-gray-400 text-xs w-4 text-right shrink-0">{count}</span>
                                     </div>
                                 );
                             })}

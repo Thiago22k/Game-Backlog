@@ -11,6 +11,9 @@ import ProfileGames from '../pages/profile/ProfileGames';
 import ProfileStats from '../pages/profile/ProfileStats';
 import ProfileCollections from '../pages/profile/ProfileCollections';
 import ProfileActivity from '../pages/profile/ProfileActivity';
+import ProfileLikes from '../pages/profile/ProfileLikes';
+import ProfileLikedGames from '../pages/profile/ProfileLikedGames';
+import ProfileLikedCollections from '../pages/profile/ProfileLikedCollections';
 import CollectionForm from '../components/collections/CollectionForm';
 import CollectionDetails from '../components/collections/CollectionDetails';
 import Settings from '../pages/Settings';
@@ -108,6 +111,9 @@ const AppRoutes = () => {
           <Route path="games" element={<ProfileGames />} />
           <Route path="collections" element={<ProfileCollections />} />
           <Route path="activity" element={<ProfileActivity />} />
+          <Route path="likes" element={<ProfileLikes />} />
+          <Route path="likes/games" element={<ProfileLikedGames />} />
+          <Route path="likes/collections" element={<ProfileLikedCollections />} />
         </Route>
 
         <Route

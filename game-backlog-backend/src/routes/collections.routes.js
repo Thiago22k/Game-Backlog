@@ -8,6 +8,7 @@ const { authenticateToken, optionalAuth } = require('../middlewares/auth'); // M
 
 router.get('/explore', optionalAuth, collectionsController.getExploreCollections);
 router.get('/user/:username', optionalAuth, collectionsController.getUserCollections); // Opcionalmente publico
+router.get('/liked/user/:username', optionalAuth, collectionsController.getUserLikedCollections); // Liked collections by username
 router.get('/:id', optionalAuth, collectionsController.getCollectionDetails);       // Opcionalmente publico
 router.get('/:id/comments', optionalAuth, collectionsController.getComments);
 

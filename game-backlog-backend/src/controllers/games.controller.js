@@ -2,6 +2,7 @@ const Game = require('../models/game.model');
 const igdbService = require('../services/igdb.service');
 const User = require('../models/user.model');
 const Activity = require('../models/activity.model');
+const { isValidRating } = require('../utils/validation');
 
 // Buscar juegos en IGDB
 const searchGames = async (req, res) => {
@@ -74,9 +75,9 @@ const addGameToUser = async (req, res) => {
     }
 
     // Validar rating si viene
-    if (rating !== undefined && (rating < 1 || rating > 5)) {
+    if (rating !== undefined && !isValidRating(rating)) {
       return res.status(400).json({
-        error: 'Rating debe estar entre 1 y 5'
+        error: 'Rating debe estar entre 0.5 y 5 en incrementos de 0.5'
       });
     }
 
@@ -225,9 +226,9 @@ const updateUserGame = async (req, res) => {
     }
 
     // Validar rating si viene
-    if (rating !== undefined && rating !== null && (rating < 1 || rating > 5)) {
+    if (rating !== undefined && rating !== null && !isValidRating(rating)) {
       return res.status(400).json({
-        error: 'Rating debe estar entre 1 y 5'
+        error: 'Rating debe estar entre 0.5 y 5 en incrementos de 0.5'
       });
     }
 

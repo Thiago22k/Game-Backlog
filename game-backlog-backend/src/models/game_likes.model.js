@@ -37,6 +37,19 @@ const GameLikes = {
         return result.rows;
     },
 
+    // Get list of liked game IDs for a user by username (join with users table)
+    async getLikedGamesByUsername(username) {
+        const query = `
+            SELECT gl.igdb_game_id, gl.created_at
+            FROM game_likes gl
+            JOIN users u ON gl.user_id = u.id
+            WHERE u.username = $1
+            ORDER BY gl.created_at DESC
+        `;
+        const result = await pool.query(query, [username]);
+        return result.rows;
+    },
+
     // Get total likes count across all games for a user (statistic)
     async getTotalLikesByUser(userId) {
         const query = 'SELECT COUNT(*) FROM game_likes WHERE user_id = $1';

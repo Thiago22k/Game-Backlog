@@ -15,10 +15,11 @@ const isValidUsername = (username) => {
   return usernameRegex.test(username);
 };
 
-// Validar rating (1-5 o null)
+// Validar rating (0.5-5 en incrementos de 0.5, o null)
 const isValidRating = (rating) => {
   if (rating === null || rating === undefined) return true;
-  return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+  const n = Number(rating);
+  return !isNaN(n) && n >= 0.5 && n <= 5 && (n * 2) % 1 === 0;
 };
 
 // Validar status de juego
