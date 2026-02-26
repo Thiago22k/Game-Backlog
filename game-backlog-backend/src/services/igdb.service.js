@@ -1,7 +1,51 @@
 const axios = require('axios');
+const IgdbCache = require('../models/igdb_cache.model');
 
 let accessToken = null;
 let tokenExpiration = null;
+
+// Cache en memoria para listas (Popular, Recent, etc)
+const memoryCache = {
+  // Ej: { 'popular_10': { data: [...], expiresAt: 123456789 } }
+};
+
+const getFromMemoryCache = (key) => {
+  const cached = memoryCache[key];
+  if (cached && Date.now() < cached.expiresAt) {
+    console.log(`🧠 Memory Cache Hit: ${key}`);
+    return cached.data;
+  }
+  return null;
+};
+
+const setToMemoryCache = (key, data, ttlHours = 24) => {
+  memoryCache[key] = {
+    data,
+    expiresAt: Date.now() + (ttlHours * 60 * 60 * 1000)
+  };
+};
+
+// Helper para determinar si el cache es válido según el TTL escalonado
+const isCacheValid = (cachedAt, firstReleaseDate) => {
+  if (!cachedAt) return false;
+
+  const now = Date.now();
+  const ageInDays = (now - new Date(cachedAt).getTime()) / (1000 * 60 * 60 * 24);
+
+  // Si no hay fecha de lanzamiento, asumimos que es "nuevo/fresco" por seguridad
+  if (!firstReleaseDate) return ageInDays < 7;
+
+  // Fecha de hace 6 meses (180 días) en timestamp Unix (segundos)
+  const sixMonthsAgo = Math.floor((now - (180 * 24 * 60 * 60 * 1000)) / 1000);
+
+  // Si fue lanzado hace menos de 6 meses -> TTL de 7 días
+  if (firstReleaseDate > sixMonthsAgo) {
+    return ageInDays < 7;
+  }
+
+  // Si es un juego antiguo -> TTL de 30 días
+  return ageInDays < 30;
+};
 
 // Obtener access token de IGDB/Twitch
 const getAccessToken = async () => {
@@ -58,10 +102,26 @@ const searchGames = async (query, limit = 10) => {
 
 const getGameById = async (slugOrId) => {
   try {
-    const token = await getAccessToken();
-
-    // Comprobar si es numérico (ID) o string (slug)
+    // 1. Intentar buscar en el cache persistente
     const isNumeric = !isNaN(slugOrId);
+    let cachedGame = null;
+
+    if (isNumeric) {
+      cachedGame = await IgdbCache.getById(parseInt(slugOrId));
+    } else {
+      cachedGame = await IgdbCache.getBySlug(slugOrId);
+    }
+
+    // 2. Si existe en cache, verificar si sigue siendo válido (TTL)
+    if (cachedGame && isCacheValid(cachedGame.updated_at, cachedGame.data.first_release_date)) {
+      console.log(`📦 Cache Hit: ${slugOrId}`);
+      return cachedGame.data;
+    }
+
+    console.log(`🌐 Cache Miss/Expired: ${slugOrId}`);
+
+    // 3. Si no hay cache o expiró, consultar IGDB
+    const token = await getAccessToken();
     const whereClause = isNumeric ? `id = ${slugOrId}` : `slug = "${slugOrId}"`;
 
     const response = await axios.post(
@@ -108,7 +168,14 @@ const getGameById = async (slugOrId) => {
       }
     );
 
-    return response.data[0];
+    const gameData = response.data[0];
+
+    // 4. Si encontramos el juego, guardarlo/actualizarlo en el cache
+    if (gameData) {
+      await IgdbCache.upsert(gameData.id, gameData.slug, gameData.name, gameData);
+    }
+
+    return gameData;
 
   } catch (error) {
     console.error('❌ Error obteniendo juego de IGDB:', error.message);
@@ -118,6 +185,10 @@ const getGameById = async (slugOrId) => {
 
 // Obtener juegos populares ACTUALES (últimos 3 años + alta calificación + más jugados)
 const getPopularGames = async (limit = 10) => {
+  const cacheKey = `popular_${limit}`;
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -146,6 +217,7 @@ const getPopularGames = async (limit = 10) => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data);
     return response.data;
 
   } catch (error) {
@@ -156,6 +228,10 @@ const getPopularGames = async (limit = 10) => {
 
 // Obtener lanzamientos recientes (últimos 3 meses, SOLO ya lanzados)
 const getRecentGames = async (limit = 10) => {
+  const cacheKey = `recent_${limit}`;
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -183,6 +259,7 @@ const getRecentGames = async (limit = 10) => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data);
     return response.data;
 
   } catch (error) {
@@ -193,6 +270,10 @@ const getRecentGames = async (limit = 10) => {
 
 // Obtener juegos más esperados (próximos lanzamientos con más hype)
 const getMostAnticipated = async (limit = 10) => {
+  const cacheKey = `anticipated_${limit}`;
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -220,6 +301,7 @@ const getMostAnticipated = async (limit = 10) => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data);
     return response.data;
 
   } catch (error) {
@@ -230,6 +312,10 @@ const getMostAnticipated = async (limit = 10) => {
 
 /// Explorar juegos con filtros y ordenamiento
 const exploreGames = async (filters = {}) => {
+  const cacheKey = `explore_${JSON.stringify(filters)}`;
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -320,6 +406,7 @@ const exploreGames = async (filters = {}) => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data, 12); // Menos TTL para exploración (12h)
     return response.data;
 
   } catch (error) {
@@ -330,6 +417,10 @@ const exploreGames = async (filters = {}) => {
 
 // Obtener lista de géneros disponibles
 const getGenres = async () => {
+  const cacheKey = 'genres_list';
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -344,6 +435,7 @@ const getGenres = async () => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data, 168); // 7 días para géneros
     return response.data;
 
   } catch (error) {
@@ -354,6 +446,10 @@ const getGenres = async () => {
 
 // Obtener plataformas principales
 const getPlatforms = async () => {
+  const cacheKey = 'platforms_list';
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const token = await getAccessToken();
 
@@ -377,6 +473,7 @@ const getPlatforms = async () => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data, 168); // 7 días para plataformas
     return response.data;
   } catch (error) {
     console.error('❌ Error obteniendo plataformas:', error.message);
@@ -384,20 +481,39 @@ const getPlatforms = async () => {
   }
 };
 
-// Obtener múltiples juegos por IDs (batch)
+// Obtener múltiples juegos por IDs (batch) con lógica híbrida
 const getGamesByIds = async (gameIds) => {
   try {
-    if (gameIds.length === 0) return [];
+    if (!gameIds || gameIds.length === 0) return [];
 
+    // 1. Buscar lo que ya tenemos en cache
+    const cachedGames = await IgdbCache.getManyByIds(gameIds);
+
+    // Filtrar los que son válidos según su TTL
+    const validCachedGames = cachedGames.filter(g =>
+      isCacheValid(g.updated_at, g.data.first_release_date)
+    );
+
+    const validIds = new Set(validCachedGames.map(g => g.igdb_id));
+    const missingIds = gameIds.filter(id => !validIds.has(id));
+
+    // Si todo está en cache, devolverlo
+    if (missingIds.length === 0) {
+      console.log(`📦 Batch Cache Hit: All ${gameIds.length} games`);
+      return validCachedGames.map(g => g.data);
+    }
+
+    console.log(`🌐 Batch Hybrid: ${validCachedGames.length} hits, ${missingIds.length} misses`);
+
+    // 2. Pedir los faltantes a IGDB
     const token = await getAccessToken();
 
-    // IGDB permite hasta 500 IDs en una query
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
         fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, 
                platforms.name, aggregated_rating, artworks.url, screenshots.url;
-        where id = (${gameIds.join(',')});
+        where id = (${missingIds.join(',')});
         limit 500;
       `,
       {
@@ -408,7 +524,22 @@ const getGamesByIds = async (gameIds) => {
       }
     );
 
-    return response.data;
+    const newGamesData = response.data;
+
+    // 3. Guardar los nuevos en el cache de forma asíncrona (no bloqueante)
+    if (newGamesData.length > 0) {
+      Promise.all(newGamesData.map(g =>
+        IgdbCache.upsert(g.id, g.slug, g.name, g)
+      )).catch(err => console.error('❌ Error actualizando cache batch:', err));
+    }
+
+    // 4. Combinar resultados
+    const results = [
+      ...validCachedGames.map(g => g.data),
+      ...newGamesData
+    ];
+
+    return results;
 
   } catch (error) {
     console.error('❌ Error obteniendo juegos por IDs:', error.message);

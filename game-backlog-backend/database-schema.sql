@@ -90,4 +90,19 @@ CREATE INDEX idx_collection_games_collection_id ON collection_games(collection_i
 COMMENT ON TABLE collections IS 'Colecciones (listas) de juegos creadas por usuarios';
 COMMENT ON TABLE collection_games IS 'Juegos que pertenecen a una colección';
 COMMENT ON TABLE collection_likes IS 'Likes otorgados a colecciones';
-COMMENT ON TABLE collection_comments IS 'Comentarios en colecciones';
+-- Tabla para cache de datos de IGDB
+CREATE TABLE igdb_cache (
+    igdb_id INTEGER PRIMARY KEY,
+    slug VARCHAR(255) UNIQUE,
+    name VARCHAR(255),
+    data JSONB NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índice para búsquedas por slug (el UNIQUE ya crea uno, pero por claridad)
+CREATE INDEX idx_igdb_cache_slug ON igdb_cache(slug);
+CREATE INDEX idx_igdb_cache_updated_at ON igdb_cache(updated_at);
+
+COMMENT ON TABLE igdb_cache IS 'Cache local de datos de juegos obtenidos de IGDB';
+COMMENT ON COLUMN igdb_cache.igdb_id IS 'ID original del juego en IGDB';
+COMMENT ON COLUMN igdb_cache.data IS 'Objeto JSON completo con la respuesta de IGDB';
