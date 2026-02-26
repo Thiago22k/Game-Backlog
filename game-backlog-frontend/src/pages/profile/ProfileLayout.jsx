@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart } from 'lucide-react';
+import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart, Flag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
@@ -13,6 +13,7 @@ import axios from '../../api/axios';
 import toast from 'react-hot-toast';
 import defaultAvatar from '../../assets/default_avatar.png';
 import usePageTitle from '../../hooks/usePageTitle';
+import { ASSETS_BASE_URL } from '../../utils/constants';
 
 const ProfileLayout = () => {
     const { user, updateUser } = useAuth();
@@ -24,6 +25,10 @@ const ProfileLayout = () => {
     const { collections, getUserCollections } = useCollections();
 
     const [isCustomizationModalOpen, setIsCustomizationModalOpen] = useState(false);
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [reportReason, setReportReason] = useState('');
+    const [reportDetails, setReportDetails] = useState('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
     const isOwner = user?.username === username;
     const displayUsername = isOwner ? user?.username : username;
@@ -75,13 +80,7 @@ const ProfileLayout = () => {
 
         try {
             const toastId = toast.loading('Uploading image...');
-            const token = localStorage.getItem('token');
-            const res = await axios.post('/users/avatar', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            const res = await axios.post('/users/avatar', formData);
             toast.dismiss(toastId);
             toast.success('Avatar updated');
             // Actualizar contexto local para reflejar cambio inmediato
@@ -97,12 +96,7 @@ const ProfileLayout = () => {
 
         try {
             const toastId = toast.loading('Removing avatar...');
-            const token = localStorage.getItem('token');
-            await axios.delete('/users/avatar', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            await axios.delete('/users/avatar');
             toast.dismiss(toastId);
             toast.success('Avatar removed');
             // Actualizar contexto local para volver a default_avatar o iniciales
@@ -128,13 +122,7 @@ const ProfileLayout = () => {
 
         try {
             const toastId = toast.loading('Uploading banner...');
-            const token = localStorage.getItem('token');
-            const res = await axios.post('/users/banner', formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data',
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            const res = await axios.post('/users/banner', formData);
             toast.dismiss(toastId);
             toast.success('Banner updated');
             // Actualizar contexto local
@@ -152,12 +140,7 @@ const ProfileLayout = () => {
 
         try {
             const toastId = toast.loading('Removing banner...');
-            const token = localStorage.getItem('token');
-            await axios.delete('/users/banner', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            await axios.delete('/users/banner');
             toast.dismiss(toastId);
             toast.success('Banner removed');
             // Actualizar contexto local
@@ -172,6 +155,33 @@ const ProfileLayout = () => {
         const profileUrl = window.location.origin + `/profile/${username}`;
         navigator.clipboard.writeText(profileUrl);
         toast.success('Profile link copied to clipboard!');
+    };
+
+    const handleReportProfile = () => {
+        setIsReportModalOpen(true);
+    };
+
+    const handleSubmitReport = async (e) => {
+        e.preventDefault();
+        if (!reportReason) {
+            toast.error('Please select a reason');
+            return;
+        }
+
+        setIsSubmittingReport(true);
+
+        // Simular envío
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        toast.success('Report submitted successfully. Thank you for helping us keep the community safe!', {
+            duration: 5000,
+            icon: '✅'
+        });
+
+        setIsReportModalOpen(false);
+        setReportReason('');
+        setReportDetails('');
+        setIsSubmittingReport(false);
     };
 
 
@@ -190,7 +200,7 @@ const ProfileLayout = () => {
         location.pathname === tab.path || location.pathname.startsWith(tab.path + '/')
     );
     const displayBanner = isOwner ? user?.banner_url : gamesHook.profileBannerUrl;
-    const bannerImage = displayBanner ? `http://localhost:3000${displayBanner}` : null;
+    const bannerImage = displayBanner ? `${ASSETS_BASE_URL}${displayBanner}` : null;
 
     // Si el usuario no existe la API devuelve ese mensaje de error específico
     if (gamesHook.error === 'Usuario no encontrado') {
@@ -225,9 +235,9 @@ const ProfileLayout = () => {
                         <div className="relative shrink-0">
                             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-primary-navy shadow-2xl bg-primary-navy-dark flex items-center justify-center">
                                 {isOwner ? (
-                                    <img src={user?.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img src={user?.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                 ) : (
-                                    <img src={gamesHook.profileAvatarUrl ? `http://localhost:3000${gamesHook.profileAvatarUrl}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img src={gamesHook.profileAvatarUrl ? `${ASSETS_BASE_URL}${gamesHook.profileAvatarUrl}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                 )}
                             </div>
                             {/* Hidden inputs keep existing functionality */}
@@ -264,6 +274,15 @@ const ProfileLayout = () => {
                                 >
                                     <LinkIcon size={20} strokeWidth={2.5} />
                                 </button>
+                                {(!isOwner && user) && (
+                                    <button
+                                        onClick={handleReportProfile}
+                                        className="text-white/30 hover:text-red-400 transition-colors mt-2"
+                                        title="Report Profile"
+                                    >
+                                        <Flag size={18} strokeWidth={2.5} />
+                                    </button>
+                                )}
                             </div>
 
 
@@ -460,6 +479,83 @@ const ProfileLayout = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Report Profile Modal */}
+            {isReportModalOpen && (
+                <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-primary-navy border border-gray-700/50 rounded-xl max-w-lg w-full p-6 relative shadow-2xl">
+                        <button
+                            onClick={() => {
+                                setIsReportModalOpen(false);
+                                setReportReason('');
+                                setReportDetails('');
+                            }}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-red-500/10 rounded-lg">
+                                <Flag size={20} className="text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">Report Profile</h3>
+                        </div>
+
+                        <form onSubmit={handleSubmitReport} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Reason</label>
+                                <select
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-yellow transition-colors"
+                                    required
+                                >
+                                    <option value="" disabled>Select a reason...</option>
+                                    <option value="inappropriate_avatar">Inappropriate Avatar</option>
+                                    <option value="inappropriate_banner">Inappropriate Banner</option>
+                                    <option value="inappropriate_bio">Inappropriate Bio</option>
+                                    <option value="harassment">Harassment or Hate Speech</option>
+                                    <option value="impersonation">Impersonation</option>
+                                    <option value="spam">Spam</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Additional Details (Optional)</label>
+                                <textarea
+                                    value={reportDetails}
+                                    onChange={(e) => setReportDetails(e.target.value)}
+                                    placeholder="Provide any extra context..."
+                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-yellow transition-colors min-h-[120px] resize-none"
+                                />
+                            </div>
+
+                            <div className="pt-2 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsReportModalOpen(false);
+                                        setReportReason('');
+                                        setReportDetails('');
+                                    }}
+                                    className="flex-1 py-3 px-4 bg-gray-800/50 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors border border-gray-700/50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingReport || !reportReason}
+                                    className="flex-[2] py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:hover:bg-red-50"
+                                >
+                                    {isSubmittingReport ? 'Sending Report...' : 'Submit Report'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

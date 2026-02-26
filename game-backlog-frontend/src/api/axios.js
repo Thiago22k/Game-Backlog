@@ -3,10 +3,7 @@ import { API_BASE_URL, STORAGE_KEYS } from '../utils/constants';
 
 // Crear instancia de axios
 const axiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: API_BASE_URL
 });
 
 // Interceptor de REQUEST: Agregar token automáticamente
@@ -33,21 +30,21 @@ axiosInstance.interceptors.response.use(
     // 3. NO es una petición a /settings/* (son errores esperados de validación)
     // 4. Hay un token guardado (significa que expiró)
     if (
-      error.response?.status === 401 && 
+      error.response?.status === 401 &&
       !error.config.url.includes('/auth/login') &&
       !error.config.url.includes('/settings') && // ← Nueva condición
       localStorage.getItem(STORAGE_KEYS.TOKEN)
     ) {
       // Limpiar token
       localStorage.removeItem(STORAGE_KEYS.TOKEN);
-      
+
       // Solo redirigir si NO estamos ya en login/register
-      if (!window.location.pathname.includes('/login') && 
-          !window.location.pathname.includes('/register')) {
+      if (!window.location.pathname.includes('/login') &&
+        !window.location.pathname.includes('/register')) {
         window.location.href = '/login';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

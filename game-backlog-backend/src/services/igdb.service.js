@@ -324,6 +324,7 @@ const exploreGames = async (filters = {}) => {
       timeRange = null, // 'last_month', 'last_year', 'last_5_years', 'upcoming'
       genres = [],
       platforms = [],
+      gameTypes = [],
       limit = 20,
       offset = 0
     } = filters;
@@ -365,6 +366,11 @@ const exploreGames = async (filters = {}) => {
       conditions.push(`platforms = (${platforms.join(',')})`);
     }
 
+    // Filtro por tipos de juego (Main game, DLC, Remake, etc)
+    if (gameTypes.length > 0) {
+      conditions.push(`game_type = (${gameTypes.join(',')})`);
+    }
+
     // Determinar ordenamiento
     let sortClause = '';
     switch (sort) {
@@ -392,7 +398,7 @@ const exploreGames = async (filters = {}) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-    fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url;
+    fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url, game_type;
     where ${whereClause};
     ${sortClause};
     limit ${limit};

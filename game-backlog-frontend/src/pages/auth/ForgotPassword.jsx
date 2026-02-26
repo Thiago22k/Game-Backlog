@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import Navbar from '../../components/layout/Navbar';
 import toast from 'react-hot-toast';
 import axios from '../../api/axios'; // Importar axios interceptor
 
@@ -53,7 +52,6 @@ const ForgotPassword = () => {
 
             {/* Content */}
             <div className="relative z-10">
-                <Navbar />
 
                 <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
                     <div className="w-full max-w-md z-10">

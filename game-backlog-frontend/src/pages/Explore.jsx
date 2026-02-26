@@ -15,6 +15,14 @@ import usePageTitle from '../hooks/usePageTitle';
 
 const TOP_PLATFORMS = [6, 167, 48, 169, 49, 130];
 
+const GAME_TYPES = [
+  { id: 0, name: 'Main Game' },
+  { id: 1, name: 'DLC / Add-on' },
+  { id: 8, name: 'Remake' },
+  { id: 9, name: 'Remaster' },
+  { id: 13, name: 'Pack' },
+];
+
 const Explore = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,6 +48,7 @@ const Explore = () => {
   const [offset, setOffset] = useState(0);
   const [genreDropdownOpen, setGenreDropdownOpen] = useState(false);
   const [platformDropdownOpen, setPlatformDropdownOpen] = useState(false);
+  const [gameTypeDropdownOpen, setGameTypeDropdownOpen] = useState(false);
   const [isAnticipatedMode, setIsAnticipatedMode] = useState(
     initialSearch ? false : searchParams.get('anticipated') === 'true'
   );
@@ -47,12 +56,14 @@ const Explore = () => {
   // Refs para cerrar al hacer click fuera
   const genreDropdownRef = useRef(null);
   const platformDropdownRef = useRef(null);
+  const gameTypeDropdownRef = useRef(null);
 
   // Filtros
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'relevance');
   const [timeRange, setTimeRange] = useState(searchParams.get('timeRange') || 'all');
   const [selectedGenres, setSelectedGenres] = useState(() => getParamArray('genres'));
   const [selectedPlatforms, setSelectedPlatforms] = useState(() => getParamArray('platforms'));
+  const [selectedGameTypes, setSelectedGameTypes] = useState(() => getParamArray('gameTypes'));
 
   // Datos de filtros
   const [availableGenres, setAvailableGenres] = useState([]);
@@ -123,6 +134,9 @@ const Explore = () => {
       if (platformDropdownRef.current && !platformDropdownRef.current.contains(event.target)) {
         setPlatformDropdownOpen(false);
       }
+      if (gameTypeDropdownRef.current && !gameTypeDropdownRef.current.contains(event.target)) {
+        setGameTypeDropdownOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -142,6 +156,12 @@ const Explore = () => {
     );
   }, []);
 
+  const toggleGameType = useCallback((typeId) => {
+    setSelectedGameTypes((prev) =>
+      prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId]
+    );
+  }, []);
+
   // Actualizar URL cuando cambian filtros
   useEffect(() => {
     const params = new URLSearchParams();
@@ -150,9 +170,10 @@ const Explore = () => {
     if (timeRange !== 'all') params.set('timeRange', timeRange);
     if (selectedGenres.length > 0) params.set('genres', selectedGenres.join(','));
     if (selectedPlatforms.length > 0) params.set('platforms', selectedPlatforms.join(','));
+    if (selectedGameTypes.length > 0) params.set('gameTypes', selectedGameTypes.join(','));
     if (isAnticipatedMode) params.set('anticipated', 'true');
     setSearchParams(params);
-  }, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, isAnticipatedMode]);
+  }, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, selectedGameTypes, isAnticipatedMode]);
 
   const fetchGames = useCallback(async (reset = false) => {
     setLoading(true);
@@ -188,6 +209,7 @@ const Explore = () => {
         if (timeRange !== 'all') params.append('timeRange', timeRange);
         if (selectedGenres.length > 0) params.append('genres', selectedGenres.join(','));
         if (selectedPlatforms.length > 0) params.append('platforms', selectedPlatforms.join(','));
+        if (selectedGameTypes.length > 0) params.append('gameTypes', selectedGameTypes.join(','));
 
         response = await axios.get(`${ENDPOINTS.GAMES.EXPLORE}?${params.toString()}`);
         const newGames = mergeWithUserGames(response.data.games);
@@ -207,7 +229,7 @@ const Explore = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, isAnticipatedMode, isAuthenticated, sortBy, timeRange, selectedGenres, selectedPlatforms, offset, mergeWithUserGames]);
+  }, [searchQuery, isAnticipatedMode, isAuthenticated, sortBy, timeRange, selectedGenres, selectedPlatforms, selectedGameTypes, offset, mergeWithUserGames]);
 
   // Recargar cuando cambian filtros o búsqueda
   useEffect(() => {
@@ -215,7 +237,7 @@ const Explore = () => {
     const delay = searchQuery.trim() ? 400 : 150;
     const timer = setTimeout(() => fetchGames(true), delay);
     return () => clearTimeout(timer);
-  }, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, isAnticipatedMode]);
+  }, [searchQuery, sortBy, timeRange, selectedGenres, selectedPlatforms, selectedGameTypes, isAnticipatedMode]);
 
   // Handlers
   const handleWishlistToggle = useCallback(async (gameId, newStatus) => {
@@ -313,6 +335,7 @@ const Explore = () => {
     setTimeRange('all');
     setSelectedGenres([]);
     setSelectedPlatforms([]);
+    setSelectedGameTypes([]);
     setIsAnticipatedMode(false);
     setGames([]);
   }, []);
@@ -322,8 +345,9 @@ const Explore = () => {
       (sortBy !== 'relevance' ? 1 : 0) +
       (timeRange !== 'all' ? 1 : 0) +
       selectedGenres.length +
-      selectedPlatforms.length,
-    [sortBy, timeRange, selectedGenres, selectedPlatforms]
+      selectedPlatforms.length +
+      selectedGameTypes.length,
+    [sortBy, timeRange, selectedGenres, selectedPlatforms, selectedGameTypes]
   );
 
   return (
@@ -480,6 +504,33 @@ const Explore = () => {
                           className="mr-2 accent-primary-yellow"
                         />
                         <span className="text-white text-sm">{platform.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Game Types Dropdown */}
+              <div className="relative" ref={gameTypeDropdownRef}>
+                <label className="block text-sm text-gray-400 mb-2">Category</label>
+                <button
+                  onClick={() => setGameTypeDropdownOpen((o) => !o)}
+                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
+                >
+                  <span>{selectedGameTypes.length === 0 ? 'All Categories' : `${selectedGameTypes.length} selected`}</span>
+                  <ChevronDown size={16} />
+                </button>
+                {gameTypeDropdownOpen && (
+                  <div className="absolute z-50 mt-2 w-full bg-primary-navy-dark border border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto custom-scrollbar">
+                    {GAME_TYPES.map((type) => (
+                      <label key={type.id} className="flex items-center px-3 py-2 hover:bg-primary-navy cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedGameTypes.includes(type.id)}
+                          onChange={() => toggleGameType(type.id)}
+                          className="mr-2 accent-primary-yellow"
+                        />
+                        <span className="text-white text-sm">{type.name}</span>
                       </label>
                     ))}
                   </div>

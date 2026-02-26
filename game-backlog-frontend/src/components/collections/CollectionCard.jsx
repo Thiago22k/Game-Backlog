@@ -2,6 +2,7 @@ import { Library, Edit3, Heart, Lock, Globe, MessageSquare } from 'lucide-react'
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { getGameCover } from '../../utils/formatters';
 import defaultAvatar from '../../assets/default_avatar.png';
+import { ASSETS_BASE_URL } from '../../utils/constants';
 
 const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy = true }) => {
     const navigate = useNavigate();
@@ -146,7 +147,7 @@ const CollectionCard = ({ collection, isOwner, showCreator = false, showPrivacy 
                     >
                         <Link to={`/profile/${collection.creator_username}`} className="w-6 h-6 rounded-full overflow-hidden border border-gray-600 bg-primary-navy flex-shrink-0 hover:ring-2 hover:ring-primary-yellow transition-all">
                             <img
-                                src={collection.creator_avatar_url ? `http://localhost:3000${collection.creator_avatar_url}` : defaultAvatar}
+                                src={collection.creator_avatar_url ? `${ASSETS_BASE_URL}${collection.creator_avatar_url}` : defaultAvatar}
                                 alt={collection.creator_username}
                                 className="w-full h-full object-cover"
                             />

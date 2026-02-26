@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, User } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
 import usePageTitle from '../../hooks/usePageTitle';
 
 const Register = () => {
@@ -78,7 +77,6 @@ const Register = () => {
 
       {/* Content */}
       <div className="relative z-10">
-        <Navbar />
 
         <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
 

@@ -375,6 +375,7 @@ const exploreGames = async (req, res) => {
       timeRange: req.query.timeRange || null, // ← Cambio aquí
       genres: req.query.genres ? req.query.genres.split(',').map(Number) : [],
       platforms: req.query.platforms ? req.query.platforms.split(',').map(Number) : [],
+      gameTypes: req.query.gameTypes ? req.query.gameTypes.split(',').map(Number) : [],
       limit: parseInt(req.query.limit) || 20,
       offset: parseInt(req.query.offset) || 0,
     };

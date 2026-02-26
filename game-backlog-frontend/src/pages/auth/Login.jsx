@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import Navbar from '../../components/layout/Navbar';
 import usePageTitle from '../../hooks/usePageTitle';
 
 const Login = () => {
@@ -77,7 +76,6 @@ const Login = () => {
 
       {/* Content */}
       <div className="relative z-10">
-        <Navbar />
 
         <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
 

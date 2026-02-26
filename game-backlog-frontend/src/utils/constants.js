@@ -1,5 +1,6 @@
 // URL del backend
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+export const ASSETS_BASE_URL = import.meta.env.VITE_ASSETS_BASE_URL || 'http://localhost:3000';
 
 // Endpoints
 export const ENDPOINTS = {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon, Lock } from 'lucide-react';
+import { ArrowLeft, Edit3, Heart, Share2, Trash2, Calendar, Gamepad2, User as UserIcon, Lock, Flag, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCollections } from '../../hooks/useCollections';
 import { useGames } from '../../hooks/useGames';
@@ -11,6 +11,7 @@ import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import NotFound from '../../pages/NotFound';
 import defaultAvatar from '../../assets/default_avatar.png';
 import usePageTitle from '../../hooks/usePageTitle';
+import { ASSETS_BASE_URL } from '../../utils/constants';
 
 const CollectionDetails = () => {
     const { id } = useParams();
@@ -41,6 +42,14 @@ const CollectionDetails = () => {
     // Paginación
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 12; // 3 rows of 4
+
+    // Report Modals State
+    const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const [reportType, setReportType] = useState('collection'); // 'collection' or 'comment'
+    const [reportItemId, setReportItemId] = useState(null);
+    const [reportReason, setReportReason] = useState('');
+    const [reportDetails, setReportDetails] = useState('');
+    const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
 
     useEffect(() => {
@@ -249,6 +258,36 @@ const CollectionDetails = () => {
         toast.success('Link copied to clipboard!');
     };
 
+    const handleReport = (type, id = null) => {
+        setReportType(type);
+        setReportItemId(id);
+        setIsReportModalOpen(true);
+    };
+
+    const handleSubmitReport = async (e) => {
+        e.preventDefault();
+        if (!reportReason) {
+            toast.error('Please select a reason');
+            return;
+        }
+
+        setIsSubmittingReport(true);
+
+        // Simular envío
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        toast.success(`Report for ${reportType} submitted successfully. Thank you!`, {
+            duration: 5000,
+            icon: '✅'
+        });
+
+        setIsReportModalOpen(false);
+        setReportReason('');
+        setReportDetails('');
+        setReportItemId(null);
+        setIsSubmittingReport(false);
+    };
+
     const handleAddComment = async (e) => {
         e.preventDefault();
         if (!newComment.trim() || !user) return;
@@ -347,14 +386,14 @@ const CollectionDetails = () => {
                             {isOwner ? (
                                 <Link to={`/profile/${user.username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
                                     <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
-                                        <img src={user.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar} alt={user.username} className="w-full h-full object-cover" />
+                                        <img src={user.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt={user.username} className="w-full h-full object-cover" />
                                     </div>
                                     {user.username}
                                 </Link>
                             ) : (
                                 <Link to={`/profile/${collection.creator_username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
                                     <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
-                                        <img src={collection.creator_avatar_url ? `http://localhost:3000${collection.creator_avatar_url}` : defaultAvatar} alt={collection.creator_username} className="w-full h-full object-cover" />
+                                        <img src={collection.creator_avatar_url ? `${ASSETS_BASE_URL}${collection.creator_avatar_url}` : defaultAvatar} alt={collection.creator_username} className="w-full h-full object-cover" />
                                     </div>
                                     {collection.creator_username}
                                 </Link>
@@ -407,6 +446,17 @@ const CollectionDetails = () => {
                                 />
                                 {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
                             </button>
+
+                            {(!isOwner && user) && (
+                                <button
+                                    onClick={() => handleReport('collection')}
+                                    className="flex items-center px-4 py-2 bg-gray-800/50 hover:bg-gray-700 text-white/50 hover:text-red-400 rounded-full transition-colors border border-gray-700/50 text-sm font-medium"
+                                    title="Report Collection"
+                                >
+                                    <Flag size={16} className="mr-2" />
+                                    Report
+                                </button>
+                            )}
                         </div>
 
                         {collection.description && (
@@ -542,7 +592,7 @@ const CollectionDetails = () => {
                         <form onSubmit={handleAddComment} className="mb-10">
                             <div className="flex gap-4 items-start">
                                 <div className="w-10 h-10 rounded-full bg-primary-yellow overflow-hidden text-primary-navy-dark flex items-center justify-center font-bold flex-shrink-0 text-lg border border-gray-600">
-                                    <img src={user.avatar_url ? `http://localhost:3000${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img src={user.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                 </div>
                                 <div className="flex-1 bg-primary-navy border border-gray-700 rounded-xl overflow-hidden focus-within:border-primary-yellow transition-colors relative flex flex-col">
                                     <textarea
@@ -577,7 +627,7 @@ const CollectionDetails = () => {
                             comments.map((comment) => (
                                 <div key={comment.id} className="flex gap-4 group">
                                     <Link to={`/profile/${comment.username}`} className="w-10 h-10 overflow-hidden rounded-full bg-gray-700 text-white flex items-center justify-center font-bold flex-shrink-0 text-lg hover:ring-2 hover:ring-primary-yellow transition-all">
-                                        <img src={comment.avatar_url ? `http://localhost:3000${comment.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                        <img src={comment.avatar_url ? `${ASSETS_BASE_URL}${comment.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
                                     </Link>
                                     <div className="flex-1">
                                         <div className="bg-primary-navy border border-gray-700 rounded-xl rounded-tl-none p-4 relative">
@@ -601,6 +651,17 @@ const CollectionDetails = () => {
                                                         <Trash2 size={16} />
                                                     </button>
                                                 )}
+
+                                                {/* Report Button (Not for owner) */}
+                                                {(user && user.id !== comment.user_id) && (
+                                                    <button
+                                                        onClick={() => handleReport('comment', comment.id)}
+                                                        className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                        title="Report comment"
+                                                    >
+                                                        <Flag size={16} />
+                                                    </button>
+                                                )}
                                             </div>
                                             <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
                                                 {comment.content}
@@ -618,6 +679,96 @@ const CollectionDetails = () => {
                 </div>
 
             </main>
+
+            {/* Report Modal */}
+            {isReportModalOpen && (
+                <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-primary-navy border border-gray-700/50 rounded-xl max-w-lg w-full p-6 relative shadow-2xl">
+                        <button
+                            onClick={() => {
+                                setIsReportModalOpen(false);
+                                setReportReason('');
+                                setReportDetails('');
+                                setReportItemId(null);
+                            }}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-red-500/10 rounded-lg">
+                                <Flag size={20} className="text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-white">
+                                {reportType === 'collection' ? 'Report Collection' : 'Report Comment'}
+                            </h3>
+                        </div>
+
+                        <form onSubmit={handleSubmitReport} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Reason</label>
+                                <select
+                                    value={reportReason}
+                                    onChange={(e) => setReportReason(e.target.value)}
+                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-yellow transition-colors appearance-none cursor-pointer"
+                                    required
+                                >
+                                    <option value="" disabled>Select a reason...</option>
+                                    {reportType === 'collection' ? (
+                                        <>
+                                            <option value="inappropriate_content">Inappropriate Title/Description</option>
+                                            <option value="spam">Spam</option>
+                                            <option value="offensive">Offensive Content</option>
+                                            <option value="other">Other</option>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <option value="harassment">Harassment</option>
+                                            <option value="hate_speech">Hate Speech</option>
+                                            <option value="spam">Spam</option>
+                                            <option value="inappropriate_language">Inappropriate Language</option>
+                                            <option value="other">Other</option>
+                                        </>
+                                    )}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-2">Additional Details (Optional)</label>
+                                <textarea
+                                    value={reportDetails}
+                                    onChange={(e) => setReportDetails(e.target.value)}
+                                    placeholder="Provide any extra context..."
+                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-yellow transition-colors min-h-[120px] resize-none"
+                                />
+                            </div>
+
+                            <div className="pt-2 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsReportModalOpen(false);
+                                        setReportReason('');
+                                        setReportDetails('');
+                                        setReportItemId(null);
+                                    }}
+                                    className="flex-1 py-3 px-4 bg-gray-800/50 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors border border-gray-700/50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingReport || !reportReason}
+                                    className="flex-[2] py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
+                                >
+                                    {isSubmittingReport ? 'Sending Report...' : 'Submit Report'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
