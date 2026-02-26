@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Clock, Gamepad2, Search } from 'lucide-react';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
@@ -13,10 +13,12 @@ const ProfileGames = () => {
     // Obtener el hook desde el Outlet
     const { games, loading, updateGame, deleteGame, addGame, isOwner } = useOutletContext();
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [ratingFilter, setRatingFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('recent');
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+    const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || 'all');
+    const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'recent');
 
     const RATING_OPTIONS = [
         { value: 'all', label: 'All' },
@@ -40,6 +42,15 @@ const ProfileGames = () => {
     // Resetear a página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
+
+        // Update URL params
+        const newParams = new URLSearchParams(searchParams);
+        if (searchQuery) newParams.set('search', searchQuery); else newParams.delete('search');
+        if (statusFilter !== 'all') newParams.set('status', statusFilter); else newParams.delete('status');
+        if (ratingFilter !== 'all') newParams.set('rating', ratingFilter); else newParams.delete('rating');
+        if (sortBy !== 'recent') newParams.set('sort', sortBy); else newParams.delete('sort');
+
+        setSearchParams(newParams, { replace: true });
     }, [searchQuery, statusFilter, ratingFilter, sortBy]);
 
     const { wishlistComingSoon, myGames } = useMemo(() => {

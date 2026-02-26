@@ -14,9 +14,10 @@ export const ENDPOINTS = {
     POPULAR: '/games/popular',
     RECENT: '/games/recent',
     ANTICIPATED: '/games/anticipated',
-    EXPLORE: '/games/explore',      // ← Nuevo
-    GENRES: '/games/genres',        // ← Nuevo
-    PLATFORMS: '/games/platforms',  // ← Nuevo
+    EXPLORE: '/games/explore',
+    GENRES: '/games/genres',
+    PLATFORMS: '/games/platforms',
+    GAME_STATS: (id) => `/games/stats/${id}`,
   },
   SETTINGS: {
     CHANGE_PASSWORD: '/settings/change-password',

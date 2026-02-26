@@ -15,6 +15,9 @@ router.get('/genres', gamesController.getGenres);
 router.get('/platforms', gamesController.getPlatforms);
 router.get('/user/:username', optionalAuth, gamesController.getUserGames);
 
+// Community stats (public)
+router.get('/stats/:igdb_game_id', gamesController.getGameStats);
+
 // Likes routes —— /api/games/likes/...
 router.get('/likes/user/:userId', optionalAuth, likesController.getUserLikedGames);
 router.get('/likes/by-username/:username', optionalAuth, likesController.getUserLikedGamesByUsername);

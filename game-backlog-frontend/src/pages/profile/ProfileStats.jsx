@@ -1,51 +1,65 @@
-import { useOutletContext, useParams } from 'react-router-dom';
-import { Gamepad2, Trophy, Star, Clock, XCircle, Archive } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { useOutletContext, useParams, Link } from 'react-router-dom';
+import { Gamepad2, Trophy, Star, Clock, XCircle, Archive, Library, Heart, MessageSquare, ChevronRight } from 'lucide-react';
+import axios from '../../api/axios';
+import { getGameCover } from '../../utils/formatters';
 
-const StatCard = ({ title, value, icon: Icon, colorClass }) => (
-    <div className="bg-primary-navy-dark rounded-xl p-6 flex items-center justify-between">
-        <div>
-            <p className="text-gray-400 text-sm font-medium mb-1">{title}</p>
-            <p className="text-3xl font-bold text-white">{value}</p>
-        </div>
-        <div className={`p-3 rounded-lg bg-opacity-10 ${colorClass}`}>
-            <Icon className={colorClass.replace('bg-', 'text-')} size={24} />
-        </div>
-    </div>
-);
+const formatRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
 
-// Read-only half-star mini display
-const MiniStars = ({ rating }) => {
-    const value = Number(rating) || 0;
-    return (
-        <div className="flex items-center gap-0.5 mt-2">
-            {[1, 2, 3, 4, 5].map(star => {
-                const fill = value >= star ? 'full' : value >= star - 0.5 ? 'half' : 'empty';
-                return (
-                    <span key={star} className="relative inline-block w-4 h-4">
-                        <Star size={16} className="absolute inset-0" style={{ color: '#374151', fill: '#374151' }} />
-                        {fill !== 'empty' && (
-                            <span
-                                className="absolute inset-0 overflow-hidden"
-                                style={{ clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none' }}
-                            >
-                                <Star size={16} style={{ color: '#EAB308', fill: '#EAB308' }} />
-                            </span>
-                        )}
-                    </span>
-                );
-            })}
-        </div>
-    );
+    if (diffInSeconds < 60) return 'Just now';
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+
+    if (diffInHours < 48) return 'Yesterday';
+
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 };
 
 const ProfileStats = () => {
-    const { games, loading, isOwner } = useOutletContext();
+    const { games, collections, loading, isOwner } = useOutletContext();
     const { username } = useParams();
+    const [likesCount, setLikesCount] = useState(0);
+
+    useEffect(() => {
+        if (!username) return;
+        const fetchLikes = async () => {
+            try {
+                const res = await axios.get(`/games/likes/by-username/${username}`);
+                setLikesCount(res.data.games?.length || 0);
+            } catch (err) {
+                console.error('Error fetching likes:', err);
+            }
+        };
+        fetchLikes();
+    }, [username]);
+
+    // Latest Completed Game
+    const latestCompletedGame = useMemo(() => {
+        const completedGames = games.filter(g => g.status === 'completed');
+        if (completedGames.length === 0) return null;
+        return [...completedGames].sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
+    }, [games]);
+
+    // Latest Playing Games (up to 2)
+    const latestPlayingGames = useMemo(() => {
+        const playingGames = games.filter(g => g.status === 'playing');
+        return [...playingGames]
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+            .slice(0, 2);
+    }, [games]);
 
     if (loading) {
         return (
-            <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow"></div>
+            <div className="flex justify-center items-center py-24">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-yellow"></div>
             </div>
         );
     }
@@ -58,138 +72,252 @@ const ProfileStats = () => {
     const ratedGames = games.filter(g => g.rating);
     const avgRating = ratedGames.length > 0
         ? (ratedGames.reduce((sum, g) => sum + Number(g.rating), 0) / ratedGames.length).toFixed(1)
-        : 0;
+        : '0.0';
 
-    // Rating distribution: count games per half-step value (0.5 … 5.0)
-    const STEPS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
-    const ratingDistribution = STEPS.map(step => ({
-        value: step,
-        count: games.filter(g => Number(g.rating) === step).length,
+    // Rating distribution (0.5–5.0 with half-point increments)
+    const ratingDistribution = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5].map(star => ({
+        value: star,
+        count: games.filter(g => Number(g.rating) === star).length,
     }));
     const maxRatingCount = Math.max(...ratingDistribution.map(r => r.count), 1);
 
+    // Star display helper
+    const renderStars = (rating) => {
+        const full = Math.floor(rating);
+        const half = rating % 1 >= 0.5;
+        return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+    };
+
     return (
         <div className="space-y-6">
-            <h3 className="text-2xl font-bold text-white mb-6">
+            <h3 className="text-3xl font-black text-white tracking-tight">
                 {isOwner ? 'Your Library Stats' : `${username}'s Library Stats`}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    title="Total Games"
-                    value={games.length}
-                    icon={Gamepad2}
-                    colorClass="bg-blue-400 text-blue-400"
-                />
-                <StatCard
-                    title="Completed"
-                    value={completed}
-                    icon={Trophy}
-                    colorClass="bg-green-400 text-green-400"
-                />
-                <StatCard
-                    title="Average Rating"
-                    value={Number(avgRating) > 0 ? avgRating : '—'}
-                    icon={Star}
-                    colorClass="bg-primary-yellow text-primary-yellow"
-                />
-                <StatCard
-                    title="Wishlisted"
-                    value={wishlist}
-                    icon={Clock}
-                    colorClass="bg-purple-400 text-purple-400"
-                />
-            </div>
+            {/* ── MAIN STATS GRID (mirrors stats.html layout) ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                {/* Status Breakdown */}
-                <div className="bg-primary-navy-dark rounded-xl p-6">
-                    <h4 className="text-lg font-semibold text-white mb-4">Status Breakdown</h4>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center text-gray-300">
-                                <Trophy size={18} className="text-green-400 mr-2" />
-                                <span>Completed</span>
-                            </div>
-                            <span className="font-semibold text-white">{completed}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center text-gray-300">
-                                <Gamepad2 size={18} className="text-blue-400 mr-2" />
-                                <span>Playing</span>
-                            </div>
-                            <span className="font-semibold text-white">{playing}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center text-gray-300">
-                                <Clock size={18} className="text-purple-400 mr-2" />
-                                <span>Wishlist</span>
-                            </div>
-                            <span className="font-semibold text-white">{wishlist}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center text-gray-300">
-                                <Archive size={18} className="text-purple-400 mr-2" />
-                                <span>Backlog</span>
-                            </div>
-                            <span className="font-semibold text-white">{backlog}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center text-gray-300">
-                                <XCircle size={18} className="text-red-400 mr-2" />
-                                <span>Dropped</span>
-                            </div>
-                            <span className="font-semibold text-white">{dropped}</span>
-                        </div>
+                {/* ── ROW 1: Mini stat cards ── */}
+                <Link
+                    to={`/profile/${username}/games`}
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                >
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Total Games</span>
+                    <span className="text-4xl font-black text-white">{games.length}</span>
+                </Link>
+
+                <Link
+                    to={`/profile/${username}/collections`}
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                >
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Collections</span>
+                    <span className="text-4xl font-black text-white">{collections?.length || 0}</span>
+                </Link>
+
+                <Link
+                    to={`/profile/${username}/likes/games`}
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                >
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Liked Games</span>
+                    <span className="text-4xl font-black text-white">{likesCount}</span>
+                </Link>
+
+                <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200">
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5">Reviews</span>
+                    <span className="text-4xl font-black text-white">—</span>
+                </div>
+
+                {/* ── ROW 2: Library Progress (span 2) ── */}
+                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6 flex flex-col justify-between">
+                    <h4 className="text-base font-bold text-white mb-5">Library Progress</h4>
+
+                    {/* Completed + Backlog highlights */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        <Link
+                            to={`/profile/${username}/games?status=completed`}
+                            className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                        >
+                            <span className="text-3xl font-black text-green-400 leading-none">{completed}</span>
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
+                        </Link>
+                        <Link
+                            to={`/profile/${username}/games?status=backlog`}
+                            className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                        >
+                            <span className="text-3xl font-black text-indigo-400 leading-none">{backlog}</span>
+                            <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
+                        </Link>
+                    </div>
+
+                    {/* Secondary stats row */}
+                    <div className="flex justify-between items-center bg-black/20 rounded-xl px-4 py-3">
+                        <Link
+                            to={`/profile/${username}/games?status=playing`}
+                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-blue-400 transition-colors group"
+                        >
+                            <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0 group-hover:scale-125 transition-transform" />
+                            Playing: <span className="text-white font-black">{playing}</span>
+                        </Link>
+                        <Link
+                            to={`/profile/${username}/games?status=wishlist`}
+                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-pink-400 transition-colors group"
+                        >
+                            <span className="text-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
+                            Wishlist: <span className="text-white font-black">{wishlist}</span>
+                        </Link>
+                        <Link
+                            to={`/profile/${username}/games?status=dropped`}
+                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-red-400 transition-colors group"
+                        >
+                            <span className="text-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
+                            Dropped: <span className="text-white font-black">{dropped}</span>
+                        </Link>
                     </div>
                 </div>
 
-                {/* Rating Distribution */}
-                <div className="bg-primary-navy-dark rounded-xl p-6">
-                    <h4 className="text-lg font-semibold text-white mb-4">Rating Distribution</h4>
-                    {ratedGames.length === 0 ? (
-                        <p className="text-gray-500 text-sm text-center py-6">No ratings yet</p>
+                {/* ── ROW 2: Rating Distribution (span 2) ── */}
+                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6">
+                    <h4 className="text-base font-bold text-white mb-5">Rating Distribution</h4>
+
+                    {ratedGames.length > 0 ? (
+                        <div className="flex gap-6 items-center">
+                            {/* Score summary */}
+                            <div className="flex flex-col items-center shrink-0">
+                                <span className="text-5xl font-black text-white leading-none">{avgRating}</span>
+                                <span className="text-amber-400 text-xl tracking-widest my-2">{renderStars(parseFloat(avgRating))}</span>
+                                <span className="text-xs text-gray-400 font-semibold">{ratedGames.length} games rated</span>
+                            </div>
+
+                            {/* Vertical bars */}
+                            <div className="flex-1 flex items-end gap-1.5 h-32 pt-2">
+                                {[...ratingDistribution].reverse().map(({ value, count }) => {
+                                    const percentage = ratedGames.length > 0 ? ((count / ratedGames.length) * 100).toFixed(1) : 0;
+                                    return (
+                                        <Link
+                                            key={value}
+                                            to={`/profile/${username}/games?rating=${value}`}
+                                            className="flex-1 flex flex-col items-center gap-2 group h-full cursor-pointer"
+                                        >
+                                            <div className="flex-1 w-full bg-white/5 rounded-t-sm flex items-end relative">
+                                                <div
+                                                    className="w-full bg-amber-400 rounded-t-sm transition-all duration-500 group-hover:bg-amber-300 group-hover:scale-x-110"
+                                                    style={{ height: `${(count / maxRatingCount) * 100}%` }}
+                                                />
+                                                {/* Custom Tooltip */}
+                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20 translate-y-2 group-hover:translate-y-0">
+                                                    <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-3 py-1.5 rounded-lg whitespace-nowrap">
+                                                        <span className="text-[11px] font-black text-white tracking-wide">
+                                                            {value} <span className="text-gray-500 mx-1">|</span> {count} {count === 1 ? 'game' : 'games'} <span className="text-amber-400/80 ml-1">({percentage}%)</span>
+                                                        </span>
+                                                    </div>
+                                                    {/* Tooltip Arrow */}
+                                                    <div className="w-2 h-2 bg-primary-navy-dark border-r border-b border-white/10 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 shadow-xl" />
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-gray-500 transition-colors group-hover:text-gray-300">{value}</span>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     ) : (
-                        <div className="space-y-2">
-                            {[...ratingDistribution].reverse().map(({ value, count }) => {
-                                const pct = Math.round((count / maxRatingCount) * 100);
-                                const isHalf = value % 1 !== 0;
-                                const fullStars = Math.floor(value);
-                                return (
-                                    <div key={value} className="flex items-center gap-3">
-                                        {/* Star label: full stars + optional half */}
-                                        <div className="flex items-center gap-0.5 w-24 shrink-0">
-                                            {Array.from({ length: fullStars }).map((_, i) => (
-                                                <Star key={i} size={10} className="fill-primary-yellow text-primary-yellow" />
-                                            ))}
-                                            {isHalf && (
-                                                <span className="relative inline-block w-[10px] h-[10px]">
-                                                    <Star size={10} className="absolute inset-0 fill-gray-600 text-gray-600" />
-                                                    <span className="absolute inset-0 overflow-hidden" style={{ clipPath: 'inset(0 50% 0 0)' }}>
-                                                        <Star size={10} className="fill-primary-yellow text-primary-yellow" />
-                                                    </span>
-                                                </span>
-                                            )}
-                                        </div>
-                                        {/* Bar */}
-                                        <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full rounded-full bg-primary-yellow transition-all duration-500"
-                                                style={{ width: `${pct}%` }}
-                                            />
-                                        </div>
-                                        {/* Count */}
-                                        <span className="text-gray-400 text-xs w-4 text-right shrink-0">{count}</span>
-                                    </div>
-                                );
-                            })}
+                        <div className="flex items-center justify-center h-24 border-2 border-dashed border-white/5 rounded-xl">
+                            <p className="text-gray-600 text-xs font-black italic uppercase tracking-widest">No ratings yet</p>
                         </div>
                     )}
-                    {ratedGames.length > 0 && (
-                        <p className="text-gray-500 text-xs mt-4 text-right">
-                            {ratedGames.length} rated game{ratedGames.length !== 1 ? 's' : ''}
-                        </p>
-                    )}
+                </div>
+
+                {/* ── ROW 3: Featured Games Row ── */}
+                <div className="col-span-2 lg:col-span-4 grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-5">
+
+                    {/* Last Completed Game (span 4/10 = 40%) */}
+                    <Link
+                        to={latestCompletedGame ? `/game/${latestCompletedGame.game_details?.slug || latestCompletedGame.igdb_game_id}` : '#'}
+                        className={`lg:col-span-4 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-5 hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group relative ${!latestCompletedGame ? 'pointer-events-none' : ''}`}
+                    >
+                        {latestCompletedGame ? (
+                            <>
+                                <div className="shrink-0 w-20 h-28 rounded-xl overflow-hidden border border-white/10 shadow-xl" title={latestCompletedGame.game_details?.name}>
+                                    <img
+                                        src={getGameCover(latestCompletedGame.game_details, 't_cover_big')}
+                                        alt={latestCompletedGame.game_details?.name}
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                    />
+                                </div>
+
+                                {/* Dynamic Completion Time Badge - Featured Corner */}
+                                <div className="absolute top-4 right-5">
+                                    <span className="bg-black/20 text-gray-400 text-xs font-black px-3 py-1 rounded-full shadow-sm whitespace-nowrap uppercase tracking-widest">
+                                        {formatRelativeTime(latestCompletedGame.updated_at)}
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-green-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Last Completed</span>
+                                    <h5 className="text-xl font-black text-white group-hover:text-primary-yellow transition-colors truncate" title={latestCompletedGame.game_details?.name}>
+                                        {latestCompletedGame.game_details?.name}
+                                    </h5>
+                                    <div className="flex items-center gap-2 mt-1.5 text-gray-400 text-xs">
+                                        {latestCompletedGame.rating && (
+                                            <span className="flex items-center gap-1">
+                                                <Star size={10} className="text-primary-yellow fill-primary-yellow" />
+                                                <span className="font-extrabold text-gray-200">{Number(latestCompletedGame.rating).toFixed(1)}</span>
+                                            </span>
+                                        )}
+                                        <span>
+                                            {new Date(latestCompletedGame.updated_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                                        </span>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-4 w-full py-2">
+                                <div className="shrink-0 w-20 h-28 rounded-xl border-2 border-dashed border-white/5 flex items-center justify-center">
+                                    <Trophy size={28} className="text-gray-800" />
+                                </div>
+                                <p className="text-gray-600 font-black italic uppercase tracking-widest text-xs">No completions yet</p>
+                            </div>
+                        )}
+                    </Link>
+
+                    {[0, 1].map((index) => {
+                        const game = latestPlayingGames[index];
+                        return (
+                            <Link
+                                key={index}
+                                to={game ? `/game/${game.game_details?.slug || game.igdb_game_id}` : '#'}
+                                className={`lg:col-span-3 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-4 hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group ${!game ? 'pointer-events-none' : ''}`}
+                            >
+                                {game ? (
+                                    <>
+                                        <div className="shrink-0 w-20 h-28 rounded-xl overflow-hidden border border-white/10 shadow-xl" title={game.game_details?.name}>
+                                            <img
+                                                src={getGameCover(game.game_details, 't_cover_big')}
+                                                alt={game.game_details?.name}
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+                                                <span className="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]">Playing</span>
+                                            </div>
+                                            <h5 className="text-xl font-black text-white group-hover:text-primary-yellow transition-colors truncate" title={game.game_details?.name}>
+                                                {game.game_details?.name}
+                                            </h5>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex items-center gap-4 w-full py-1 opacity-40">
+                                        <div className="shrink-0 w-20 h-28 rounded-xl border-2 border-dashed border-white/10 flex items-center justify-center">
+                                            <Clock size={24} className="text-gray-600" />
+                                        </div>
+                                        <span className="text-[10px] font-black text-gray-600 uppercase tracking-[0.2em] leading-tight">Slot<br />Available</span>
+                                    </div>
+                                )}
+                            </Link>
+                        );
+                    })}
                 </div>
             </div>
         </div>

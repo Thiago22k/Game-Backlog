@@ -174,17 +174,6 @@ const ProfileLayout = () => {
         toast.success('Profile link copied to clipboard!');
     };
 
-    // Calcular estadísticas globales
-    const stats = useMemo(() => {
-        const ratedGames = games.filter(g => g.rating);
-        return {
-            total: games.length,
-            completed: games.filter(g => g.status === 'completed').length,
-            avgRating: ratedGames.length > 0
-                ? (ratedGames.reduce((sum, g) => sum + Number(g.rating), 0) / ratedGames.length).toFixed(1)
-                : 0,
-        };
-    }, [games]);
 
     const tabs = [
         { name: 'Stats', path: `/profile/${username}`, icon: LayoutDashboard },
@@ -277,26 +266,6 @@ const ProfileLayout = () => {
                                 </button>
                             </div>
 
-                            {/* Stats */}
-                            <div className="flex flex-wrap items-center gap-3 mt-3 text-sm font-medium drop-shadow-sm">
-                                <span className="text-white bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10">
-                                    {stats.total} game{stats.total !== 1 ? 's' : ''}
-                                </span>
-                                <span className="text-white bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10 flex items-center gap-1.5">
-                                    <Library size={14} className="opacity-70" />
-                                    {collections.length} colls
-                                </span>
-                                <span className="text-green-300 bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10 flex items-center gap-1.5">
-                                    <Trophy size={14} />
-                                    {stats.completed} comp
-                                </span>
-                                {Number(stats.avgRating) > 0 && (
-                                    <span className="text-primary-yellow bg-black/20 px-2 py-1 rounded-md backdrop-blur-sm border border-white/10 flex items-center gap-1.5">
-                                        <Star size={14} fill="currentColor" />
-                                        {stats.avgRating} avg
-                                    </span>
-                                )}
-                            </div>
 
                             {/* Bio */}
                             {profileBio && (
@@ -411,7 +380,7 @@ const ProfileLayout = () => {
                         </div>
 
                         {/* Pasamos el hook entero y el estado isOwner usando context */}
-                        <Outlet context={{ ...gamesHook, isOwner }} />
+                        <Outlet context={{ ...gamesHook, collections, isOwner }} />
                     </>
                 )}
             </main>

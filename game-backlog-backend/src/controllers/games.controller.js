@@ -421,6 +421,18 @@ const getPlatforms = async (req, res) => {
   }
 };
 
+// Obtener estadísticas comunitarias de un juego
+const getGameStats = async (req, res) => {
+  try {
+    const { igdb_game_id } = req.params;
+    const stats = await Game.getGameStats(igdb_game_id);
+    res.json({ stats });
+  } catch (error) {
+    console.error('Error en getGameStats:', error);
+    res.status(500).json({ error: 'Error al obtener estadísticas del juego' });
+  }
+};
+
 module.exports = {
   searchGames,
   getGameDetails,
@@ -431,7 +443,8 @@ module.exports = {
   getPopularGames,
   getRecentGames,
   getMostAnticipated,
-  exploreGames,   // ← Nuevo
-  getGenres,      // ← Nuevo
-  getPlatforms,   // ← Nuevo
+  exploreGames,
+  getGenres,
+  getPlatforms,
+  getGameStats,
 };

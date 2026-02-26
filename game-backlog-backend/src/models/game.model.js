@@ -38,43 +38,43 @@ const Game = {
   },
 
   // Actualizar estado y/o calificación
-async updateGame(userId, igdbGameId, status, rating) {
-  const updates = [];
-  const values = [userId, igdbGameId];
-  let valueIndex = 3;
+  async updateGame(userId, igdbGameId, status, rating) {
+    const updates = [];
+    const values = [userId, igdbGameId];
+    let valueIndex = 3;
 
-  if (status !== undefined) {
-    updates.push(`status = $${valueIndex}`);
-    values.push(status);
-    valueIndex++;
+    if (status !== undefined) {
+      updates.push(`status = $${valueIndex}`);
+      values.push(status);
+      valueIndex++;
 
-    // Si cambia a completed, actualizar completed_at
-    if (status === 'completed') {
-      updates.push(`completed_at = CURRENT_TIMESTAMP`);
-    } else {
-      // Si cambia a otro status, LIMPIAR completed_at
-      updates.push(`completed_at = NULL`); // ← Nuevo
+      // Si cambia a completed, actualizar completed_at
+      if (status === 'completed') {
+        updates.push(`completed_at = CURRENT_TIMESTAMP`);
+      } else {
+        // Si cambia a otro status, LIMPIAR completed_at
+        updates.push(`completed_at = NULL`); // ← Nuevo
+      }
     }
-  }
 
-  if (rating !== undefined) {
-    updates.push(`rating = $${valueIndex}`);
-    values.push(rating);
-    valueIndex++;
-  }
+    if (rating !== undefined) {
+      updates.push(`rating = $${valueIndex}`);
+      values.push(rating);
+      valueIndex++;
+    }
 
-  updates.push('updated_at = CURRENT_TIMESTAMP');
+    updates.push('updated_at = CURRENT_TIMESTAMP');
 
-  const query = `
+    const query = `
     UPDATE user_games 
     SET ${updates.join(', ')}
     WHERE user_id = $1 AND igdb_game_id = $2
     RETURNING *
   `;
 
-  const result = await pool.query(query, values);
-  return result.rows[0];
-},
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  },
 
   // Eliminar juego de la lista del usuario
   async deleteGame(userId, igdbGameId) {
@@ -88,6 +88,67 @@ async updateGame(userId, igdbGameId, status, rating) {
     const query = 'SELECT id FROM user_games WHERE user_id = $1 AND igdb_game_id = $2';
     const result = await pool.query(query, [userId, igdbGameId]);
     return result.rows.length > 0;
+  },
+
+  // Aggregate community stats for a game (used in GameDetails page)
+  async getGameStats(igdbGameId) {
+    const statsQuery = `
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'playing')                       AS playing_count,
+        COUNT(*) FILTER (WHERE status = 'completed')                     AS completed_count,
+        COUNT(*) FILTER (WHERE status = 'backlog')                       AS backlog_count,
+        COUNT(*) FILTER (WHERE status = 'wishlist')                      AS wishlist_count,
+        COUNT(*) FILTER (WHERE status = 'dropped')                       AS dropped_count,
+        COUNT(*) FILTER (WHERE rating IS NOT NULL)                       AS ratings_count,
+        ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL)::numeric, 1) AS avg_rating,
+        -- Distribution buckets
+        COUNT(*) FILTER (WHERE rating = 0.5) AS r05,
+        COUNT(*) FILTER (WHERE rating = 1.0) AS r10,
+        COUNT(*) FILTER (WHERE rating = 1.5) AS r15,
+        COUNT(*) FILTER (WHERE rating = 2.0) AS r20,
+        COUNT(*) FILTER (WHERE rating = 2.5) AS r25,
+        COUNT(*) FILTER (WHERE rating = 3.0) AS r30,
+        COUNT(*) FILTER (WHERE rating = 3.5) AS r35,
+        COUNT(*) FILTER (WHERE rating = 4.0) AS r40,
+        COUNT(*) FILTER (WHERE rating = 4.5) AS r45,
+        COUNT(*) FILTER (WHERE rating = 5.0) AS r50
+      FROM user_games
+      WHERE igdb_game_id = $1
+    `;
+    const likesQuery = 'SELECT COUNT(*) FROM game_likes WHERE igdb_game_id = $1';
+    const collsQuery = 'SELECT COUNT(DISTINCT collection_id) FROM collection_games WHERE igdb_game_id = $1';
+
+    const [statsRes, likesRes, collsRes] = await Promise.all([
+      pool.query(statsQuery, [igdbGameId]),
+      pool.query(likesQuery, [igdbGameId]),
+      pool.query(collsQuery, [igdbGameId]),
+    ]);
+
+    const s = statsRes.rows[0];
+    return {
+      likes: parseInt(likesRes.rows[0].count, 10),
+      playing: parseInt(s.playing_count, 10),
+      completed: parseInt(s.completed_count, 10),
+      backlog: parseInt(s.backlog_count, 10),
+      wishlist: parseInt(s.wishlist_count, 10),
+      dropped: parseInt(s.dropped_count, 10),
+      ratingsCount: parseInt(s.ratings_count, 10),
+      avgRating: s.avg_rating ? parseFloat(s.avg_rating) : 0,
+      collectionsCount: parseInt(collsRes.rows[0].count, 10),
+      reviewsCount: 0, // Placeholder
+      ratingDistribution: [
+        parseInt(s.r05, 10),
+        parseInt(s.r10, 10),
+        parseInt(s.r15, 10),
+        parseInt(s.r20, 10),
+        parseInt(s.r25, 10),
+        parseInt(s.r30, 10),
+        parseInt(s.r35, 10),
+        parseInt(s.r40, 10),
+        parseInt(s.r45, 10),
+        parseInt(s.r50, 10)
+      ]
+    };
   },
 };
 
