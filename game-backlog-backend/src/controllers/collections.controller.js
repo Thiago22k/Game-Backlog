@@ -65,6 +65,7 @@ const getUserCollections = async (req, res) => {
                     is_profile_public: false,
                     username: targetUsername,
                     avatar_url: user.avatar_url,
+                    avatar_static_url: user.avatar_static_url,
                     banner_url: user.banner_url
                 });
             }
@@ -109,6 +110,7 @@ const getUserCollections = async (req, res) => {
             is_profile_public: isProfilePublic,
             username: targetUsername || req.user?.username,
             avatar_url: username ? (await User.findByUsername(username)).avatar_url : undefined,
+            avatar_static_url: username ? (await User.findByUsername(username)).avatar_static_url : undefined,
             banner_url: username ? (await User.findByUsername(username)).banner_url : undefined
         });
     } catch (error) {
@@ -320,7 +322,8 @@ const addComment = async (req, res) => {
             comment: {
                 ...newComment,
                 username: req.user.username || user?.username || 'User',
-                avatar_url: user?.avatar_url || null
+                avatar_url: user?.avatar_url || null,
+                avatar_static_url: user?.avatar_static_url || null
             }
         });
     } catch (error) {

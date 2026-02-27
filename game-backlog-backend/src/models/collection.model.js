@@ -40,7 +40,7 @@ const Collection = {
     // Obtener detalles de una colección específica
     async getCollectionById(collectionId) {
         const query = `
-            SELECT c.*, u.username as creator_username, u.avatar_url as creator_avatar_url 
+            SELECT c.*, u.username as creator_username, u.avatar_url as creator_avatar_url, u.avatar_static_url as creator_avatar_static_url
             FROM collections c 
             JOIN users u ON c.user_id = u.id 
             WHERE c.id = $1
@@ -178,6 +178,7 @@ const Collection = {
             SELECT c.*,
                    creator.username  AS creator_username,
                    creator.avatar_url AS creator_avatar_url,
+                   creator.avatar_static_url AS creator_avatar_static_url,
                    COUNT(DISTINCT cg.id)  AS game_count,
                    COUNT(DISTINCT cl2.id) AS likes_count,
                    (SELECT COUNT(*) FROM collection_comments cc WHERE cc.collection_id = c.id) AS comments_count
@@ -189,7 +190,7 @@ const Collection = {
             LEFT JOIN collection_likes cl2 ON c.id = cl2.collection_id
             WHERE liker.username = $1
               AND c.is_public    = true
-            GROUP BY c.id, creator.username, creator.avatar_url, cl.created_at
+            GROUP BY c.id, creator.username, creator.avatar_url, creator.avatar_static_url, cl.created_at
             ORDER BY cl.created_at DESC
         `;
         const result = await pool.query(query, [username]);
@@ -239,7 +240,7 @@ const Collection = {
 
     async getComments(collectionId) {
         const query = `
-            SELECT cc.id, cc.content, cc.created_at, u.id as user_id, u.username, u.avatar_url
+            SELECT cc.id, cc.content, cc.created_at, u.id as user_id, u.username, u.avatar_url, u.avatar_static_url
             FROM collection_comments cc
             JOIN users u ON cc.user_id = u.id
             WHERE cc.collection_id = $1
@@ -270,6 +271,7 @@ const Collection = {
             SELECT c.*, 
                    u.username as creator_username, 
                    u.avatar_url as creator_avatar_url,
+                   u.avatar_static_url as creator_avatar_static_url,
                    COUNT(DISTINCT cg.id) as game_count,
                    (SELECT COUNT(*) FROM collection_likes cl WHERE cl.collection_id = c.id) as likes_count,
                    (SELECT COUNT(*) FROM collection_comments cc WHERE cc.collection_id = c.id) as comments_count
@@ -277,7 +279,7 @@ const Collection = {
             JOIN users u ON c.user_id = u.id
             LEFT JOIN collection_games cg ON c.id = cg.collection_id
             WHERE c.is_public = true
-            GROUP BY c.id, u.username, u.avatar_url
+            GROUP BY c.id, u.username, u.avatar_url, u.avatar_static_url
             ORDER BY ${orderBy}
             LIMIT $1
         `;

@@ -203,15 +203,19 @@ const ProfileStats = () => {
                                                     className="w-full bg-amber-400 rounded-t-sm transition-all duration-500 group-hover:bg-amber-300 group-hover:scale-x-110"
                                                     style={{ height: `${(count / maxRatingCount) * 100}%` }}
                                                 />
-                                                {/* Custom Tooltip */}
-                                                <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20 translate-y-2 group-hover:translate-y-0">
-                                                    <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-3 py-1.5 rounded-lg whitespace-nowrap">
-                                                        <span className="text-[11px] font-black text-white tracking-wide">
-                                                            {value} <span className="text-gray-500 mx-1">|</span> {count} {count === 1 ? 'game' : 'games'} <span className="text-amber-400/80 ml-1">({percentage}%)</span>
+                                                {/* Custom Tooltip (Estilo Mini / Escala Original) */}
+                                                <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20 translate-y-1 group-hover:translate-y-0 flex flex-col items-center">
+
+                                                    {/* Cuerpo del Tooltip (Escala Mini) */}
+                                                    <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-2.5 py-1 rounded-md whitespace-nowrap relative z-10">
+                                                        <span className="text-[11px] font-semibold text-white tracking-wide">
+                                                            {value} <span className="text-gray-500 mx-1">|</span> {count} {count === 1 ? 'game' : 'games'} <span className="text-amber-400 ml-0.5">({percentage}%)</span>
                                                         </span>
                                                     </div>
-                                                    {/* Tooltip Arrow */}
-                                                    <div className="w-2 h-2 bg-primary-navy-dark border-r border-b border-white/10 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 shadow-xl" />
+
+                                                    {/* El Rombo (Diamante Completo Sobresaliente) */}
+                                                    <div className="w-2.5 h-2.5 bg-white rotate-45 -mt-0.5 shadow-lg relative z-0" />
+
                                                 </div>
                                             </div>
                                             <span className="text-[10px] font-bold text-gray-500 transition-colors group-hover:text-gray-300">{value}</span>

@@ -41,7 +41,8 @@ const Notification = {
         const query = `
             SELECT n.*,
                    u.username   AS actor_username,
-                   u.avatar_url AS actor_avatar_url
+                   u.avatar_url AS actor_avatar_url,
+                   u.avatar_static_url AS actor_avatar_static_url
             FROM notifications n
             JOIN users u ON n.actor_id = u.id
             WHERE n.recipient_id = $1

@@ -6,7 +6,7 @@ const User = {
     const query = `
       INSERT INTO users (username, email, password)
       VALUES ($1, $2, $3)
-      RETURNING id, username, email, is_profile_public, avatar_url, banner_url, created_at
+      RETURNING id, username, email, is_profile_public, avatar_url, avatar_static_url, banner_url, created_at
     `;
     const values = [username, email, hashedPassword];
     const result = await pool.query(query, values);
@@ -29,7 +29,7 @@ const User = {
 
   // Buscar usuario por ID
   async findById(id) {
-    const query = 'SELECT id, username, email, is_profile_public, avatar_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
+    const query = 'SELECT id, username, email, is_profile_public, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0];
   },
@@ -40,7 +40,7 @@ const User = {
     UPDATE users 
     SET password = $1, updated_at = CURRENT_TIMESTAMP 
     WHERE id = $2
-    RETURNING id, username, email
+    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
   `;
     const result = await pool.query(query, [newHashedPassword, userId]);
     return result.rows[0];
@@ -52,7 +52,7 @@ const User = {
     UPDATE users 
     SET email = $1, updated_at = CURRENT_TIMESTAMP 
     WHERE id = $2
-    RETURNING id, username, email
+    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
   `;
     const result = await pool.query(query, [newEmail, userId]);
     return result.rows[0];
@@ -64,7 +64,7 @@ const User = {
     UPDATE users 
     SET username = $1, last_username_change = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
     WHERE id = $2
-    RETURNING id, username, email, last_username_change
+    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, last_username_change
   `;
     const result = await pool.query(query, [newUsername, userId]);
     return result.rows[0];
@@ -83,7 +83,7 @@ const User = {
       UPDATE users 
       SET is_profile_public = $1, updated_at = CURRENT_TIMESTAMP 
       WHERE id = $2
-      RETURNING id, username, email, is_profile_public
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, is_profile_public
     `;
     const result = await pool.query(query, [isPublic, userId]);
     return result.rows[0];
@@ -97,14 +97,14 @@ const User = {
   },
 
   // Actualizar avatar
-  async updateAvatar(userId, avatarUrl) {
+  async updateAvatar(userId, avatarUrl, avatarStaticUrl = null) {
     const query = `
       UPDATE users 
-      SET avatar_url = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $2
-      RETURNING id, username, email, avatar_url, banner_url
+      SET avatar_url = $1, avatar_static_url = $2, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $3
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
     `;
-    const result = await pool.query(query, [avatarUrl, userId]);
+    const result = await pool.query(query, [avatarUrl, avatarStaticUrl, userId]);
     return result.rows[0];
   },
 
@@ -114,7 +114,7 @@ const User = {
       UPDATE users 
       SET banner_url = $1, updated_at = CURRENT_TIMESTAMP 
       WHERE id = $2
-      RETURNING id, username, email, avatar_url, banner_url
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
     `;
     const result = await pool.query(query, [bannerUrl, userId]);
     return result.rows[0];
@@ -126,7 +126,7 @@ const User = {
       UPDATE users
       SET bio = $1, social_twitch = $2, social_discord = $3, social_steam = $4, updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
-      RETURNING id, username, email, bio, social_twitch, social_discord, social_steam
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam
     `;
     const result = await pool.query(query, [bio || null, social_twitch || null, social_discord || null, social_steam || null, userId]);
     return result.rows[0];

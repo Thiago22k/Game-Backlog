@@ -113,12 +113,19 @@ const getGameById = async (slugOrId) => {
     }
 
     // 2. Si existe en cache, verificar si sigue siendo válido (TTL)
+    // También verificamos si tiene campos esenciales (como summary). 
+    // Si le faltan, forzamos un refresh aunque el TTL sea válido (para arreglar cache "envenenado").
     if (cachedGame && isCacheValid(cachedGame.updated_at, cachedGame.data.first_release_date)) {
-      console.log(`📦 Cache Hit: ${slugOrId}`);
-      return cachedGame.data;
-    }
+      const hasEssentialData = cachedGame.data && (cachedGame.data.summary || cachedGame.data.storyline);
 
-    console.log(`🌐 Cache Miss/Expired: ${slugOrId}`);
+      if (hasEssentialData) {
+        console.log(`📦 Cache Hit: ${slugOrId}`);
+        return cachedGame.data;
+      }
+      console.log(`🌐 Cache Incomplete (Repairing): ${slugOrId}`);
+    } else {
+      console.log(`🌐 Cache Miss/Expired: ${slugOrId}`);
+    }
 
     // 3. Si no hay cache o expiró, consultar IGDB
     const token = await getAccessToken();
@@ -194,7 +201,8 @@ const getPopularGames = async (limit = 10) => {
 
     // Fecha de hace 3 años en timestamp Unix
     const threeYearsAgo = Math.floor((Date.now() - (3 * 365 * 24 * 60 * 60 * 1000)) / 1000);
-    const now = Math.floor(Date.now() / 1000);
+    const gracePeriod = 24 * 60 * 60; // 24 horas en segundos
+    const nowWithGrace = Math.floor(Date.now() / 1000) - gracePeriod;
 
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
@@ -202,7 +210,7 @@ const getPopularGames = async (limit = 10) => {
         fields name, slug, cover.url, cover.image_id, rating, first_release_date, total_rating_count;
         where 
           first_release_date > ${threeYearsAgo} 
-          & first_release_date < ${now}
+          & first_release_date < ${nowWithGrace}
           & cover != null 
           & rating > 75
           & total_rating_count > 50;
@@ -237,8 +245,9 @@ const getRecentGames = async (limit = 10) => {
 
     // Últimos 3 meses
     const threeMonthsAgo = Math.floor((Date.now() - (3 * 30 * 24 * 60 * 60 * 1000)) / 1000);
-    // HOY (no futuro)
-    const now = Math.floor(Date.now() / 1000);
+    // HOY (considerando periodo de gracia de 24h)
+    const gracePeriod = 24 * 60 * 60;
+    const nowWithGrace = Math.floor(Date.now() / 1000) - gracePeriod;
 
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
@@ -246,7 +255,7 @@ const getRecentGames = async (limit = 10) => {
         fields name, slug, cover.url, cover.image_id, rating, first_release_date;
         where 
           first_release_date > ${threeMonthsAgo} 
-          & first_release_date <= ${now}
+          & first_release_date <= ${nowWithGrace}
           & cover != null;
         sort first_release_date desc;
         limit ${limit};
@@ -277,7 +286,8 @@ const getMostAnticipated = async (limit = 10) => {
   try {
     const token = await getAccessToken();
 
-    const now = Math.floor(Date.now() / 1000);
+    const gracePeriod = 24 * 60 * 60; // 24 horas en segundos
+    const nowWithGrace = Math.floor(Date.now() / 1000) - gracePeriod;
     // Próximos 12 meses
     const oneYearFromNow = Math.floor((Date.now() + (365 * 24 * 60 * 60 * 1000)) / 1000);
 
@@ -286,7 +296,7 @@ const getMostAnticipated = async (limit = 10) => {
       `
         fields name, slug, cover.url, cover.image_id, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes;
         where 
-          first_release_date > ${now}
+          first_release_date > ${nowWithGrace}
           & first_release_date < ${oneYearFromNow}
           & cover != null
           & hypes > 0;
@@ -336,24 +346,25 @@ const exploreGames = async (filters = {}) => {
     conditions.push('cover != null');
 
     // Filtro por rango de tiempo
-    const now = Math.floor(Date.now() / 1000);
+    const gracePeriod = 24 * 60 * 60; // 24h de gracia
+    const nowWithGrace = Math.floor(Date.now() / 1000) - gracePeriod;
 
     if (timeRange === 'last_month') {
       const lastMonth = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${now}`);
+      conditions.push(`first_release_date >= ${lastMonth} & first_release_date <= ${nowWithGrace}`);
     } else if (timeRange === 'this_year') {
       const startOfYear = new Date(new Date().getFullYear(), 0, 1).getTime() / 1000;
-      conditions.push(`first_release_date >= ${startOfYear} & first_release_date <= ${now}`);
+      conditions.push(`first_release_date >= ${startOfYear} & first_release_date <= ${nowWithGrace}`);
     } else if (timeRange === 'last_year') {
       const lastYearStart = new Date(new Date().getFullYear() - 1, 0, 1).getTime() / 1000;
       const lastYearEnd = new Date(new Date().getFullYear() - 1, 11, 31).getTime() / 1000;
       conditions.push(`first_release_date >= ${lastYearStart} & first_release_date <= ${lastYearEnd}`);
     } else if (timeRange === 'last_5_years') {
       const last5Years = Math.floor((Date.now() - (5 * 365 * 24 * 60 * 60 * 1000)) / 1000);
-      conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${now}`);
+      conditions.push(`first_release_date >= ${last5Years} & first_release_date <= ${nowWithGrace}`);
     } else {
-      // Por defecto: solo juegos ya lanzados
-      conditions.push(`first_release_date <= ${now}`);
+      // Por defecto: solo juegos ya lanzados (con gracia de 24h)
+      conditions.push(`first_release_date <= ${nowWithGrace}`);
     }
 
     // Filtro por géneros
@@ -495,9 +506,10 @@ const getGamesByIds = async (gameIds) => {
     // 1. Buscar lo que ya tenemos en cache
     const cachedGames = await IgdbCache.getManyByIds(gameIds);
 
-    // Filtrar los que son válidos según su TTL
+    // Filtrar los que son válidos según su TTL y que NO sean registros parciales (deben tener summary o storyline)
     const validCachedGames = cachedGames.filter(g =>
-      isCacheValid(g.updated_at, g.data.first_release_date)
+      isCacheValid(g.updated_at, g.data.first_release_date) &&
+      (g.data.summary || g.data.storyline)
     );
 
     const validIds = new Set(validCachedGames.map(g => g.igdb_id));
@@ -517,8 +529,11 @@ const getGamesByIds = async (gameIds) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, 
-               platforms.name, aggregated_rating, artworks.url, screenshots.url;
+        fields name, slug, cover.url, cover.image_id, summary, storyline, first_release_date, 
+               rating, rating_count, genres.name, platforms.name, platforms.slug, 
+               artworks.url, artworks.image_id, screenshots.url, 
+               involved_companies.company.name, involved_companies.developer, involved_companies.publisher, 
+               game_type;
         where id = (${missingIds.join(',')});
         limit 500;
       `,

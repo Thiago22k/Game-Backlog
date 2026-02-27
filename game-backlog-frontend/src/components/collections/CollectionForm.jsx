@@ -7,6 +7,7 @@ import axios from '../../api/axios';
 import { getGameCover, PLACEHOLDER_COVER } from '../../utils/formatters';
 import Navbar from '../layout/Navbar';
 import { useAuth } from '../../context/AuthContext';
+import ConfirmModal from '../common/ConfirmModal';
 
 const CATEGORIES = {
     0: 'Main Game',
@@ -47,6 +48,16 @@ const CollectionForm = () => {
     const [isSearching, setIsSearching] = useState(false);
 
     const [selectedGames, setSelectedGames] = useState([]);
+
+    // Confirm Modal State
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        variant: 'default',
+        isLoading: false
+    });
 
     // Cargar datos si es edición
     useEffect(() => {
@@ -153,17 +164,25 @@ const CollectionForm = () => {
     };
 
     const handleDelete = async () => {
-        if (window.confirm('Are you sure you want to delete this collection? This action cannot be undone.')) {
-            const result = await deleteCollection(id);
-            if (result.success) {
-                toast.success('Collection deleted successfully');
-                // Si la eliminamos y el "from" era sus detalles, saltaría error 404. Así que la vista normal
-                const isFromDetails = from.includes(id);
-                navigate(isFromDetails ? `/profile/${user?.username}/collections` : from);
-            } else {
-                toast.error(result.error || 'Failed to delete collection');
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Collection',
+            message: 'Are you sure you want to delete this collection? This action cannot be undone and all data associated with this collection will be lost.',
+            variant: 'danger',
+            confirmLabel: 'Delete Collection',
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isLoading: true }));
+                const result = await deleteCollection(id);
+                if (result.success) {
+                    toast.success('Collection deleted successfully');
+                    const isFromDetails = from.includes(id);
+                    navigate(isFromDetails ? `/profile/${user?.username}/collections` : from);
+                } else {
+                    toast.error(result.error || 'Failed to delete collection');
+                    setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false });
+                }
             }
-        }
+        });
     };
 
     return (
@@ -364,6 +383,17 @@ const CollectionForm = () => {
                     </div>
                 </form>
             </main>
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                variant={confirmModal.variant}
+                confirmLabel={confirmModal.confirmLabel}
+                isLoading={confirmModal.isLoading}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false })}
+            />
         </div>
     );
 };

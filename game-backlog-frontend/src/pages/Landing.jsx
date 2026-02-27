@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Flame, Clock, Trophy, ClipboardList, Star, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,7 @@ import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCard
 import { useGames } from '../hooks/useGames';
 import usePageTitle from '../hooks/usePageTitle';
 import toast from 'react-hot-toast';
+import { formatIGDBImage } from '../utils/formatters';
 
 // Constante a nivel de módulo — no se recrea en cada render
 const STATUS_LABELS = {
@@ -31,6 +32,14 @@ const Landing = () => {
   const [bestOfYearGames, setBestOfYearGames] = useState([]);
   const [anticipatedGames, setAnticipatedGames] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Seleccionar el juego destacado (el más cercano a lanzarse de los esperados)
+  const featuredGame = useMemo(() => {
+    if (!anticipatedGames.length) return null;
+    return [...anticipatedGames]
+      .filter(g => g.screenshots?.length || g.artworks?.length)
+      .sort((a, b) => (a.first_release_date || 0) - (b.first_release_date || 0))[0] || anticipatedGames[0];
+  }, [anticipatedGames]);
 
   usePageTitle(''); // Uses default 'Stackd'
 
@@ -170,12 +179,44 @@ const Landing = () => {
   }, [isAuthenticated]);
 
   return (
-    <div className="min-h-screen bg-primary-navy">
+    <div className="min-h-screen bg-primary-navy relative">
+      {/* Dynamic Background with Fade Effect */}
+      <div className="absolute top-0 left-0 w-full h-[950px] z-0 overflow-hidden pointer-events-none">
+        {featuredGame && (
+          <>
+            <img
+              src={
+                featuredGame.screenshots?.[0]?.url
+                  ? formatIGDBImage(featuredGame.screenshots[0].url, 't_screenshot_huge')
+                  : formatIGDBImage(featuredGame.cover?.url, 't_screenshot_huge')
+              }
+              alt=""
+              className="w-full h-full object-cover opacity-30"
+              style={{ filter: 'brightness(0.7)' }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-primary-navy/40 via-transparent to-primary-navy" />
+          </>
+        )}
+      </div>
+      {
+        featuredGame && (
+          <div className="absolute right-6 top-48 z-20 hidden lg:flex flex-col items-center">
+            <Link
+              to={`/game/${featuredGame.slug}`}
+              className="vertical-text text-[10px] font-bold tracking-[0.3em] text-primary-yellow/60 hover:text-primary-yellow transition-all uppercase whitespace-nowrap"
+              style={{ writingMode: 'vertical-rl' }}
+            >
+              Featured: {featuredGame.name}
+            </Link>
+          </div>
+        )
+      }
+
       <Navbar />
 
       {/* Hero Section */}
       <div className="relative overflow-hidden">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 text-center">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-64 pb-48 text-center">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white">
             Stack<span className="text-primary-yellow">d</span>
           </h1>
@@ -210,7 +251,7 @@ const Landing = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {loading ? (
           <>
@@ -384,12 +425,12 @@ const Landing = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-primary-navy-dark border-t border-gray-800 py-8 mt-16">
+      <footer className="relative z-10 bg-primary-navy-dark border-t border-gray-800 py-8 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-gray-500">© 2026 Stackd. Game data powered by IGDB.</p>
         </div>
       </footer>
-    </div>
+    </div >
   );
 };
 

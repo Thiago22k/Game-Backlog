@@ -182,9 +182,12 @@ const Explore = () => {
 
       if (searchQuery.trim()) {
         response = await axios.get(`${ENDPOINTS.GAMES.SEARCH}?query=${encodeURIComponent(searchQuery)}`);
-        const now = Date.now() / 1000;
+        const gracePeriod = 24 * 60 * 60;
+        const nowWithGrace = Math.floor(Date.now() / 1000) - gracePeriod;
+
+        // Incluir juegos ya lanzados O que lanzaron hace menos de 24h (para que el resto de la lógica los maneje)
         const filtered = response.data.games.filter(
-          (game) => game.first_release_date && game.first_release_date <= now
+          (game) => game.first_release_date && game.first_release_date <= (Math.floor(Date.now() / 1000) + gracePeriod * 365) // Permitir ver todo en búsqueda, la tarjeta decidirá el estilo
         );
         setGames(mergeWithUserGames(filtered));
         setHasMore(false);
@@ -573,8 +576,13 @@ const Explore = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6 mb-8">
-              {games.map((game) =>
-                isAnticipatedMode ? (
+              {games.map((game) => {
+                const releaseThreshold = game.first_release_date
+                  ? (game.first_release_date * 1000) + (24 * 60 * 60 * 1000)
+                  : null;
+                const isEffectivelyUnreleased = !releaseThreshold || releaseThreshold > Date.now();
+
+                return isEffectivelyUnreleased ? (
                   <AnticipatedGameCard
                     key={game.id}
                     game={game}
@@ -589,8 +597,8 @@ const Explore = () => {
                     onStatusChange={handleStatusChange}
                     onRatingChange={handleRatingChange}
                   />
-                )
-              )}
+                );
+              })}
             </div>
 
             {/* Load More */}

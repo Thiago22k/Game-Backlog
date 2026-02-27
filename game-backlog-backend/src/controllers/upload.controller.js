@@ -25,7 +25,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // Límite 5MB
+        fileSize: 10 * 1024 * 1024 // Aumentado a 10MB para soportar banners y GIFs pesados
     },
     fileFilter: fileFilter
 });
@@ -38,33 +38,62 @@ const uploadAvatar = async (req, res) => {
         }
 
         const userId = req.user.userId;
+        const isGif = req.file.mimetype === 'image/gif';
 
-        // Generar nombre de archivo único (.webp)
+        // Generar nombre de archivo único
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const fileName = `avatar-${userId}-${uniqueSuffix}.webp`;
+        const extension = isGif ? 'gif' : 'webp';
+        const fileName = `avatar-${userId}-${uniqueSuffix}.${extension}`;
         const filePath = path.join(uploadDir, fileName);
-        const avatarUrl = `/uploads/avatars/${fileName}`;
+        let avatarUrl = `/uploads/avatars/${fileName}`;
+        let avatarStaticUrl = null;
 
-        // Procesar imagen con sharp: 400x400, crop center, convert to webp
-        await sharp(req.file.buffer)
-            .resize(400, 400, {
-                fit: 'cover',
-                position: 'center'
-            })
-            .webp({ quality: 80 })
-            .toFile(filePath);
+        if (isGif) {
+            // Guardar GIF original (validación de tamaño se hace en multer, pero ProfileLayout enviará máx 8MB)
+            fs.writeFileSync(filePath, req.file.buffer);
 
-        // Obtener el usuario actual para borrar su avatar anterior si existe (y no es el default)
-        const user = await User.findById(userId);
-        if (user.avatar_url && !user.avatar_url.includes('default')) {
-            const oldAvatarPath = path.join(__dirname, '..', '..', 'public', user.avatar_url.replace('/uploads/', 'uploads/'));
-            if (fs.existsSync(oldAvatarPath)) {
-                fs.unlinkSync(oldAvatarPath);
-            }
+            // Generar thumbnail estático del primer frame
+            const thumbName = `avatar-${userId}-${uniqueSuffix}-static.webp`;
+            const thumbPath = path.join(uploadDir, thumbName);
+            await sharp(req.file.buffer, { pages: 1 }) // pages: 1 extrae solo el primer frame
+                .resize(400, 400, {
+                    fit: 'cover',
+                    position: 'center'
+                })
+                .webp({ quality: 80 })
+                .toFile(thumbPath);
+
+            avatarStaticUrl = `/uploads/avatars/${thumbName}`;
+        } else {
+            // Procesar imagen normal con sharp: 400x400, convert to webp
+            await sharp(req.file.buffer)
+                .resize(400, 400, {
+                    fit: 'cover',
+                    position: 'center'
+                })
+                .webp({ quality: 80 })
+                .toFile(filePath);
         }
 
+        // Obtener el usuario actual para borrar archivos anteriores
+        const user = await User.findById(userId);
+        const filesToDelete = [];
+        if (user.avatar_url && !user.avatar_url.includes('default')) {
+            filesToDelete.push(user.avatar_url);
+        }
+        if (user.avatar_static_url) {
+            filesToDelete.push(user.avatar_static_url);
+        }
+
+        filesToDelete.forEach(fileUrl => {
+            const fullPath = path.join(__dirname, '..', '..', 'public', fileUrl.replace('/uploads/', 'uploads/'));
+            if (fs.existsSync(fullPath)) {
+                fs.unlinkSync(fullPath);
+            }
+        });
+
         // Actualizar base de datos
-        const updatedUser = await User.updateAvatar(userId, avatarUrl);
+        const updatedUser = await User.updateAvatar(userId, avatarUrl, avatarStaticUrl);
 
         res.json({
             message: 'Avatar actualizado y optimizado exitosamente',
@@ -87,11 +116,21 @@ const deleteAvatar = async (req, res) => {
             return res.status(400).json({ error: 'No tienes un avatar personalizado para eliminar' });
         }
 
-        // Borrar archivo físico si existe
-        const avatarPath = path.join(__dirname, '..', '..', 'public', user.avatar_url.replace('/uploads/', 'uploads/'));
-        if (fs.existsSync(avatarPath)) {
-            fs.unlinkSync(avatarPath);
+        // Borrar archivos físicos si existen
+        const filesToDelete = [];
+        if (user.avatar_url && !user.avatar_url.includes('default')) {
+            filesToDelete.push(user.avatar_url);
         }
+        if (user.avatar_static_url) {
+            filesToDelete.push(user.avatar_static_url);
+        }
+
+        filesToDelete.forEach(fileUrl => {
+            const fullPath = path.join(__dirname, '..', '..', 'public', fileUrl.replace('/uploads/', 'uploads/'));
+            if (fs.existsSync(fullPath)) {
+                fs.unlinkSync(fullPath);
+            }
+        });
 
         // Actualizar base de datos a null
         const updatedUser = await User.updateAvatar(userId, null);

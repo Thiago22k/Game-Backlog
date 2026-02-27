@@ -1,36 +1,26 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Home, Compass, AlertCircle } from 'lucide-react';
-import Navbar from '../components/layout/Navbar';
+import bgImage from '../assets/404_bg.jpg';
 
 const NotFound = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-
-    // Check context based on URL path
-    const isProfileError = location.pathname.startsWith('/profile/');
-    const isGameError = location.pathname.startsWith('/game/');
-    const isCollectionError = location.pathname.startsWith('/collections/');
 
     let title = "Page Not Found";
-    let description = "The page you are trying to reach has vanished into the digital void. Let's get you back to safe ground.";
-
-    if (isProfileError) {
-        title = "Player Not Found";
-        description = "The user profile you're looking for doesn't exist. They might have changed their username or deleted their account.";
-    } else if (isGameError) {
-        title = "Game Not Found";
-        description = "This game doesn't seem to exist in our database. It might have been removed or the URL is incorrect.";
-    } else if (isCollectionError) {
-        title = "Collection Not Found";
-        description = "This collection doesn't exist or has been deleted by its owner.";
-    }
+    let description = "We searched for this page in your backlog, but it's buried under 400 other games you promised to play. We'll probably never find it.";
 
     return (
-        <div className="min-h-screen bg-primary-navy flex flex-col">
-            <Navbar />
+        <div className="min-h-screen bg-primary-navy flex flex-col relative overflow-hidden">
+            {/* Background Image with Overlay */}
+            <div
+                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+                style={{
+                    backgroundImage: `url(${bgImage})`,
+                    filter: 'brightness(0.2)'
+                }}
+            />
 
-            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10">
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center z-10 relative">
                 <div className="mb-8">
                     <AlertCircle className="w-32 h-32 text-primary-yellow opacity-90" strokeWidth={1.5} />
                 </div>

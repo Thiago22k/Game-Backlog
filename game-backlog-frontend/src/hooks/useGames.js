@@ -8,6 +8,7 @@ export const useGames = () => {
   const [error, setError] = useState(null);
   const [isProfilePublic, setIsProfilePublic] = useState(true);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState(null);
+  const [profileAvatarStaticUrl, setProfileAvatarStaticUrl] = useState(null);
   const [profileBannerUrl, setProfileBannerUrl] = useState(null);
   const [profileBio, setProfileBio] = useState(null);
   const [profileSocialTwitch, setProfileSocialTwitch] = useState(null);
@@ -36,6 +37,9 @@ export const useGames = () => {
       if (response.data.avatar_url !== undefined) {
         setProfileAvatarUrl(response.data.avatar_url);
       }
+      if (response.data.avatar_static_url !== undefined) {
+        setProfileAvatarStaticUrl(response.data.avatar_static_url);
+      }
       if (response.data.banner_url !== undefined) {
         setProfileBannerUrl(response.data.banner_url);
       }
@@ -51,7 +55,14 @@ export const useGames = () => {
       if (response.data.social_steam !== undefined) {
         setProfileSocialSteam(response.data.social_steam);
       }
-      return { success: true, data: response.data.games, isProfilePublic: response.data.is_profile_public, profileAvatarUrl: response.data.avatar_url, profileBannerUrl: response.data.banner_url };
+      return {
+        success: true,
+        data: response.data.games,
+        isProfilePublic: response.data.is_profile_public,
+        profileAvatarUrl: response.data.avatar_url,
+        profileAvatarStaticUrl: response.data.avatar_static_url,
+        profileBannerUrl: response.data.banner_url
+      };
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al obtener juegos';
       setError(errorMsg);
@@ -144,6 +155,7 @@ export const useGames = () => {
     error,
     isProfilePublic,
     profileAvatarUrl,
+    profileAvatarStaticUrl,
     profileBannerUrl,
     profileBio,
     profileSocialTwitch,

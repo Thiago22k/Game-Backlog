@@ -28,9 +28,15 @@ const isValidGameStatus = (status) => {
   return validStatuses.includes(status);
 };
 
-// Validar que sea un número entero positivo
 const isPositiveInteger = (value) => {
   return Number.isInteger(Number(value)) && Number(value) > 0;
+};
+
+// Validar handle de red social (solo alfanuméricos, guiones, guiones bajos y puntos)
+const isValidSocialHandle = (handle) => {
+  if (!handle) return true; // Permitir nulos/vacíos
+  const handleRegex = /^[a-zA-Z0-9_\-\.]+$/;
+  return handleRegex.test(handle);
 };
 
 // Sanitizar string (eliminar espacios y convertir a lowercase)
@@ -50,6 +56,7 @@ module.exports = {
   isValidRating,
   isValidGameStatus,
   isPositiveInteger,
+  isValidSocialHandle,
   sanitizeString,
   sanitizeUsernameAndPreserveCase,
 };

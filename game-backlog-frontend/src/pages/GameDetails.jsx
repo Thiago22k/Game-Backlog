@@ -276,8 +276,12 @@ const GameDetails = () => {
   const screenshots = useMemo(() => game?.screenshots?.slice(0, 9) ?? [], [game]);
   const similarGames = useMemo(() => game?.similar_games?.slice(0, 6) ?? [], [game]);
   const summary = useMemo(() => game?.summary || game?.storyline, [game]);
-  // A game is "unreleased" if it has no release date yet, or its release date is in the future
-  const isUnreleased = useMemo(() => !game?.first_release_date || game.first_release_date > Date.now() / 1000, [game]);
+  // A game is "unreleased" if it has no release date yet, or its release date is in the future (within 24h grace period)
+  const isUnreleased = useMemo(() => {
+    if (!game?.first_release_date) return true;
+    const releaseThreshold = (game.first_release_date * 1000) + (24 * 60 * 60 * 1000);
+    return releaseThreshold > Date.now();
+  }, [game]);
 
   // Derived category and parent game
   const categoryName = useMemo(() => {
@@ -817,15 +821,16 @@ const GameStatsPanel = ({ stats }) => {
                         style={{ height: `${hasData ? Math.max((val / maxBucket) * 100, 8) : 4}%` }}
                       />
 
-                      {/* Custom Tooltip */}
-                      <div className="absolute -top-10 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-2 group-hover/bar:translate-y-0">
-                        <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-3 py-1.5 rounded-lg whitespace-nowrap">
-                          <span className="text-[11px] font-black text-white tracking-wide">
-                            {ratingValue.toFixed(1)} <span className="text-gray-500 mx-1">|</span> {val} {val === 1 ? 'vote' : 'votes'} <span className="text-amber-400/80 ml-1">({percentage}%)</span>
+                      {/* Custom Tooltip (Estilo Mini) */}
+                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-1 group-hover/bar:translate-y-0 flex flex-col items-center">
+                        {/* Cuerpo del Tooltip */}
+                        <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-2.5 py-1 rounded-md whitespace-nowrap relative z-10">
+                          <span className="text-[11px] font-semibold text-white tracking-wide">
+                            {ratingValue.toFixed(1)} <span className="text-gray-500 mx-1">|</span> {val} {val === 1 ? 'vote' : 'votes'} <span className="text-amber-400 ml-0.5">({percentage}%)</span>
                           </span>
                         </div>
-                        {/* Tooltip Arrow */}
-                        <div className="w-2 h-2 bg-primary-navy-dark border-r border-b border-white/10 rotate-45 absolute -bottom-1 left-1/2 -translate-x-1/2 shadow-xl" />
+                        {/* El Rombo (Diamante Completo) */}
+                        <div className="w-2.5 h-2.5 bg-white rotate-45 -mt-0.5 shadow-lg relative z-0" />
                       </div>
                     </div>
                   );

@@ -5,8 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import Logo from '../../assets/logo.svg?react';
 import SearchModal from './SearchModal';
-import defaultAvatar from '../../assets/default_avatar.png';
-import { ASSETS_BASE_URL } from '../../utils/constants';
+import { getAvatarUrl } from '../../utils/avatar';
 
 // ─── Helper: format relative time ────────────────────────────────────────────
 const relativeTime = (dateStr) => {
@@ -40,7 +39,10 @@ const NotifItem = ({ notif, onRead }) => (
     className={`w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-primary-navy transition-colors border-b border-gray-800 last:border-0 ${!notif.is_read ? 'bg-primary-navy/40' : ''}`}
   >
     <img
-      src={notif.actor_avatar_url ? `${ASSETS_BASE_URL}${notif.actor_avatar_url}` : defaultAvatar}
+      src={getAvatarUrl({
+        avatar_url: notif.actor_avatar_url,
+        avatar_static_url: notif.actor_avatar_static_url
+      }, { animated: false })}
       alt={notif.actor_username}
       className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
     />
@@ -220,7 +222,7 @@ const Navbar = ({ transparentMode = true }) => {
                       >
                         <div className="w-8 h-8 rounded-full flex items-center justify-center overflow-hidden border border-gray-600 bg-primary-navy-dark">
                           <img
-                            src={user?.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar}
+                            src={getAvatarUrl(user, { animated: false })}
                             alt={user?.username || 'User'}
                             className="w-full h-full object-cover"
                           />

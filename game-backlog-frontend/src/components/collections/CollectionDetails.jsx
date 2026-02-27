@@ -8,10 +8,11 @@ import { useAuth } from '../../context/AuthContext';
 import Navbar from '../layout/Navbar';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
-import NotFound from '../../pages/NotFound';
-import defaultAvatar from '../../assets/default_avatar.png';
 import usePageTitle from '../../hooks/usePageTitle';
+import NotFound from '../../pages/NotFound';
 import { ASSETS_BASE_URL } from '../../utils/constants';
+import ConfirmModal from '../common/ConfirmModal';
+import { getAvatarUrl } from '../../utils/avatar';
 
 const CollectionDetails = () => {
     const { id } = useParams();
@@ -50,6 +51,16 @@ const CollectionDetails = () => {
     const [reportReason, setReportReason] = useState('');
     const [reportDetails, setReportDetails] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+    // Confirm Modal State
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        variant: 'default',
+        isLoading: false
+    });
 
 
     useEffect(() => {
@@ -306,15 +317,23 @@ const CollectionDetails = () => {
     };
 
     const handleDeleteComment = async (commentId) => {
-        if (!window.confirm('Delete this comment?')) return;
-
-        const result = await deleteComment(id, commentId);
-        if (result.success) {
-            setComments(comments.filter(c => c.id !== commentId));
-            toast.success('Comment deleted');
-        } else {
-            toast.error(result.error || 'Failed to delete comment');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Delete Comment',
+            message: 'Are you sure you want to delete this comment? This action cannot be undone.',
+            variant: 'default',
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isLoading: true }));
+                const result = await deleteComment(id, commentId);
+                if (result.success) {
+                    setComments(prev => prev.filter(c => c.id !== commentId));
+                    toast.success('Comment deleted');
+                } else {
+                    toast.error(result.error || 'Failed to delete comment');
+                }
+                setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false });
+            }
+        });
     };
 
     if (loading && !collection) {
@@ -386,14 +405,25 @@ const CollectionDetails = () => {
                             {isOwner ? (
                                 <Link to={`/profile/${user.username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
                                     <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
-                                        <img src={user.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt={user.username} className="w-full h-full object-cover" />
+                                        <img
+                                            src={getAvatarUrl(user, { animated: false })}
+                                            alt={user.username}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
                                     {user.username}
                                 </Link>
                             ) : (
                                 <Link to={`/profile/${collection.creator_username}`} className="flex items-center font-medium text-gray-300 hover:text-primary-yellow transition-colors">
                                     <div className="w-5 h-5 rounded-full overflow-hidden mr-1.5 border border-gray-600 bg-primary-navy-dark">
-                                        <img src={collection.creator_avatar_url ? `${ASSETS_BASE_URL}${collection.creator_avatar_url}` : defaultAvatar} alt={collection.creator_username} className="w-full h-full object-cover" />
+                                        <img
+                                            src={getAvatarUrl({
+                                                avatar_url: collection.creator_avatar_url,
+                                                avatar_static_url: collection.creator_avatar_static_url
+                                            }, { animated: false })}
+                                            alt={collection.creator_username}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
                                     {collection.creator_username}
                                 </Link>
@@ -484,7 +514,10 @@ const CollectionDetails = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10">
                                 {paginatedGames.map((cg) => {
                                     const releaseDate = cg.game_details?.first_release_date ? new Date(cg.game_details.first_release_date * 1000) : null;
-                                    const isUnreleased = !releaseDate || releaseDate > new Date();
+
+                                    // Periodo de gracia de 24 horas
+                                    const releaseThreshold = releaseDate ? new Date(releaseDate.getTime() + 24 * 60 * 60 * 1000) : null;
+                                    const isUnreleased = !releaseThreshold || releaseThreshold > new Date();
 
                                     const mappedGame = { ...cg.game_details, id: cg.igdb_game_id, status: cg.game_details.status, user_rating: cg.game_details.user_rating };
 
@@ -592,7 +625,11 @@ const CollectionDetails = () => {
                         <form onSubmit={handleAddComment} className="mb-10">
                             <div className="flex gap-4 items-start">
                                 <div className="w-10 h-10 rounded-full bg-primary-yellow overflow-hidden text-primary-navy-dark flex items-center justify-center font-bold flex-shrink-0 text-lg border border-gray-600">
-                                    <img src={user.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img
+                                        src={getAvatarUrl(user, { animated: false })}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover bg-primary-navy-dark"
+                                    />
                                 </div>
                                 <div className="flex-1 bg-primary-navy border border-gray-700 rounded-xl overflow-hidden focus-within:border-primary-yellow transition-colors relative flex flex-col">
                                     <textarea
@@ -627,7 +664,14 @@ const CollectionDetails = () => {
                             comments.map((comment) => (
                                 <div key={comment.id} className="flex gap-4 group">
                                     <Link to={`/profile/${comment.username}`} className="w-10 h-10 overflow-hidden rounded-full bg-gray-700 text-white flex items-center justify-center font-bold flex-shrink-0 text-lg hover:ring-2 hover:ring-primary-yellow transition-all">
-                                        <img src={comment.avatar_url ? `${ASSETS_BASE_URL}${comment.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                        <img
+                                            src={getAvatarUrl({
+                                                avatar_url: comment.avatar_url,
+                                                avatar_static_url: comment.avatar_static_url
+                                            }, { animated: false })}
+                                            alt="Avatar"
+                                            className="w-full h-full object-cover bg-primary-navy-dark"
+                                        />
                                     </Link>
                                     <div className="flex-1">
                                         <div className="bg-primary-navy border border-gray-700 rounded-xl rounded-tl-none p-4 relative">
@@ -769,6 +813,16 @@ const CollectionDetails = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                variant={confirmModal.variant}
+                isLoading={confirmModal.isLoading}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false })}
+            />
         </div>
     );
 };

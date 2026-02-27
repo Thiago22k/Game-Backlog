@@ -11,9 +11,33 @@ import Navbar from '../../components/layout/Navbar';
 import NotFound from '../NotFound';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
-import defaultAvatar from '../../assets/default_avatar.png';
 import usePageTitle from '../../hooks/usePageTitle';
 import { ASSETS_BASE_URL } from '../../utils/constants';
+import { sanitizeSocialHandle } from '../../utils/sanitize';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { getAvatarUrl } from '../../utils/avatar';
+
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/**
+ * Validates an image file for its MIME type and size.
+ * @param {File} file - The file to validate.
+ * @param {Object} options - Validation options.
+ * @param {number} options.maxSizeMB - Maximum allowed size in Megabytes.
+ * @param {boolean} options.allowGif - Whether GIF is allowed.
+ * @returns {Object} { valid: boolean, error: string | null }
+ */
+const validateImageFile = (file, { maxSizeMB, allowGif = false }) => {
+    const allowed = allowGif ? ALLOWED_IMAGE_TYPES : ALLOWED_IMAGE_TYPES.filter(t => t !== 'image/gif');
+
+    if (!allowed.includes(file.type)) {
+        return { valid: false, error: allowGif ? 'Only JPG, PNG, WebP or GIF images are allowed' : 'Only JPG, PNG or WebP images are allowed' };
+    }
+    if (file.size > maxSizeMB * 1024 * 1024) {
+        return { valid: false, error: `File size exceeds the limit (${maxSizeMB}MB)` };
+    }
+    return { valid: true, error: null };
+};
 
 const ProfileLayout = () => {
     const { user, updateUser } = useAuth();
@@ -29,6 +53,16 @@ const ProfileLayout = () => {
     const [reportReason, setReportReason] = useState('');
     const [reportDetails, setReportDetails] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+    // Status for the custom ConfirmModal
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        variant: 'default',
+        isLoading: false
+    });
 
     const isOwner = user?.username === username;
     const displayUsername = isOwner ? user?.username : username;
@@ -69,9 +103,14 @@ const ProfileLayout = () => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Validar tamaño (5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('File size exceeds the limit (5MB)');
+        const isGif = file.type === 'image/gif';
+        const validation = validateImageFile(file, {
+            maxSizeMB: isGif ? 8 : 5,
+            allowGif: true
+        });
+
+        if (!validation.valid) {
+            toast.error(validation.error);
             return;
         }
 
@@ -92,28 +131,37 @@ const ProfileLayout = () => {
     };
 
     const handleDeleteAvatar = async () => {
-        if (!window.confirm('Are you sure you want to remove your custom avatar?')) return;
-
-        try {
-            const toastId = toast.loading('Removing avatar...');
-            await axios.delete('/users/avatar');
-            toast.dismiss(toastId);
-            toast.success('Avatar removed');
-            // Actualizar contexto local para volver a default_avatar o iniciales
-            updateUser({ avatar_url: null });
-        } catch (error) {
-            toast.dismiss();
-            toast.error(error.response?.data?.error || 'Error removing avatar');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Remove Avatar',
+            message: 'Are you sure you want to remove your custom avatar? This action cannot be undone.',
+            variant: 'default',
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isLoading: true }));
+                try {
+                    await axios.delete('/users/avatar');
+                    toast.success('Avatar removed');
+                    updateUser({ avatar_url: null });
+                } catch (error) {
+                    toast.error(error.response?.data?.error || 'Error removing avatar');
+                } finally {
+                    setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false });
+                }
+            }
+        });
     };
 
     const handleBannerFileChange = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
 
-        // Validar tamaño (10MB para banner)
-        if (file.size > 10 * 1024 * 1024) {
-            toast.error('File size exceeds the limit (10MB)');
+        const validation = validateImageFile(file, {
+            maxSizeMB: 10,
+            allowGif: false
+        });
+
+        if (!validation.valid) {
+            toast.error(validation.error);
             return;
         }
 
@@ -136,19 +184,24 @@ const ProfileLayout = () => {
     };
 
     const handleDeleteBanner = async () => {
-        if (!window.confirm('Are you sure you want to remove your custom banner?')) return;
-
-        try {
-            const toastId = toast.loading('Removing banner...');
-            await axios.delete('/users/banner');
-            toast.dismiss(toastId);
-            toast.success('Banner removed');
-            // Actualizar contexto local
-            updateUser({ banner_url: null });
-        } catch (error) {
-            toast.dismiss();
-            toast.error(error.response?.data?.error || 'Error removing banner');
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: 'Remove Banner',
+            message: 'Are you sure you want to remove your custom banner? This action will reset your profile header to its default appearance.',
+            variant: 'default',
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isLoading: true }));
+                try {
+                    await axios.delete('/users/banner');
+                    toast.success('Banner removed');
+                    updateUser({ banner_url: null });
+                } catch (error) {
+                    toast.error(error.response?.data?.error || 'Error removing banner');
+                } finally {
+                    setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false });
+                }
+            }
+        });
     };
 
     const handleShareProfile = () => {
@@ -235,9 +288,20 @@ const ProfileLayout = () => {
                         <div className="relative shrink-0">
                             <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden border-4 border-primary-navy shadow-2xl bg-primary-navy-dark flex items-center justify-center">
                                 {isOwner ? (
-                                    <img src={user?.avatar_url ? `${ASSETS_BASE_URL}${user.avatar_url}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img
+                                        src={getAvatarUrl(user, { animated: true })}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover bg-primary-navy-dark"
+                                    />
                                 ) : (
-                                    <img src={gamesHook.profileAvatarUrl ? `${ASSETS_BASE_URL}${gamesHook.profileAvatarUrl}` : defaultAvatar} alt="Avatar" className="w-full h-full object-cover bg-primary-navy-dark" />
+                                    <img
+                                        src={getAvatarUrl({
+                                            avatar_url: gamesHook.profileAvatarUrl,
+                                            avatar_static_url: gamesHook.profileAvatarStaticUrl
+                                        }, { animated: true })}
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover bg-primary-navy-dark"
+                                    />
                                 )}
                             </div>
                             {/* Hidden inputs keep existing functionality */}
@@ -247,7 +311,7 @@ const ProfileLayout = () => {
                                         type="file"
                                         ref={hiddenFileInputRef}
                                         className="hidden"
-                                        accept="image/png, image/jpeg, image/jpg, image/webp"
+                                        accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
                                         onChange={handleFileChange}
                                     />
                                     <input
@@ -296,35 +360,35 @@ const ProfileLayout = () => {
                                 <div className="flex items-center gap-2 mt-2">
                                     {profileSocialTwitch && (
                                         <a
-                                            href={`https://twitch.tv/${profileSocialTwitch}`}
+                                            href={`https://twitch.tv/${sanitizeSocialHandle(profileSocialTwitch)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            title={`Twitch: ${profileSocialTwitch}`}
+                                            title={`Twitch: ${sanitizeSocialHandle(profileSocialTwitch)}`}
                                             className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white text-xs font-medium transition-colors"
                                         >
                                             <TwitchIcon className="w-4 h-4" />
-                                            {profileSocialTwitch}
+                                            {sanitizeSocialHandle(profileSocialTwitch)}
                                         </a>
                                     )}
                                     {profileSocialDiscord && (
                                         <span
-                                            title={`Discord: ${profileSocialDiscord}`}
+                                            title={`Discord: ${sanitizeSocialHandle(profileSocialDiscord)}`}
                                             className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 backdrop-blur-sm border border-white/10 text-white text-xs font-medium cursor-default select-all"
                                         >
                                             <DiscordIcon className="w-4 h-4" />
-                                            {profileSocialDiscord}
+                                            {sanitizeSocialHandle(profileSocialDiscord)}
                                         </span>
                                     )}
                                     {profileSocialSteam && (
                                         <a
-                                            href={`https://steamcommunity.com/id/${profileSocialSteam}`}
+                                            href={`https://steamcommunity.com/id/${sanitizeSocialHandle(profileSocialSteam)}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            title={`Steam: ${profileSocialSteam}`}
+                                            title={`Steam: ${sanitizeSocialHandle(profileSocialSteam)}`}
                                             className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/20 hover:bg-black/40 backdrop-blur-sm border border-white/10 text-white text-xs font-medium transition-colors"
                                         >
                                             <SteamIcon className="w-4 h-4" />
-                                            {profileSocialSteam}
+                                            {sanitizeSocialHandle(profileSocialSteam)}
                                         </a>
                                     )}
                                 </div>
@@ -559,6 +623,16 @@ const ProfileLayout = () => {
                     </div>
                 </div>
             )}
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                variant={confirmModal.variant}
+                isLoading={confirmModal.isLoading}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false })}
+            />
         </div>
     );
 };

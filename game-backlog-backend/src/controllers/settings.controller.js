@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user.model');
-const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
+const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase, isValidSocialHandle } = require('../utils/validation');
 const pool = require('../config/database');
 
 // Cambiar contraseña
@@ -291,6 +291,17 @@ const updateProfile = async (req, res) => {
     social_twitch = social_twitch?.trim() || null;
     social_discord = social_discord?.trim() || null;
     social_steam = social_steam?.trim() || null;
+
+    // Validate social handles format
+    if (!isValidSocialHandle(social_twitch)) {
+      return res.status(400).json({ error: 'Formato de handle de Twitch inválido' });
+    }
+    if (!isValidSocialHandle(social_discord)) {
+      return res.status(400).json({ error: 'Formato de handle de Discord inválido' });
+    }
+    if (!isValidSocialHandle(social_steam)) {
+      return res.status(400).json({ error: 'Formato de handle de Steam inválido' });
+    }
 
     const updatedUser = await User.updateProfile(userId, { bio, social_twitch, social_discord, social_steam });
 

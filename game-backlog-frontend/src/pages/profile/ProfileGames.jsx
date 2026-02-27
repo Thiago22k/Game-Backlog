@@ -63,7 +63,14 @@ const ProfileGames = () => {
                 ? new Date(game.game_details.first_release_date * 1000)
                 : null;
 
-            if (game.status === 'wishlist' && (!releaseDate || releaseDate > now)) {
+            // Añadimos un periodo de gracia de 24 horas después del lanzamiento
+            // para que los juegos que salen hoy (o salieron hace menos de un día)
+            // se mantengan en la sección de "Coming Soon" si están en wishlist.
+            const releaseThreshold = releaseDate
+                ? new Date(releaseDate.getTime() + 24 * 60 * 60 * 1000)
+                : null;
+
+            if (game.status === 'wishlist' && (!releaseThreshold || releaseThreshold > now)) {
                 wishlist.push(game);
             } else {
                 my.push(game);

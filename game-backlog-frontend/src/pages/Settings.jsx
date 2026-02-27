@@ -10,6 +10,7 @@ import DiscordIcon from '../assets/discord-icon.svg?react';
 import SteamIcon from '../assets/steam-icon.svg?react';
 import Navbar from '../components/layout/Navbar';
 import usePageTitle from '../hooks/usePageTitle';
+import { sanitizeSocialHandle } from '../utils/sanitize';
 
 const Settings = () => {
   const { user, updateUser, logout } = useAuth();
@@ -129,9 +130,27 @@ const Settings = () => {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
+
+    // Sanitizar handles antes de enviar
+    const sanitizedData = {
+      ...profileData,
+      social_twitch: sanitizeSocialHandle(profileData.social_twitch),
+      social_discord: sanitizeSocialHandle(profileData.social_discord),
+      social_steam: sanitizeSocialHandle(profileData.social_steam),
+    };
+
     try {
-      const res = await axios.put(ENDPOINTS.SETTINGS.UPDATE_PROFILE, profileData);
+      const res = await axios.put(ENDPOINTS.SETTINGS.UPDATE_PROFILE, sanitizedData);
       updateUser(res.data.user);
+
+      // Actualizar estado local con los valores ya sanitizados para consistencia
+      setProfileData(prev => ({
+        ...prev,
+        social_twitch: sanitizedData.social_twitch || '',
+        social_discord: sanitizedData.social_discord || '',
+        social_steam: sanitizedData.social_steam || '',
+      }));
+
       toast.success('Profile updated!');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error updating profile');
