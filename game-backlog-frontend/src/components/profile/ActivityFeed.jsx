@@ -140,6 +140,31 @@ const ActivityItem = ({ activity, username }) => {
         );
     }
 
+    if (action_type === 'CREATE_REVIEW' || action_type === 'UPDATE_REVIEW') {
+        return (
+            <div className="flex gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                <div className="shrink-0 p-3 rounded-xl bg-primary-yellow/10 h-fit">
+                    <MessageSquare className="text-primary-yellow" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-300">
+                        <span className="font-semibold text-white">{username}</span> {action_type === 'CREATE_REVIEW' ? 'wrote' : 'updated'} a review for{" "}
+                        <Link to={`/game/${metadata.game_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-bold text-primary-yellow hover:underline">
+                            {metadata.game_name}
+                        </Link>
+                        {" "}<span className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">{metadata.rating}/5</span>
+                    </p>
+                    {metadata.review_preview && (
+                        <div className="mt-2 bg-black/20 p-3 rounded-lg border border-white/5">
+                            <p className="text-sm text-gray-400 italic">"{metadata.review_preview}"</p>
+                        </div>
+                    )}
+                    <span className="text-xs text-gray-500 mt-2 block">{timeAgo}</span>
+                </div>
+            </div>
+        );
+    }
+
     return null;
 };
 

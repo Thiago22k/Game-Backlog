@@ -20,14 +20,22 @@ const relativeTime = (dateStr) => {
 
 // ─── Helper: notification message ────────────────────────────────────────────
 const notifMessage = (notif) => {
-  const actor = notif.metadata?.actor_username || 'Someone';
+  const actor = notif.actor_username || notif.metadata?.actor_username || 'Someone';
   const colName = notif.metadata?.collection_name || 'your collection';
+  const gameName = notif.metadata?.game_name || notif.metadata?.gameName || 'a game';
+
   if (notif.type === 'LIKED_COLLECTION') {
     return <><span className="font-semibold text-white">@{actor}</span>{' liked your collection '}<span className="italic">«{colName}»</span></>;
   }
   if (notif.type === 'COMMENTED_COLLECTION') {
     const preview = notif.metadata?.comment_preview;
     return <><span className="font-semibold text-white">@{actor}</span>{' commented on '}<span className="italic">«{colName}»</span>{preview ? <><br /><span className="text-gray-500 text-xs">"{preview}"</span></> : null}</>;
+  }
+  if (notif.type === 'like_review') {
+    return <><span className="font-semibold text-white">@{actor}</span>{' liked your review for '}<span className="italic">«{gameName}»</span></>;
+  }
+  if (notif.type === 'comment_review') {
+    return <><span className="font-semibold text-white">@{actor}</span>{' commented on your review for '}<span className="italic">«{gameName}»</span></>;
   }
   return 'New notification';
 };
@@ -201,7 +209,11 @@ const Navbar = ({ transparentMode = true }) => {
                                   notif={notif}
                                   onRead={() => {
                                     markOneRead(notif.id);
-                                    navigate(`/collections/${notif.entity_id}`);
+                                    const isCollection = notif.type.includes('COLLECTION');
+                                    const target = isCollection
+                                      ? `/collections/${notif.entity_id}`
+                                      : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId}`;
+                                    navigate(target);
                                     setNotifPanelOpen(false);
                                   }}
                                 />

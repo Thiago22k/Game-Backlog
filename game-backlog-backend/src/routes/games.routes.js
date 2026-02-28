@@ -13,6 +13,7 @@ router.get('/anticipated', gamesController.getMostAnticipated);
 router.get('/explore', gamesController.exploreGames);
 router.get('/genres', gamesController.getGenres);
 router.get('/platforms', gamesController.getPlatforms);
+router.get('/recommendations', authenticateToken, gamesController.getRecommendations);
 router.get('/user/:username', optionalAuth, gamesController.getUserGames);
 
 // Community stats (public)

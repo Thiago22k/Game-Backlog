@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink, Heart, Library, MessageSquare, XCircle, FolderPlus } from 'lucide-react';
+import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink, Heart, Library, MessageSquare, XCircle, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
+import { useGameLikes } from '../hooks/useGameLikes';
 import usePageTitle from '../hooks/usePageTitle';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
@@ -13,6 +14,9 @@ import StarRating from '../components/games/StarRating';
 import GameLikeButton from '../components/games/GameLikeButton';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 import AddToCollectionModal from '../components/collections/AddToCollectionModal';
+import ReviewsPanel from '../components/reviews/ReviewsPanel';
+import ReviewModal from '../components/reviews/ReviewModal';
+import reviewService from '../api/review.service';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const STATUSES = [
@@ -35,74 +39,7 @@ const InfoRow = ({ label, children }) => (
   </div>
 );
 
-/** Star widget — Lucide Star with half-star support */
-const InlineStarRating = ({ rating, onRate, interactive }) => {
-  const [hovered, setHovered] = useState(0);
-  const display = hovered || Number(rating) || 0;
 
-  const getColor = (value) => {
-    if (value <= 2) return '#ef4444';
-    if (value <= 3.5) return '#f97316';
-    return '#22c55e';
-  };
-  const accentColor = display > 0 ? getColor(display) : '#6b7280';
-
-  const getFill = (star) => {
-    if (display >= star) return 'full';
-    if (display >= star - 0.5) return 'half';
-    return 'empty';
-  };
-
-  const handleMouseMove = (e, star) => {
-    if (!interactive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    setHovered(e.clientX - rect.left < rect.width / 2 ? star - 0.5 : star);
-  };
-
-  const handleClick = (e, star) => {
-    if (!interactive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    onRate(e.clientX - rect.left < rect.width / 2 ? star - 0.5 : star);
-  };
-
-  return (
-    <div
-      className="flex items-center gap-2"
-      onMouseLeave={() => interactive && setHovered(0)}
-    >
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => {
-          const fill = getFill(star);
-          return (
-            <div
-              key={star}
-              className={`relative w-7 h-7 ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
-              onMouseMove={(e) => handleMouseMove(e, star)}
-              onClick={(e) => handleClick(e, star)}
-            >
-              {/* Base — gray */}
-              <Star size={28} className="absolute inset-0" style={{ color: '#374151', fill: '#374151' }} />
-              {/* Filled overlay */}
-              {fill !== 'empty' && (
-                <span
-                  className="absolute inset-0 overflow-hidden transition-all duration-100"
-                  style={{ clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none' }}
-                >
-                  <Star size={28} style={{ color: accentColor, fill: accentColor }} />
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {display > 0 ? (
-        <span className="text-sm text-gray-400">{display}/5</span>
-      ) : interactive ? (
-        <span className="text-sm text-gray-500">No rating yet</span>
-      ) : null}
-    </div>
-  );
-};
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 const GameDetails = () => {
@@ -118,8 +55,18 @@ const GameDetails = () => {
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [myReview, setMyReview] = useState(null);
 
   const [banner, setBanner] = useState(null);
+  const [activeTab, setActiveTab] = useState('stats');
+
+  const tabs = [
+    { id: 'stats', label: 'Stats', icon: LayoutDashboard },
+    { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+    { id: 'details', label: 'Details', icon: Info },
+    { id: 'similar', label: 'Similar', icon: Library },
+  ];
 
   usePageTitle(game?.name);
 
@@ -152,27 +99,30 @@ const GameDetails = () => {
   }, [slug]);
 
   // ── Fetch User Game ──────────────────────────────────────────────────────
+  const fetchUserGame = useCallback(async () => {
+    if (!isAuthenticated || !game?.id) {
+      setUserGame(null);
+      setMyReview(null);
+      return;
+    }
+    try {
+      const userRes = await getUserGames();
+      if (userRes.success) {
+        const found = userRes.data.find((g) => g.igdb_game_id === game.id);
+        setUserGame(found || null);
+      }
+
+      // También cargar la reseña del usuario
+      const reviewData = await reviewService.getMyReview(game.id);
+      setMyReview(reviewData || null);
+    } catch (err) {
+      console.error('Error loading user game or review:', err);
+    }
+  }, [game?.id, isAuthenticated, getUserGames]);
+
   useEffect(() => {
-    let isMounted = true;
-    const fetchUserGame = async () => {
-      if (!isAuthenticated || !game?.id) {
-        setUserGame(null);
-        return;
-      }
-      try {
-        const userRes = await getUserGames();
-        if (!isMounted) return;
-        if (userRes.success) {
-          const found = userRes.data.find((g) => g.igdb_game_id === game.id);
-          setUserGame(found || null);
-        }
-      } catch (err) {
-        console.error('Error loading user game:', err);
-      }
-    };
     fetchUserGame();
-    return () => { isMounted = false; };
-  }, [game?.id, isAuthenticated]);
+  }, [fetchUserGame]);
 
   // ── Fetch Community Stats ─────────────────────────────────────────────────
   const fetchStats = useCallback(async () => {
@@ -188,6 +138,55 @@ const GameDetails = () => {
   useEffect(() => {
     fetchStats();
   }, [fetchStats]);
+
+  // ── Derived values (Must be before early returns to follow Rules of Hooks) ────
+  const cover = useMemo(() => game ? getGameCover(game) : null, [game]);
+  const igdbScore = useMemo(() => game?.rating ? Math.round(game.rating) : null, [game]);
+  const developer = useMemo(() => game?.involved_companies
+    ?.filter((ic) => ic.developer)
+    .map((ic) => ic.company.name)
+    .join(', ') || null, [game]);
+  const publisher = useMemo(() => game?.involved_companies
+    ?.filter((ic) => ic.publisher)
+    .map((ic) => ic.company.name)
+    .join(', ') || null, [game]);
+  const screenshots = useMemo(() => game?.screenshots?.slice(0, 9) ?? [], [game]);
+  const similarGames = useMemo(() => game?.similar_games?.slice(0, 6) ?? [], [game]);
+  const summary = useMemo(() => game?.summary || game?.storyline, [game]);
+  // A game is "unreleased" if it has no release date yet, or its release date is in the future (within 12h grace period)
+  const isUnreleased = useMemo(() => {
+    if (!game?.first_release_date) return true;
+    const releaseThreshold = (game.first_release_date * 1000) + (12 * 60 * 60 * 1000);
+    return releaseThreshold > Date.now();
+  }, [game]);
+
+  // Derived category and parent game
+  const categoryName = useMemo(() => {
+    if (!game) return null;
+    const categories = {
+      0: 'Main Game',
+      1: 'DLC / Addon',
+      2: 'Expansion',
+      3: 'Bundle',
+      4: 'Standalone Expansion',
+      5: 'Mod',
+      6: 'Episode',
+      7: 'Season',
+      8: 'Remake',
+      9: 'Remaster',
+      10: 'Expanded Game',
+      11: 'Port',
+      12: 'Fork',
+      13: 'Pack',
+      14: 'Update'
+    };
+    return categories[game.game_type] || null;
+  }, [game]);
+
+  const parentGame = useMemo(() => {
+    // Determine the main game link, prioritizing version_parent over parent_game
+    return game?.version_parent || game?.parent_game || null;
+  }, [game]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleStatusSelect = useCallback(async (statusId) => {
@@ -250,6 +249,11 @@ const GameDetails = () => {
     }
   }, [isAuthenticated, userGame, game?.id, updateGame, fetchStats]);
 
+  const handleReviewUpdated = useCallback(() => {
+    fetchStats();
+    fetchUserGame();
+  }, [fetchStats, fetchUserGame]);
+
   const handleAddToCollectionClick = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -262,54 +266,17 @@ const GameDetails = () => {
     setIsCollectionModalOpen(true);
   }, [isAuthenticated]);
 
-  // ── Derived values (Must be before early returns to follow Rules of Hooks) ────
-  const cover = useMemo(() => game ? getGameCover(game) : null, [game]);
-  const igdbScore = useMemo(() => game?.rating ? Math.round(game.rating) : null, [game]);
-  const developer = useMemo(() => game?.involved_companies
-    ?.filter((ic) => ic.developer)
-    .map((ic) => ic.company.name)
-    .join(', ') || null, [game]);
-  const publisher = useMemo(() => game?.involved_companies
-    ?.filter((ic) => ic.publisher)
-    .map((ic) => ic.company.name)
-    .join(', ') || null, [game]);
-  const screenshots = useMemo(() => game?.screenshots?.slice(0, 9) ?? [], [game]);
-  const similarGames = useMemo(() => game?.similar_games?.slice(0, 6) ?? [], [game]);
-  const summary = useMemo(() => game?.summary || game?.storyline, [game]);
-  // A game is "unreleased" if it has no release date yet, or its release date is in the future (within 24h grace period)
-  const isUnreleased = useMemo(() => {
-    if (!game?.first_release_date) return true;
-    const releaseThreshold = (game.first_release_date * 1000) + (24 * 60 * 60 * 1000);
-    return releaseThreshold > Date.now();
-  }, [game]);
-
-  // Derived category and parent game
-  const categoryName = useMemo(() => {
-    if (!game) return null;
-    const categories = {
-      0: 'Main Game',
-      1: 'DLC / Addon',
-      2: 'Expansion',
-      3: 'Bundle',
-      4: 'Standalone Expansion',
-      5: 'Mod',
-      6: 'Episode',
-      7: 'Season',
-      8: 'Remake',
-      9: 'Remaster',
-      10: 'Expanded Game',
-      11: 'Port',
-      12: 'Fork',
-      13: 'Pack',
-      14: 'Update'
-    };
-    return categories[game.game_type] || null;
-  }, [game]);
-
-  const parentGame = useMemo(() => {
-    // Determine the main game link, prioritizing version_parent over parent_game
-    return game?.version_parent || game?.parent_game || null;
-  }, [game]);
+  const handleWriteReviewClick = useCallback(() => {
+    if (!isAuthenticated) {
+      toast.error('Sign in to share your review!');
+      return;
+    }
+    if (isUnreleased) {
+      toast.error("Seriously, have you played this game yet?");
+      return;
+    }
+    setIsReviewModalOpen(true);
+  }, [isAuthenticated, isUnreleased]);
 
   // ── Loading / error states (After all React hooks have been called) ───────────
   if (loading) {
@@ -385,32 +352,6 @@ const GameDetails = () => {
                 className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10"
                 onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
               />
-              <div className="absolute bottom-0 left-0 right-0 rounded-b-xl bg-primary-navy/90 border-t border-white/5 px-3 py-2 flex items-center justify-between">
-                <GameLikeButton
-                  igdbGameId={game.id}
-                  gameName={game.name}
-                  coverUrl={game.cover?.image_id}
-                  size="sm"
-                  showCount={true}
-                />
-
-                <button
-                  onClick={handleAddToCollectionClick}
-                  className="p-1.5 text-gray-400 hover:text-primary-yellow hover:bg-white/5 rounded-lg transition-colors group"
-                  title="Add to Collection"
-                >
-                  <FolderPlus size={18} className="group-active:scale-90 transition-transform" />
-                </button>
-
-                {igdbScore ? (
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-bold text-primary-yellow leading-none">{igdbScore}</span>
-                    <span className="text-[10px] text-gray-400 leading-none mt-0.5">IGDB</span>
-                  </div>
-                ) : (
-                  <div className="w-10" /> /* Spacer to keep folder in the middle if no score */
-                )}
-              </div>
             </div>
 
             {/* Title & meta */}
@@ -419,14 +360,17 @@ const GameDetails = () => {
                 <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
                   {game.name}
                 </h1>
-                {categoryName && categoryName !== 'Main Game' && (
+                {(categoryName && (categoryName !== 'Main Game' || parentGame)) && (
                   parentGame ? (
                     <Link
                       to={`/game/${parentGame.slug || parentGame.id}`}
                       className="px-2 py-0.5 bg-gray-800/80 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors text-sm rounded border border-gray-700 self-center mt-1 focus:outline-none"
-                      title={`A ${categoryName.toLowerCase()} of ${parentGame.name} (${parentGame.first_release_date ? new Date(parentGame.first_release_date * 1000).getFullYear() : 'Unknown'})`}
+                      title={categoryName === 'Main Game'
+                        ? `This is a version of ${parentGame.name}`
+                        : `A ${categoryName.toLowerCase()} of ${parentGame.name} (${parentGame.first_release_date ? new Date(parentGame.first_release_date * 1000).getFullYear() : 'Unknown'})`
+                      }
                     >
-                      {categoryName}
+                      {categoryName === 'Main Game' ? 'Edition' : categoryName}
                     </Link>
                   ) : (
                     <span className="px-2 py-0.5 bg-gray-800/80 text-gray-300 text-sm rounded border border-gray-700 self-center mt-1">
@@ -519,52 +463,181 @@ const GameDetails = () => {
           {/* ── LEFT COLUMN ───────────────────────────────────────────── */}
           <div className="lg:col-span-2 space-y-8">
 
-            {/* Community Stats */}
-            <GameStatsPanel stats={gameStats} />
-
-            {/* Screenshots */}
-            {screenshots.length > 0 && (
-              <div className="bg-primary-navy-dark rounded-2xl p-6">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">Screenshots</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {screenshots.map((s) => (
-                    <img
-                      key={s.id}
-                      src={formatIGDBImage(s.url, 't_screenshot_med')}
-                      alt="Screenshot"
-                      className="w-full h-36 object-cover rounded-lg hover:opacity-80 transition-opacity cursor-pointer"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Similar games */}
-            {similarGames.length > 0 && (
-              <div className="bg-primary-navy-dark rounded-2xl p-6">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-4">You Might Also Like</p>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-                  {similarGames.map((sg) => (
-                    <div
-                      key={sg.id}
-                      onClick={() => navigate(`/game/${sg.slug || sg.id}`)}
-                      className="cursor-pointer group"
+            {/* Tab Navigation */}
+            <div className="border-b border-gray-700">
+              <nav className="-mb-px flex space-x-6">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`
+                        flex items-center whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors
+                        ${isActive
+                          ? 'border-primary-yellow text-primary-yellow'
+                          : 'border-transparent text-gray-400 hover:text-white hover:border-gray-500'
+                        }
+                      `}
                     >
-                      <img
-                        src={getGameCover(sg)}
-                        alt={sg.name}
-                        className="w-full aspect-[3/4] object-cover rounded-lg group-hover:ring-2 group-hover:ring-primary-yellow transition-all"
-                        onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
-                      />
-                      <p className="mt-1.5 text-xs text-gray-400 truncate group-hover:text-white transition-colors">
-                        {sg.name}
-                      </p>
-                    </div>
-                  ))}
+                      <Icon className="mr-2" size={18} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Tab Content */}
+            <div className="min-h-[400px]">
+              {activeTab === 'stats' && (
+                <div className="animate-in fade-in duration-300">
+                  <GameStatsPanel
+                    stats={gameStats}
+                    game={game}
+                    myReview={myReview}
+                    onAddCollection={handleAddToCollectionClick}
+                    onStatsUpdate={fetchStats}
+                    onWriteReview={handleWriteReviewClick}
+                  />
                 </div>
-              </div>
-            )}
+              )}
+
+
+
+              {activeTab === 'gallery' && (
+                <div className="animate-in fade-in duration-300">
+                  {screenshots.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {screenshots.map((s) => (
+                        <div key={s.id} className="aspect-video overflow-hidden rounded-xl bg-primary-navy-dark border border-white/5">
+                          <img
+                            src={formatIGDBImage(s.url, 't_screenshot_med')}
+                            alt="Screenshot"
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-primary-navy-dark rounded-2xl p-12 text-center border border-dashed border-gray-700">
+                      <ImageIcon size={48} className="mx-auto text-gray-600 mb-4" />
+                      <p className="text-gray-400">No screenshots available for this game.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'details' && (
+                <div className="animate-in fade-in duration-300 space-y-6">
+                  <div className="bg-primary-navy-dark rounded-2xl p-8 border border-gray-700/50">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 bg-primary-yellow/10 rounded-lg">
+                        <Info size={20} className="text-primary-yellow" />
+                      </div>
+                      <h3 className="text-xl font-bold text-white">Game Details</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Left Column */}
+                      <div className="space-y-6">
+                        {game.game_modes?.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Game Modes</span>
+                            <div className="flex flex-wrap gap-2">
+                              {game.game_modes.map((m) => (
+                                <span key={m.id} className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-lg border border-gray-700">
+                                  {m.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {game.player_perspectives?.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Player Perspectives</span>
+                            <div className="flex flex-wrap gap-2">
+                              {game.player_perspectives.map((p) => (
+                                <span key={p.id} className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-lg border border-gray-700">
+                                  {p.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="space-y-6">
+                        {game.websites?.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">External Links</span>
+                            <div className="flex flex-col gap-3">
+                              {game.websites.map((w) => {
+                                // Category 1 is Official, we can list others too or filter
+                                const isOfficial = w.category === 1;
+                                return (
+                                  <a
+                                    key={w.id}
+                                    href={w.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-2 text-sm transition-colors ${isOfficial ? 'text-primary-yellow hover:underline' : 'text-gray-400 hover:text-white'}`}
+                                  >
+                                    <ExternalLink size={14} />
+                                    {isOfficial ? 'Official Website' : new URL(w.url).hostname.replace('www.', '')}
+                                  </a>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {!game.game_modes && !game.player_perspectives && !game.websites && (
+                          <p className="text-sm italic text-gray-500">More detailed information coming soon...</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'similar' && (
+                <div className="animate-in fade-in duration-300">
+                  {similarGames.length > 0 ? (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                      {similarGames.map((sg) => (
+                        <div
+                          key={sg.id}
+                          onClick={() => navigate(`/game/${sg.slug || sg.id}`)}
+                          className="cursor-pointer group"
+                        >
+                          <div className="aspect-[3/4] overflow-hidden rounded-xl ring-1 ring-white/10 group-hover:ring-primary-yellow transition-all duration-300">
+                            <img
+                              src={getGameCover(sg)}
+                              alt={sg.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
+                            />
+                          </div>
+                          <p className="mt-2 text-xs font-medium text-gray-400 group-hover:text-white truncate transition-colors">
+                            {sg.name}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="bg-primary-navy-dark rounded-2xl p-12 text-center border border-dashed border-gray-700">
+                      <Layers size={48} className="mx-auto text-gray-600 mb-4" />
+                      <p className="text-gray-400">No similar games found.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── RIGHT SIDEBAR ─────────────────────────────────────────── */}
@@ -634,11 +707,20 @@ const GameDetails = () => {
                         {userGame ? (
                           <div>
                             <p className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-2">My Rating</p>
-                            <InlineStarRating
-                              rating={userGame.rating || 0}
-                              onRate={handleRatingChange}
-                              interactive={true}
-                            />
+                            <div className="flex items-center gap-3">
+                              <StarRating
+                                rating={userGame.rating || 0}
+                                onRate={handleRatingChange}
+                                interactive={true}
+                                size={28}
+                                gap={4}
+                              />
+                              {userGame.rating > 0 && (
+                                <span className="text-[10px] font-black text-white bg-white/5 px-2 py-0.5 rounded">
+                                  {Number(userGame.rating).toFixed(1)}/5
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <p className="text-xs text-gray-500 text-center">Add to list to rate</p>
@@ -660,60 +742,46 @@ const GameDetails = () => {
               </div>
             </div>
 
-            {/* ── DETAILS — only non-duplicate info ─────────────────── */}
-            {!parentGame && (game.game_modes?.length > 0 || game.websites?.find((w) => w.category === 1)) && (
-              <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-5 space-y-4">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold">Details</p>
-
-                {parentGame && (
-                  <div className="flex flex-col gap-1 mt-0.5">
-                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Original Game</span>
-                    <Link to={`/game/${parentGame.slug || parentGame.id}`} className="text-sm font-medium text-primary-yellow hover:underline flex items-center gap-1 group w-max">
-                      <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                      {parentGame.name}
-                    </Link>
-                  </div>
-                )}
-
-                {game.game_modes?.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Game Modes</span>
-                    <div className="flex flex-wrap gap-1.5 mt-0.5">
-                      {game.game_modes.map((m) => (
-                        <span key={m.id} className="px-2 py-0.5 bg-gray-700 text-gray-300 text-xs rounded border border-gray-600">
-                          {m.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {game.websites?.find((w) => w.category === 1) && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Official Site</span>
-                    <a
-                      href={game.websites.find((w) => w.category === 1).url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-primary-yellow hover:underline text-sm"
-                    >
-                      <ExternalLink size={13} />
-                      Visit website
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
+        </div>
+
+        {/* ── REVIEWS SECTION (Moved to bottom) ─────────────────────────────── */}
+        <div className="mt-12 pt-10 border-t border-gray-800">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2.5 bg-primary-yellow/10 rounded-xl">
+              <MessageSquare size={24} className="text-primary-yellow" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black text-white uppercase tracking-tight">Community Reviews</h2>
+              <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">Player feedback & ratings</p>
+            </div>
+          </div>
+
+          <ReviewsPanel
+            game={game}
+            onReviewUpdated={handleReviewUpdated}
+            myReview={myReview}
+            onRequestEditReview={handleWriteReviewClick}
+          />
         </div>
       </div>
 
-      {/* Add to Collection Modal */}
       {isCollectionModalOpen && (
         <AddToCollectionModal
           isOpen={isCollectionModalOpen}
           onClose={() => setIsCollectionModalOpen(false)}
           game={game}
+        />
+      )}
+
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          game={game}
+          existingReview={myReview || (userGame ? { status: userGame.status, rating: userGame.rating } : null)}
+          onSaveSuccess={handleReviewUpdated}
         />
       )}
     </div>
@@ -763,7 +831,11 @@ const InlineSummary = ({ summary }) => {
 };
 
 // ─── Community Stats Panel (right sidebar) ──────────────────────────────────
-const GameStatsPanel = ({ stats }) => {
+const GameStatsPanel = ({ stats, game, myReview, onAddCollection, onStatsUpdate, onWriteReview }) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { liked, toggleLike, toggling } = useGameLikes(game?.id);
+
   if (stats === null) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-pulse">
@@ -774,16 +846,26 @@ const GameStatsPanel = ({ stats }) => {
     );
   }
 
-  const totalSaves = (stats.playing || 0) + (stats.completed || 0) + (stats.backlog || 0) + (stats.wishlist || 0) + (stats.dropped || 0);
-  const hasAny = totalSaves > 0 || (stats.likes || 0) > 0 || (stats.collectionsCount || 0) > 0;
-  if (!hasAny) return null;
+  const handleLikeClick = async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    await toggleLike(game.name, game.cover?.image_id);
+    if (onStatsUpdate) onStatsUpdate();
+  };
+
+  const totalSaves = (stats?.playing || 0) + (stats?.completed || 0) + (stats?.backlog || 0) + (stats?.wishlist || 0) + (stats?.dropped || 0);
+
+  const igdbScoreValue = game?.rating ? Math.round(game.rating) : null;
 
   // Rating histogram buckets (10 buckets from 0.5 to 5.0)
-  const ratingBuckets = stats.ratingDistribution || [];
+  const ratingBuckets = stats?.ratingDistribution || Array.from({ length: 10 }).fill(0);
   const maxBucket = ratingBuckets.length > 0 ? Math.max(...ratingBuckets, 1) : 1;
   // Determine which bucket matches the average rating to highlight it
   // Using Math.round to make it more stable and representative of the nearest 0.5 step
-  const activeBucketIndex = Math.max(0, Math.min(9, Math.round((stats.avgRating || 0) / 0.5) - 1));
+  const activeBucketIndex = Math.max(0, Math.min(9, Math.round((stats?.avgRating || 0) / 0.5) - 1));
 
   // Helper to format large numbers like "12.4K"
   const formatNumber = (num) => {
@@ -791,145 +873,180 @@ const GameStatsPanel = ({ stats }) => {
     return num.toString();
   };
 
+  // Star display helper
+  const renderStars = (rating) => {
+    const full = Math.floor(rating);
+    const half = rating % 1 >= 0.5;
+    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+  };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div className="space-y-6">
+      {/* ── ROW 1: MINI STAT CARDS (Engagement) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
+        {/* Likes Panel */}
+        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+          <span className="text-4xl font-black text-white">{formatNumber(stats.likes || 0)}</span>
+          <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">Likes</span>
 
-      {/* ── PANEL 1: AVERAGE RATING ── */}
-      <div className="bg-primary-navy-dark rounded-[24px] p-6 flex flex-col gap-4">
-        <h3 className="text-xs text-gray-400 font-semibold uppercase tracking-widest">Average Rating</h3>
+          <button
+            onClick={handleLikeClick}
+            disabled={toggling}
+            className={`mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border ${liked
+              ? 'bg-pink-500/10 border-pink-500/50 text-pink-500'
+              : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+              }`}
+          >
+            <Heart size={14} className={liked ? 'fill-current' : ''} />
+            {liked ? 'Liked' : 'Like'}
+          </button>
+        </div>
 
-        {stats.ratingsCount > 0 ? (
-          <>
-            <div className="flex items-baseline gap-2">
-              <span className="text-5xl font-bold text-white leading-none">{stats.avgRating?.toFixed(1) || '0.0'}</span>
-              <span className="text-sm text-gray-400 font-medium">/ from {stats.ratingsCount.toLocaleString()} votes</span>
-            </div>
+        {/* Collections Panel */}
+        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+          <span className="text-4xl font-black text-white">{formatNumber(stats.collectionsCount || 0)}</span>
+          <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">In Collections</span>
 
-            {/* Histogram */}
-            <div className="flex flex-col h-[85px] mt-auto">
-              {/* Bars container with fixed height */}
-              <div className="flex items-end justify-between h-[60px] gap-1 pt-4">
-                {(ratingBuckets.length > 0 ? ratingBuckets : Array.from({ length: 10 }).fill(0)).map((val, i) => {
-                  const hasData = val > 0;
+          <button
+            onClick={onAddCollection}
+            className="mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+          >
+            <FolderPlus size={14} />
+            Add to Collection
+          </button>
+        </div>
+
+        {/* Reviews Panel */}
+        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+          <span className="text-4xl font-black text-white">{formatNumber(stats.reviewsCount || 0)}</span>
+          <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">Reviews</span>
+
+          <button
+            onClick={onWriteReview}
+            className="mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+          >
+            {myReview ? (
+              <>
+                <Pencil size={14} />
+                Edit Review
+              </>
+            ) : (
+              <>
+                <Plus size={14} />
+                Write Review
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* ── COMMUNITY RATING (MIMICS RATING DISTRIBUTION) ── */}
+        <div className="bg-primary-navy-dark rounded-2xl p-6">
+          <div className="flex justify-between items-center mb-5">
+            <h4 className="text-xs font-black text-white uppercase tracking-wider">Community Rating</h4>
+            {igdbScoreValue && (
+              <div className="text-xs font-bold">
+                <span className="text-primary-yellow">{igdbScoreValue}</span>
+                <a
+                  href={game.url || `https://www.igdb.com/games/${game.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-500 ml-1 hover:text-white hover:underline transition-colors cursor-pointer relative z-10"
+                >
+                  on IGDB
+                </a>
+              </div>
+            )}
+          </div>
+
+          {stats.ratingsCount > 0 ? (
+            <div className="flex gap-6 items-center">
+              {/* Score summary */}
+              <div className="flex flex-col items-center shrink-0">
+                <span className="text-5xl font-black text-white leading-none">{stats.avgRating?.toFixed(1) || '0.0'}</span>
+                <span className="text-amber-400 text-xl tracking-widest my-2">{renderStars(stats.avgRating || 0)}</span>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{stats.ratingsCount.toLocaleString()} votes</span>
+              </div>
+
+              {/* Vertical bars */}
+              <div className="flex-1 grid grid-cols-10 gap-1 h-32 pt-2 items-end">
+                {[...ratingBuckets].map((val, i) => {
                   const ratingValue = (i + 1) * 0.5;
-                  const percentage = stats.ratingsCount > 0 ? Math.round((val / stats.ratingsCount) * 100) : 0;
+                  const percentage = stats.ratingsCount > 0 ? ((val / stats.ratingsCount) * 100).toFixed(1) : 0;
+                  const isMin = i === 0;
+                  const isMax = i === ratingBuckets.length - 1;
 
                   return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end relative group/bar">
-                      <div
-                        className={`w-full rounded-sm transition-all duration-300 ${hasData ? 'bg-amber-500 hover:bg-amber-400 hover:shadow-[0_0_12px_rgba(245,158,11,0.4)]' : 'bg-gray-800'}`}
-                        style={{ height: `${hasData ? Math.max((val / maxBucket) * 100, 8) : 4}%` }}
-                      />
-
-                      {/* Custom Tooltip (Estilo Mini) */}
-                      <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-1 group-hover/bar:translate-y-0 flex flex-col items-center">
-                        {/* Cuerpo del Tooltip */}
-                        <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-2.5 py-1 rounded-md whitespace-nowrap relative z-10">
-                          <span className="text-[11px] font-semibold text-white tracking-wide">
-                            {ratingValue.toFixed(1)} <span className="text-gray-500 mx-1">|</span> {val} {val === 1 ? 'vote' : 'votes'} <span className="text-amber-400 ml-0.5">({percentage}%)</span>
-                          </span>
+                    <div
+                      key={i}
+                      className="flex flex-col items-center gap-2 group h-full cursor-pointer relative"
+                    >
+                      <div className="flex-1 w-full bg-white/5 rounded-t-sm flex items-end relative">
+                        <div
+                          className="w-full bg-amber-400 rounded-t-sm transition-all duration-500 group-hover:bg-amber-300 group-hover:scale-x-110"
+                          style={{ height: `${(val / maxBucket) * 100}%` }}
+                        />
+                        {/* Custom Tooltip */}
+                        <div className="absolute -top-9 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-20 translate-y-1 group-hover:translate-y-0 flex flex-col items-center">
+                          <div className="bg-primary-navy-dark border border-white/10 shadow-2xl px-2.5 py-1 rounded-md whitespace-nowrap relative z-10">
+                            <span className="text-[11px] font-semibold text-white tracking-wide">
+                              {ratingValue.toFixed(1)} <span className="text-gray-500 mx-1">|</span> {val} {val === 1 ? 'vote' : 'votes'} <span className="text-amber-400 ml-0.5">({percentage}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-2.5 h-2.5 bg-white rotate-45 -mt-0.5 shadow-lg relative z-0" />
                         </div>
-                        {/* El Rombo (Diamante Completo) */}
-                        <div className="w-2.5 h-2.5 bg-white rotate-45 -mt-0.5 shadow-lg relative z-0" />
+                      </div>
+                      <div className="h-4 flex items-center justify-center">
+                        <span className="text-[10px] font-bold text-gray-500 transition-colors group-hover:text-gray-300">
+                          {isMin ? '0.5' : isMax ? '5' : ''}
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {/* Labels container: show 1, 2, 3, 4, 5 clearly */}
-              <div className="flex justify-between h-[20px] mt-2 relative px-0.5">
-                {Array.from({ length: 10 }).map((_, i) => {
-                  const isWhole = (i + 1) % 2 === 0; // 1, 2, 3, 4, 5
-                  const label = Math.floor((i + 1) * 0.5);
-                  return (
-                    <div key={i} className="flex-1 flex justify-center">
-                      {isWhole && (
-                        <span className="text-[10px] text-gray-500 font-bold leading-none">
-                          {label}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
             </div>
-          </>
-        ) : (
-          <div className="flex-grow flex flex-col items-center justify-center opacity-40 gap-3">
-            <Star size={40} className="text-gray-500" />
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-widest">No ratings yet</p>
-          </div>
-        )}
-      </div>
-
-      {/* ── PANEL 2: PLAY STATUS ── */}
-      <div className="bg-primary-navy-dark rounded-[24px] p-6 flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xs text-gray-400 font-semibold uppercase tracking-widest">Play Status</h3>
-          <div className="bg-gray-800 px-3 py-1 rounded-full text-xs font-bold text-white">
-            {totalSaves.toLocaleString()} Total
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-44 border-2 border-dashed border-white/5 rounded-xl">
+              <p className="text-gray-600 text-xs font-black italic uppercase tracking-widest">No ratings yet</p>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-3 mt-1">
-          {[
-            { label: 'Completed', count: stats.completed || 0, color: 'bg-emerald-500' },
-            { label: 'Playing', count: stats.playing || 0, color: 'bg-blue-500' },
-            { label: 'Backlog', count: stats.backlog || 0, color: 'bg-purple-500' },
-            { label: 'Wishlist', count: stats.wishlist || 0, color: 'bg-amber-500' },
-            { label: 'Dropped', count: stats.dropped || 0, color: 'bg-red-500' },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center justify-between text-sm font-medium">
-              <div className="flex items-center gap-3">
-                <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                <span className="text-white">{item.label}</span>
-              </div>
-              <span className="text-gray-400">{item.count.toLocaleString()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* ── PLAY STATUS (MIMICS LIBRARY PROGRESS) ── */}
+        <div className="bg-primary-navy-dark rounded-2xl p-6 flex flex-col justify-between">
+          <h4 className="text-base font-bold text-white mb-5 uppercase tracking-wider text-xs font-black">Play Status</h4>
 
-      {/* ── PANEL 3: ENGAGEMENT ── */}
-      <div className="bg-primary-navy-dark rounded-[24px] p-6 flex flex-col gap-4">
-        <h3 className="text-xs text-gray-400 font-semibold uppercase tracking-widest">Engagement</h3>
-
-        <div className="flex flex-col gap-3 flex-grow justify-center">
-          {/* Likes */}
-          <div className="flex items-center gap-4 bg-white/5 px-4 py-3 rounded-2xl">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500/15 text-red-500">
-              <Heart size={20} fill="currentColor" />
+          {/* Completed + Backlog highlights */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group">
+              <span className="text-3xl font-black text-green-400 leading-none">{stats.completed || 0}</span>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-white leading-tight">{formatNumber(stats.likes || 0)}</span>
-              <span className="text-xs text-gray-400 font-medium">Likes</span>
+            <div className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group">
+              <span className="text-3xl font-black text-indigo-400 leading-none">{stats.backlog || 0}</span>
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
             </div>
           </div>
 
-          {/* Reviews */}
-          <div className="flex items-center gap-4 bg-white/5 px-4 py-3 rounded-2xl">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500">
-              <MessageSquare size={20} fill="currentColor" />
+          {/* Secondary stats row */}
+          <div className="flex justify-between items-center bg-black/20 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+              <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0 group-hover:scale-125 transition-transform" />
+              Playing: <span className="text-white font-black">{stats.playing || 0}</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-white leading-tight">{formatNumber(stats.reviewsCount || 0)}</span>
-              <span className="text-xs text-gray-400 font-medium">Reviews</span>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+              <span className="w-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
+              Wishlist: <span className="text-white font-black">{stats.wishlist || 0}</span>
             </div>
-          </div>
-
-          {/* Collections */}
-          <div className="flex items-center gap-4 bg-white/5 px-4 py-3 rounded-2xl">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-purple-500/15 text-purple-500">
-              <Library size={20} fill="currentColor" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-white leading-tight">{formatNumber(stats.collectionsCount || 0)}</span>
-              <span className="text-xs text-gray-400 font-medium">In Collections</span>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+              <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
+              Dropped: <span className="text-white font-black">{stats.dropped || 0}</span>
             </div>
           </div>
         </div>
       </div>
-
     </div>
   );
 };

@@ -1,6 +1,58 @@
 import React from 'react';
+import { Star, StarHalf } from 'lucide-react';
 
-const RatingBadge = ({ rating, size = 'sm', className = '' }) => {
+const RatingBadge = ({ rating, size = 'sm', className = '', type = 'score' }) => {
+    // If it's a star rating, render a row of stars
+    if (type === 'stars') {
+        const display = Number(rating) || 0;
+
+        const getColor = (value) => {
+            if (value <= 2) return '#ef4444'; // Red
+            if (value <= 3.5) return '#f97316'; // Orange
+            return '#22c55e'; // Green
+        };
+        const accentColor = display > 0 ? getColor(display) : '#6b7280';
+
+        const getFill = (star) => {
+            if (display >= star) return 'full';
+            if (display >= star - 0.5) return 'half';
+            return 'empty';
+        };
+
+        const sizeClasses = {
+            sm: 16, // Smaller than the 28px default
+            md: 20,
+            lg: 28
+        };
+        const iconSize = sizeClasses[size];
+
+        return (
+            <div className={`flex items-center gap-1 ${className}`}>
+                <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                        const fill = getFill(star);
+                        return (
+                            <div key={star} className="relative" style={{ width: iconSize, height: iconSize }}>
+                                {/* Base — gray */}
+                                <Star size={iconSize} className="absolute inset-0" style={{ color: '#374151', fill: '#374151' }} />
+                                {/* Filled overlay */}
+                                {fill !== 'empty' && (
+                                    <span
+                                        className="absolute inset-0 overflow-hidden"
+                                        style={{ clipPath: fill === 'half' ? 'inset(0 50% 0 0)' : 'none' }}
+                                    >
+                                        <Star size={iconSize} style={{ color: accentColor, fill: accentColor }} />
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
+    // Default: IGDB Score Badge
     const getSVGColorClass = (score) => {
         if (!score) return 'fill-gray-600 text-white';
         if (score >= 80) return 'fill-green-500 text-primary-navy-dark';
@@ -12,15 +64,15 @@ const RatingBadge = ({ rating, size = 'sm', className = '' }) => {
     const colorClass = getSVGColorClass(rating);
     const displayRating = rating ? Math.round(rating) : 'N/A';
 
-    // Dimensions based on size
-    const sizeClasses = {
+    // Dimensions based on size for the badge
+    const badgeSizeClasses = {
         sm: 'w-10 h-14 text-sm',
         md: 'w-12 h-16 text-base',
         lg: 'w-16 h-24 text-xl'
     };
 
     return (
-        <div className={`relative flex items-center justify-center ${sizeClasses[size]} font-bold drop-shadow-md ${className}`}>
+        <div className={`relative flex items-center justify-center ${badgeSizeClasses[size]} font-bold drop-shadow-md ${className}`}>
             <svg
                 className={`absolute inset-0 w-full h-full ${colorClass.split(' ')[0]} drop-shadow-sm`}
                 version="1.0" xmlns="http://www.w3.org/2000/svg"

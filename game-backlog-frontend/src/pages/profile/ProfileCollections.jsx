@@ -4,6 +4,7 @@ import { Plus, Library, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCollections } from '../../hooks/useCollections';
 import CollectionCard from '../../components/collections/CollectionCard';
+import CustomSelect from '../../components/common/CustomSelect';
 
 const ProfileCollections = () => {
     const { username } = useParams();
@@ -120,17 +121,17 @@ const ProfileCollections = () => {
                     <div className="flex flex-wrap gap-4 items-center">
                         <div className="flex items-center gap-2">
                             <span className="text-gray-400 text-sm">Sort by:</span>
-                            <select
+                            <CustomSelect
+                                options={[
+                                    { value: 'recent', label: 'Recently Created' },
+                                    { value: 'likes', label: 'Most Liked' },
+                                    { value: 'comments', label: 'Most Commented' },
+                                    { value: 'games-high', label: 'Games (High-Low)' },
+                                    { value: 'games-low', label: 'Games (Low-High)' },
+                                ]}
                                 value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="bg-primary-navy-dark text-white rounded-lg px-4 py-2 text-sm focus:outline-none border border-gray-700 focus:border-primary-yellow transition-colors cursor-pointer"
-                            >
-                                <option value="recent">Recently Created</option>
-                                <option value="likes">Most Liked</option>
-                                <option value="comments">Most Commented</option>
-                                <option value="games-high">Games (High-Low)</option>
-                                <option value="games-low">Games (Low-High)</option>
-                            </select>
+                                onChange={setSortBy}
+                            />
                         </div>
                     </div>
                 </div>

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Library, ChevronDown, ArrowLeft } from 'lucide-react';
 import CollectionCard from '../../components/collections/CollectionCard';
+import CustomSelect from '../../components/common/CustomSelect';
 import axios from '../../api/axios';
 import usePageTitle from '../../hooks/usePageTitle';
 
@@ -89,20 +90,20 @@ const ProfileLikedCollections = () => {
                 <div className="mb-8 flex flex-wrap gap-4 items-center">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm">Sort by:</span>
-                        <select
+                        <CustomSelect
+                            options={[
+                                { value: 'recent', label: 'Recently Liked' },
+                                { value: 'likes', label: 'Most Liked' },
+                                { value: 'comments', label: 'Most Commented' },
+                                { value: 'games-high', label: 'Games (High-Low)' },
+                                { value: 'games-low', label: 'Games (Low-High)' },
+                            ]}
                             value={sortBy}
-                            onChange={(e) => {
-                                setSortBy(e.target.value);
+                            onChange={(val) => {
+                                setSortBy(val);
                                 setVisibleCount(PAGE_SIZE);
                             }}
-                            className="bg-primary-navy-dark text-white rounded-lg px-4 py-2 text-sm focus:outline-none border border-gray-700 focus:border-primary-yellow transition-colors cursor-pointer"
-                        >
-                            <option value="recent">Recently Liked</option>
-                            <option value="likes">Most Liked</option>
-                            <option value="comments">Most Commented</option>
-                            <option value="games-high">Games (High-Low)</option>
-                            <option value="games-low">Games (Low-High)</option>
-                        </select>
+                        />
                     </div>
                 </div>
             )}

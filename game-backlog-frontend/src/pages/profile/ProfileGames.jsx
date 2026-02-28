@@ -6,10 +6,12 @@ import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../../components/games/AnticipatedGameCardSkeleton';
+import CustomSelect from '../../components/common/CustomSelect';
 
 const ProfileGames = () => {
     const navigate = useNavigate();
     const gridRef = useRef(null);
+    const wishlistGridRef = useRef(null);
     // Obtener el hook desde el Outlet
     const { games, loading, updateGame, deleteGame, addGame, isOwner } = useOutletContext();
 
@@ -19,6 +21,7 @@ const ProfileGames = () => {
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
     const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || 'all');
     const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'recent');
+    const [currentWishlistPage, setCurrentWishlistPage] = useState(1);
 
     const RATING_OPTIONS = [
         { value: 'all', label: 'All' },
@@ -42,6 +45,7 @@ const ProfileGames = () => {
     // Resetear a página 1 cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
+        setCurrentWishlistPage(1);
 
         // Update URL params
         const newParams = new URLSearchParams(searchParams);
@@ -134,11 +138,17 @@ const ProfileGames = () => {
     }, [myGames, searchQuery, statusFilter, ratingFilter, sortBy]);
 
     const totalPages = Math.ceil(processedMyGames.length / itemsPerPage);
+    const wishlistTotalPages = Math.ceil(filteredWishlist.length / itemsPerPage);
 
     const paginatedGames = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         return processedMyGames.slice(startIndex, startIndex + itemsPerPage);
     }, [processedMyGames, currentPage]);
+
+    const paginatedWishlist = useMemo(() => {
+        const startIndex = (currentWishlistPage - 1) * itemsPerPage;
+        return filteredWishlist.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredWishlist, currentWishlistPage]);
 
     const handlePageChange = (newPage) => {
         if (newPage >= 1 && newPage <= totalPages) {
@@ -146,14 +156,25 @@ const ProfileGames = () => {
         }
     };
 
+    const handleWishlistPageChange = (newPage) => {
+        if (newPage >= 1 && newPage <= wishlistTotalPages) {
+            setCurrentWishlistPage(newPage);
+        }
+    };
+
     // Scroll to the top of the grid section when the page changes
     useEffect(() => {
-        // We only scroll if the page is changed and we are not in the first mount
-        // Or simply always scroll when currentPage changes if we want accuracy
         if (gridRef.current) {
             gridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, [currentPage]);
+
+    // Scroll to the top of the wishlist section when the wishlist page changes
+    useEffect(() => {
+        if (wishlistGridRef.current) {
+            wishlistGridRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [currentWishlistPage]);
 
     const handleStatusChange = useCallback(async (gameId, newStatus) => {
         const game = games.find(g => g.igdb_game_id === gameId);
@@ -278,7 +299,7 @@ const ProfileGames = () => {
             ) : (
                 <>
                     {filteredWishlist.length > 0 && (
-                        <section className="mb-12">
+                        <section ref={wishlistGridRef} className="mb-12 scroll-mt-24">
                             <div className="flex items-center mb-6">
                                 <Clock className="text-primary-yellow mr-2" size={24} />
                                 <h3 className="text-2xl font-bold text-white">
@@ -290,7 +311,7 @@ const ProfileGames = () => {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
-                                {filteredWishlist.map((game) => (
+                                {paginatedWishlist.map((game) => (
                                     <AnticipatedGameCard
                                         key={game.id}
                                         game={mapGameForCard(game)}
@@ -300,6 +321,63 @@ const ProfileGames = () => {
                                     />
                                 ))}
                             </div>
+
+                            {/* Pagination Controls for Wishlist */}
+                            {wishlistTotalPages > 1 && (
+                                <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+                                    <button
+                                        onClick={() => handleWishlistPageChange(currentWishlistPage - 1)}
+                                        disabled={currentWishlistPage === 1}
+                                        className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentWishlistPage === 1
+                                            ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                            : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                            }`}
+                                    >
+                                        Prev
+                                    </button>
+
+                                    <div className="flex items-center gap-1 mx-2">
+                                        {Array.from({ length: wishlistTotalPages }).map((_, idx) => {
+                                            const pageNum = idx + 1;
+                                            if (
+                                                pageNum === 1 ||
+                                                pageNum === wishlistTotalPages ||
+                                                (pageNum >= currentWishlistPage - 1 && pageNum <= currentWishlistPage + 1)
+                                            ) {
+                                                return (
+                                                    <button
+                                                        key={`wish-pg-${pageNum}`}
+                                                        onClick={() => handleWishlistPageChange(pageNum)}
+                                                        className={`w-10 h-10 rounded-full font-medium transition-all flex items-center justify-center text-sm border ${currentWishlistPage === pageNum
+                                                            ? 'bg-primary-yellow text-primary-navy-dark border-primary-yellow scale-110 shadow-sm'
+                                                            : 'bg-gray-800/50 border-gray-700/50 text-gray-300 hover:bg-gray-700 hover:text-white backdrop-blur-sm'
+                                                            }`}
+                                                    >
+                                                        {pageNum}
+                                                    </button>
+                                                );
+                                            } else if (
+                                                pageNum === currentWishlistPage - 2 ||
+                                                pageNum === currentWishlistPage + 2
+                                            ) {
+                                                return <span key={`wish-dots-${pageNum}`} className="text-gray-500 px-1">...</span>;
+                                            }
+                                            return null;
+                                        })}
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleWishlistPageChange(currentWishlistPage + 1)}
+                                        disabled={currentWishlistPage === wishlistTotalPages}
+                                        className={`px-4 py-2 rounded-full font-medium transition-colors border text-sm flex items-center ${currentWishlistPage === wishlistTotalPages
+                                            ? 'bg-gray-800/20 text-gray-600 border-gray-800/30 cursor-not-allowed'
+                                            : 'bg-gray-800/50 border-gray-700/50 text-white hover:bg-gray-700 backdrop-blur-sm'
+                                            }`}
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            )}
                         </section>
                     )}
 
@@ -344,30 +422,26 @@ const ProfileGames = () => {
                                 <div className="flex flex-wrap gap-4">
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-400 text-sm">Rating:</span>
-                                        <select
+                                        <CustomSelect
+                                            options={RATING_OPTIONS}
                                             value={ratingFilter}
-                                            onChange={(e) => setRatingFilter(e.target.value)}
-                                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
-                                        >
-                                            {RATING_OPTIONS.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                            onChange={setRatingFilter}
+                                        />
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-gray-400 text-sm">Sort by:</span>
-                                        <select
+                                        <CustomSelect
+                                            options={[
+                                                { value: 'recent', label: 'Recently Added' },
+                                                { value: 'name', label: 'Name (A-Z)' },
+                                                { value: 'rating-high', label: 'Rating (High-Low)' },
+                                                { value: 'rating-low', label: 'Rating (Low-High)' },
+                                                { value: 'release-new', label: 'Release Date (Newest)' },
+                                                { value: 'release-old', label: 'Release Date (Oldest)' },
+                                            ]}
                                             value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
-                                        >
-                                            <option value="recent">Recently Added</option>
-                                            <option value="name">Name (A-Z)</option>
-                                            <option value="rating-high">Rating (High-Low)</option>
-                                            <option value="rating-low">Rating (Low-High)</option>
-                                            <option value="release-new">Release Date (Newest)</option>
-                                            <option value="release-old">Release Date (Oldest)</option>
-                                        </select>
+                                            onChange={setSortBy}
+                                        />
                                     </div>
                                 </div>
                             </div>

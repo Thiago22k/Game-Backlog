@@ -12,6 +12,7 @@ import usePageTitle from '../../hooks/usePageTitle';
 import NotFound from '../../pages/NotFound';
 import { ASSETS_BASE_URL } from '../../utils/constants';
 import ConfirmModal from '../common/ConfirmModal';
+import ReportModal from '../common/ReportModal';
 import { getAvatarUrl } from '../../utils/avatar';
 
 const CollectionDetails = () => {
@@ -336,7 +337,8 @@ const CollectionDetails = () => {
         });
     };
 
-    if (loading && !collection) {
+    // Loading state while fetching initial data
+    if (!collection && !isPrivateError && !notFound) {
         return (
             <div className="min-h-screen bg-primary-navy">
                 <Navbar />
@@ -375,9 +377,9 @@ const CollectionDetails = () => {
         );
     }
 
-    if (notFound) return <NotFound />;
 
-    if (!collection) return null;
+
+    if (notFound) return <NotFound />;
 
     const isOwner = user && user.id === collection.user_id;
 
@@ -522,7 +524,7 @@ const CollectionDetails = () => {
                                     const mappedGame = { ...cg.game_details, id: cg.igdb_game_id, status: cg.game_details.status, user_rating: cg.game_details.user_rating };
 
                                     return (
-                                        <div key={cg.id} className="relative group h-full">
+                                        <div key={cg.igdb_game_id} className="relative group h-full">
                                             {isUnreleased ? (
                                                 <AnticipatedGameCard
                                                     game={mappedGame}
@@ -724,95 +726,35 @@ const CollectionDetails = () => {
 
             </main>
 
-            {/* Report Modal */}
-            {isReportModalOpen && (
-                <div className="fixed inset-0 z-[300] bg-black bg-opacity-70 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-primary-navy border border-gray-700/50 rounded-xl max-w-lg w-full p-6 relative shadow-2xl">
-                        <button
-                            onClick={() => {
-                                setIsReportModalOpen(false);
-                                setReportReason('');
-                                setReportDetails('');
-                                setReportItemId(null);
-                            }}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-                        >
-                            <X size={20} />
-                        </button>
-
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="p-2 bg-red-500/10 rounded-lg">
-                                <Flag size={20} className="text-red-400" />
-                            </div>
-                            <h3 className="text-xl font-bold text-white">
-                                {reportType === 'collection' ? 'Report Collection' : 'Report Comment'}
-                            </h3>
-                        </div>
-
-                        <form onSubmit={handleSubmitReport} className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Reason</label>
-                                <select
-                                    value={reportReason}
-                                    onChange={(e) => setReportReason(e.target.value)}
-                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-yellow transition-colors appearance-none cursor-pointer"
-                                    required
-                                >
-                                    <option value="" disabled>Select a reason...</option>
-                                    {reportType === 'collection' ? (
-                                        <>
-                                            <option value="inappropriate_content">Inappropriate Title/Description</option>
-                                            <option value="spam">Spam</option>
-                                            <option value="offensive">Offensive Content</option>
-                                            <option value="other">Other</option>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <option value="harassment">Harassment</option>
-                                            <option value="hate_speech">Hate Speech</option>
-                                            <option value="spam">Spam</option>
-                                            <option value="inappropriate_language">Inappropriate Language</option>
-                                            <option value="other">Other</option>
-                                        </>
-                                    )}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-2">Additional Details (Optional)</label>
-                                <textarea
-                                    value={reportDetails}
-                                    onChange={(e) => setReportDetails(e.target.value)}
-                                    placeholder="Provide any extra context..."
-                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary-yellow transition-colors min-h-[120px] resize-none"
-                                />
-                            </div>
-
-                            <div className="pt-2 flex gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsReportModalOpen(false);
-                                        setReportReason('');
-                                        setReportDetails('');
-                                        setReportItemId(null);
-                                    }}
-                                    className="flex-1 py-3 px-4 bg-gray-800/50 hover:bg-gray-700 text-white rounded-lg font-semibold transition-colors border border-gray-700/50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSubmittingReport || !reportReason}
-                                    className="flex-[2] py-3 px-4 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50"
-                                >
-                                    {isSubmittingReport ? 'Sending Report...' : 'Submit Report'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <ReportModal
+                isOpen={isReportModalOpen}
+                type={reportType}
+                title={reportType === 'collection' ? 'Report Collection' : 'Report Comment'}
+                options={reportType === 'collection' ? [
+                    { value: 'inappropriate_content', label: 'Inappropriate Title/Description' },
+                    { value: 'spam', label: 'Spam' },
+                    { value: 'offensive', label: 'Offensive Content' },
+                    { value: 'other', label: 'Other' }
+                ] : [
+                    { value: 'harassment', label: 'Harassment' },
+                    { value: 'hate_speech', label: 'Hate Speech' },
+                    { value: 'spam', label: 'Spam' },
+                    { value: 'inappropriate_language', label: 'Inappropriate Language' },
+                    { value: 'other', label: 'Other' }
+                ]}
+                isSubmitting={isSubmittingReport}
+                onClose={() => {
+                    setIsReportModalOpen(false);
+                    setReportItemId(null);
+                }}
+                onSubmit={({ reason, details }) => {
+                    // Update state variables to match expectation of handleSubmitReport simulation
+                    setReportReason(reason);
+                    setReportDetails(details);
+                    // Trigger the actual submission
+                    handleSubmitReport({ preventDefault: () => { } });
+                }}
+            />
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}

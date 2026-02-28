@@ -2,6 +2,7 @@ const Game = require('../models/game.model');
 const igdbService = require('../services/igdb.service');
 const User = require('../models/user.model');
 const Activity = require('../models/activity.model');
+const recommendationService = require('../services/recommendation.service');
 const { isValidRating } = require('../utils/validation');
 
 // Buscar juegos en IGDB
@@ -434,6 +435,23 @@ const getGameStats = async (req, res) => {
   }
 };
 
+// Obtener recomendaciones personalizadas
+const getRecommendations = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const limit = parseInt(req.query.limit) || 10;
+    const games = await recommendationService.getRecommendations(userId, limit);
+
+    res.json({
+      total: games.length,
+      games
+    });
+  } catch (error) {
+    console.error('Error en getRecommendations:', error);
+    res.status(500).json({ error: 'Error al obtener recomendaciones' });
+  }
+};
+
 module.exports = {
   searchGames,
   getGameDetails,
@@ -448,4 +466,5 @@ module.exports = {
   getGenres,
   getPlatforms,
   getGameStats,
+  getRecommendations, // ← Nuevo
 };

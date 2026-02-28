@@ -117,11 +117,13 @@ const Game = {
     `;
     const likesQuery = 'SELECT COUNT(*) FROM game_likes WHERE igdb_game_id = $1';
     const collsQuery = 'SELECT COUNT(DISTINCT collection_id) FROM collection_games WHERE igdb_game_id = $1';
+    const reviewsQuery = 'SELECT COUNT(*) FROM reviews WHERE igdb_game_id = $1';
 
-    const [statsRes, likesRes, collsRes] = await Promise.all([
+    const [statsRes, likesRes, collsRes, reviewsRes] = await Promise.all([
       pool.query(statsQuery, [igdbGameId]),
       pool.query(likesQuery, [igdbGameId]),
       pool.query(collsQuery, [igdbGameId]),
+      pool.query(reviewsQuery, [igdbGameId]),
     ]);
 
     const s = statsRes.rows[0];
@@ -135,7 +137,7 @@ const Game = {
       ratingsCount: parseInt(s.ratings_count, 10),
       avgRating: s.avg_rating ? parseFloat(s.avg_rating) : 0,
       collectionsCount: parseInt(collsRes.rows[0].count, 10),
-      reviewsCount: 0, // Placeholder
+      reviewsCount: parseInt(reviewsRes.rows[0].count, 10),
       ratingDistribution: [
         parseInt(s.r05, 10),
         parseInt(s.r10, 10),

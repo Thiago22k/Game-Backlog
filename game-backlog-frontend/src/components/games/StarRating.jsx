@@ -5,7 +5,7 @@ import { Star } from 'lucide-react';
  * Half-star rating component using Lucide's Star icon.
  * Supports values: 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5
  */
-const StarRating = ({ rating, onRate, interactive = true }) => {
+const StarRating = ({ rating, onRate, interactive = true, size = 20, gap = 2 }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
   const displayRating = hoverRating || rating || 0;
@@ -46,7 +46,8 @@ const StarRating = ({ rating, onRate, interactive = true }) => {
 
   return (
     <div
-      className="flex items-center gap-0.5"
+      className="flex items-center"
+      style={{ gap: `${gap}px` }}
       onMouseLeave={() => interactive && setHoverRating(0)}
     >
       {[1, 2, 3, 4, 5].map((star) => {
@@ -55,16 +56,16 @@ const StarRating = ({ rating, onRate, interactive = true }) => {
         return (
           <div
             key={star}
-            className={`relative w-5 h-5 ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+            className={`relative ${interactive ? 'cursor-pointer' : 'cursor-default'}`}
+            style={{ width: `${size}px`, height: `${size}px` }}
             onMouseMove={(e) => handleMouseMove(e, star)}
             onClick={(e) => handleClick(e, star)}
           >
             {/* Base star — always gray */}
             <Star
-              size={20}
+              size={size}
               className="absolute inset-0 transition-transform duration-100"
-              style={{ color: '#374151' }}
-              fill="#374151"
+              style={{ color: '#374151', fill: '#374151' }}
             />
 
             {/* Filled star — clipped based on fill state */}
@@ -76,9 +77,8 @@ const StarRating = ({ rating, onRate, interactive = true }) => {
                 }}
               >
                 <Star
-                  size={20}
-                  style={{ color: accentColor }}
-                  fill={accentColor}
+                  size={size}
+                  style={{ color: accentColor, fill: accentColor }}
                   className={interactive ? 'hover:scale-110 transition-transform duration-100' : ''}
                 />
               </span>

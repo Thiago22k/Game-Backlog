@@ -275,14 +275,14 @@ const CollectionForm = () => {
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-white font-medium">{game.name}</span>
-                                                        {(game.game_type === 0 || game.game_type === undefined) ? (
+                                                        {((game.game_type === 0 || game.game_type === undefined) && (game.version_parent || game.parent_game)) ? (
                                                             <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
-                                                                Main Game
+                                                                Edition
                                                             </span>
                                                         ) : (
-                                                            CATEGORIES[game.game_type] && (
+                                                            CATEGORIES[game.game_type || 0] && (
                                                                 <span className="px-1.5 py-0.5 bg-gray-800/80 text-gray-400 text-[10px] uppercase tracking-wider font-bold rounded border border-gray-700 leading-none">
-                                                                    {CATEGORIES[game.game_type]}
+                                                                    {CATEGORIES[game.game_type || 0]}
                                                                 </span>
                                                             )
                                                         )}

@@ -27,18 +27,23 @@ const ProfileStats = () => {
     const { games, collections, loading, isOwner } = useOutletContext();
     const { username } = useParams();
     const [likesCount, setLikesCount] = useState(0);
+    const [reviewsCount, setReviewsCount] = useState(0);
 
     useEffect(() => {
         if (!username) return;
-        const fetchLikes = async () => {
+        const fetchLikesAndReviews = async () => {
             try {
-                const res = await axios.get(`/games/likes/by-username/${username}`);
-                setLikesCount(res.data.games?.length || 0);
+                const [likesRes, reviewsRes] = await Promise.all([
+                    axios.get(`/games/likes/by-username/${username}`),
+                    axios.get(`/reviews/user/${username}/count`)
+                ]);
+                setLikesCount(likesRes.data.games?.length || 0);
+                setReviewsCount(reviewsRes.data.count || 0);
             } catch (err) {
-                console.error('Error fetching likes:', err);
+                console.error('Error fetching stats:', err);
             }
         };
-        fetchLikes();
+        fetchLikesAndReviews();
     }, [username]);
 
     // Latest Completed Game
@@ -124,7 +129,7 @@ const ProfileStats = () => {
 
                 <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200">
                     <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5">Reviews</span>
-                    <span className="text-4xl font-black text-white">—</span>
+                    <span className="text-4xl font-black text-white">{reviewsCount}</span>
                 </div>
 
                 {/* ── ROW 2: Library Progress (span 2) ── */}

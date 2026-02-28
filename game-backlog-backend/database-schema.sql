@@ -106,3 +106,51 @@ CREATE INDEX idx_igdb_cache_updated_at ON igdb_cache(updated_at);
 COMMENT ON TABLE igdb_cache IS 'Cache local de datos de juegos obtenidos de IGDB';
 COMMENT ON COLUMN igdb_cache.igdb_id IS 'ID original del juego en IGDB';
 COMMENT ON COLUMN igdb_cache.data IS 'Objeto JSON completo con la respuesta de IGDB';
+
+-- Tabla de reseñas
+CREATE TABLE reviews (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    igdb_game_id INTEGER NOT NULL,
+    rating NUMERIC(2,1) CHECK (rating >= 0.5 AND rating <= 5 AND rating * 2 = FLOOR(rating * 2)),
+    status VARCHAR(20) NOT NULL,
+    sub_status VARCHAR(50),
+    platform VARCHAR(100),
+    contains_spoiler BOOLEAN DEFAULT false,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_review UNIQUE(user_id, igdb_game_id)
+);
+
+-- Tabla de likes en las reseñas
+CREATE TABLE review_likes (
+    id SERIAL PRIMARY KEY,
+    review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_review_like UNIQUE(review_id, user_id)
+);
+
+-- Respuestas a las reseñas
+CREATE TABLE review_comments (
+    id SERIAL PRIMARY KEY,
+    review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reportes de reseñas
+CREATE TABLE review_reports (
+    id SERIAL PRIMARY KEY,
+    review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Índices para reseñas
+CREATE INDEX idx_reviews_game_id ON reviews(igdb_game_id);
+CREATE INDEX idx_reviews_user_id ON reviews(user_id);

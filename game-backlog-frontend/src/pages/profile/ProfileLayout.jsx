@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useNavigate, useParams, useLocation, Link } from 'react-router-dom';
 import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart, Flag } from 'lucide-react';
+import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
@@ -572,21 +573,20 @@ const ProfileLayout = () => {
                         <form onSubmit={handleSubmitReport} className="space-y-5">
                             <div>
                                 <label className="block text-sm font-medium text-gray-400 mb-2">Reason</label>
-                                <select
+                                <CustomSelect
+                                    options={[
+                                        { value: 'inappropriate_avatar', label: 'Inappropriate Avatar' },
+                                        { value: 'inappropriate_banner', label: 'Inappropriate Banner' },
+                                        { value: 'inappropriate_bio', label: 'Inappropriate Bio' },
+                                        { value: 'harassment', label: 'Harassment or Hate Speech' },
+                                        { value: 'impersonation', label: 'Impersonation' },
+                                        { value: 'spam', label: 'Spam' },
+                                        { value: 'other', label: 'Other' },
+                                    ]}
                                     value={reportReason}
-                                    onChange={(e) => setReportReason(e.target.value)}
-                                    className="w-full bg-primary-navy-dark border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary-yellow transition-colors"
-                                    required
-                                >
-                                    <option value="" disabled>Select a reason...</option>
-                                    <option value="inappropriate_avatar">Inappropriate Avatar</option>
-                                    <option value="inappropriate_banner">Inappropriate Banner</option>
-                                    <option value="inappropriate_bio">Inappropriate Bio</option>
-                                    <option value="harassment">Harassment or Hate Speech</option>
-                                    <option value="impersonation">Impersonation</option>
-                                    <option value="spam">Spam</option>
-                                    <option value="other">Other</option>
-                                </select>
+                                    onChange={setReportReason}
+                                    className="w-full"
+                                />
                             </div>
 
                             <div>

@@ -12,6 +12,7 @@ import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
 import usePageTitle from '../hooks/usePageTitle';
+import CustomSelect from '../components/common/CustomSelect';
 
 const TOP_PLATFORMS = [6, 167, 48, 169, 49, 130];
 
@@ -431,32 +432,36 @@ const Explore = () => {
               {/* Sort */}
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Sort by</label>
-                <select
+                <CustomSelect
+                  options={[
+                    { value: 'relevance', label: 'Relevance' },
+                    { value: 'popular', label: 'Popular' },
+                    { value: 'highest_rated', label: 'Highest Rated' },
+                    { value: 'recent', label: 'Recent' },
+                  ]}
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 focus:outline-none"
-                >
-                  <option value="relevance">Relevance</option>
-                  <option value="popular">Popular</option>
-                  <option value="highest_rated">Highest Rated</option>
-                  <option value="recent">Recent</option>
-                </select>
+                  onChange={setSortBy}
+                  containerClassName="w-full"
+                  className="w-full bg-primary-navy rounded-lg"
+                />
               </div>
 
               {/* Time Range */}
               <div>
                 <label className="block text-sm text-gray-400 mb-2">Time Range</label>
-                <select
+                <CustomSelect
+                  options={[
+                    { value: 'all', label: 'All Time' },
+                    { value: 'last_month', label: 'Last Month' },
+                    { value: 'this_year', label: 'This Year' },
+                    { value: 'last_year', label: 'Last Year' },
+                    { value: 'last_5_years', label: 'Last 5 Years' },
+                  ]}
                   value={timeRange}
-                  onChange={(e) => setTimeRange(e.target.value)}
-                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 focus:outline-none"
-                >
-                  <option value="all">All Time</option>
-                  <option value="last_month">Last Month</option>
-                  <option value="this_year">This Year</option>
-                  <option value="last_year">Last Year</option>
-                  <option value="last_5_years">Last 5 Years</option>
-                </select>
+                  onChange={setTimeRange}
+                  containerClassName="w-full"
+                  className="w-full bg-primary-navy rounded-lg"
+                />
               </div>
 
               {/* Genres Dropdown */}

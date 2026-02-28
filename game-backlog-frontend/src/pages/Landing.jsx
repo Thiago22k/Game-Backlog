@@ -9,6 +9,8 @@ import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
+import CompactGameCard from '../components/games/CompactGameCard';
+import ReviewPreviewCard from '../components/reviews/ReviewPreviewCard';
 import { useGames } from '../hooks/useGames';
 import usePageTitle from '../hooks/usePageTitle';
 import toast from 'react-hot-toast';
@@ -31,6 +33,8 @@ const Landing = () => {
   const [popularGames, setPopularGames] = useState([]);
   const [bestOfYearGames, setBestOfYearGames] = useState([]);
   const [anticipatedGames, setAnticipatedGames] = useState([]);
+  const [recommendedGames, setRecommendedGames] = useState([]);
+  const [recentReviews, setRecentReviews] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Seleccionar el juego destacado (el más cercano a lanzarse de los esperados)
@@ -142,12 +146,14 @@ const Landing = () => {
   useEffect(() => {
     const fetchGames = async () => {
       try {
-        // Cargar juegos del usuario (si autenticado) y los tres feeds en paralelo
-        const [userResult, popularRes, bestOfYearRes, anticipatedRes] = await Promise.all([
+        // Cargar juegos del usuario (si autenticado) y los feeds en paralelo
+        const [userResult, popularRes, bestOfYearRes, anticipatedRes, recommendedRes, recentReviewsRes] = await Promise.all([
           isAuthenticated ? getUserGames() : Promise.resolve({ success: false, data: [] }),
           axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=relevance&timeRange=last_month&limit=8`),
           axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&timeRange=last_year&limit=8`),
           axios.get(`${ENDPOINTS.GAMES.ANTICIPATED}?limit=8`),
+          isAuthenticated ? axios.get(`${ENDPOINTS.GAMES.RECOMMENDATIONS}?limit=6`) : axios.get(`${ENDPOINTS.GAMES.EXPLORE}?sort=popular&limit=6`),
+          axios.get('/reviews/recent?limit=4')
         ]);
 
         const userGamesData = userResult.success ? userResult.data : [];
@@ -168,6 +174,8 @@ const Landing = () => {
         setPopularGames(mergeUserData(popularRes.data.games));
         setBestOfYearGames(mergeUserData(bestOfYearRes.data.games));
         setAnticipatedGames(mergeUserData(anticipatedRes.data.games));
+        setRecommendedGames(mergeUserData(recommendedRes.data.games || recommendedRes.data));
+        setRecentReviews(recentReviewsRes.data || []);
       } catch (error) {
         console.error('Error loading games:', error);
       } finally {
@@ -320,6 +328,63 @@ const Landing = () => {
                     onRatingChange={handleRatingChange}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* Split Layout: Recommendations & Recent Reviews */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+              {/* Recommendations Column */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold flex items-center text-white">
+                    <Star className="text-primary-yellow inline-block mr-2" size={24} />
+                    {isAuthenticated ? 'Recommended for You' : 'Recommended Games'}
+                  </h2>
+                  <Link
+                    to="/explore"
+                    className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
+                  >
+                    Explore More
+                  </Link>
+                </div>
+                {recommendedGames.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {recommendedGames.map((game) => (
+                      <CompactGameCard
+                        key={`rec-${game.id}`}
+                        game={game}
+                        interactive={isAuthenticated}
+                        onStatusChange={handleStatusChange}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-primary-navy-dark rounded-xl p-8 text-center h-[380px] flex flex-col justify-center">
+                    <p className="text-gray-400 italic">No recommendations available yet.</p>
+                    {isAuthenticated && <p className="text-sm text-gray-500 mt-2">Add more games to your list to get personalized suggestions.</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Reviews Column */}
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold flex items-center text-white">
+                    <ClipboardList className="text-primary-yellow inline-block mr-2" size={24} />
+                    Community Reviews
+                  </h2>
+                </div>
+                {recentReviews.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {recentReviews.map((review) => (
+                      <ReviewPreviewCard key={review.id} review={review} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-primary-navy-dark rounded-xl p-8 text-center h-[380px] flex flex-col justify-center">
+                    <p className="text-gray-400 italic">No recent reviews found.</p>
+                  </div>
+                )}
               </div>
             </div>
 

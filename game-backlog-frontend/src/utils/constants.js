@@ -18,6 +18,7 @@ export const ENDPOINTS = {
     EXPLORE: '/games/explore',
     GENRES: '/games/genres',
     PLATFORMS: '/games/platforms',
+    RECOMMENDATIONS: '/games/recommendations', // ← Nuevo
     GAME_STATS: (id) => `/games/stats/${id}`,
   },
   SETTINGS: {
@@ -28,9 +29,49 @@ export const ENDPOINTS = {
     UPDATE_PROFILE: '/settings/update-profile',
     DELETE_ACCOUNT: '/settings/delete-account',
   },
+  REVIEWS: {
+    POPULAR: '/reviews/popular',
+    RECENT: '/reviews/recent',
+    BY_GAME: (id) => `/reviews/game/${id}`,
+    MY_REVIEW: (id) => `/reviews/game/${id}/me`,
+    SAVE: (id) => `/reviews/game/${id}`,
+    DELETE: (id) => `/reviews/game/${id}`,
+    TOGGLE_LIKE: (id) => `/reviews/${id}/like`,
+    ADD_COMMENT: (id) => `/reviews/${id}/comments`,
+    GET_COMMENTS: (id) => `/reviews/${id}/comments`,
+    DELETE_COMMENT: (reviewId, commentId) => `/reviews/${reviewId}/comments/${commentId}`,
+    REPORT: (id) => `/reviews/${id}/report`,
+  }
 };
 
 // Keys para localStorage
 export const STORAGE_KEYS = {
   TOKEN: 'token',
+};
+
+// Subestados de reseñas
+export const REVIEW_SUB_STATUSES = {
+  completed: [
+    { value: 'platinum', label: 'Platinum' },
+    { value: 'main_story', label: 'Main Story' },
+    { value: 'replayed', label: 'Replayed' },
+    { value: 'one_and_done', label: 'One and Done' },
+  ],
+  playing: [
+    { value: 'active', label: 'Active' },
+    { value: 'paused', label: 'Paused' },
+    { value: 'sporadic', label: 'Sporadic Player' },
+    { value: 'stuck', label: 'Stuck' },
+  ],
+  backlog: [
+    { value: 'next_to_play', label: 'Next to Play' },
+    { value: 'low_priority', label: 'Low Priority' },
+    { value: 'waiting_for_friends', label: 'Waiting for Friends' },
+  ],
+  dropped: [
+    { value: 'boring', label: 'Boring' },
+    { value: 'too_hard', label: 'Too Hard' },
+    { value: 'unplayable', label: 'Unplayable / Buggy' },
+    { value: 'false_expectations', label: 'False Expectations' },
+  ]
 };

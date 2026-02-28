@@ -80,7 +80,7 @@ const searchGames = async (query, limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type;
+        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type, version_parent, parent_game;
         search "${query}";
         limit ${limit};
       `,
@@ -116,10 +116,14 @@ const getGameById = async (slugOrId) => {
     // También verificamos si tiene campos esenciales (como summary). 
     // Si le faltan, forzamos un refresh aunque el TTL sea válido (para arreglar cache "envenenado").
     if (cachedGame && isCacheValid(cachedGame.updated_at, cachedGame.data.first_release_date)) {
-      const hasEssentialData = cachedGame.data && (cachedGame.data.summary || cachedGame.data.storyline);
+      const hasEssentialData = cachedGame.data &&
+        (cachedGame.data.summary || cachedGame.data.storyline) &&
+        (!cachedGame.data.similar_games ||
+          (cachedGame.data.similar_games.length === 0) ||
+          (cachedGame.data.similar_games[0].name)); // Verificar que tengan al menos el nombre
 
       if (hasEssentialData) {
-        console.log(`📦 Cache Hit: ${slugOrId}`);
+        console.log(`📦 Cache Hit²: ${slugOrId}`);
         return cachedGame.data;
       }
       console.log(`🌐 Cache Incomplete (Repairing): ${slugOrId}`);
@@ -207,7 +211,7 @@ const getPopularGames = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, rating, first_release_date, total_rating_count;
+        fields name, slug, cover.url, cover.image_id, rating, first_release_date, total_rating_count, game_type, version_parent, parent_game;
         where 
           first_release_date > ${threeYearsAgo} 
           & first_release_date < ${nowWithGrace}
@@ -252,7 +256,7 @@ const getRecentGames = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, rating, first_release_date;
+        fields name, slug, cover.url, cover.image_id, rating, first_release_date, game_type, version_parent, parent_game;
         where 
           first_release_date > ${threeMonthsAgo} 
           & first_release_date <= ${nowWithGrace}
@@ -294,7 +298,7 @@ const getMostAnticipated = async (limit = 10) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes;
+        fields name, slug, cover.url, cover.image_id, genres.name, artworks.url, screenshots.url, rating, first_release_date, hypes, game_type, version_parent, parent_game;
         where 
           first_release_date > ${nowWithGrace}
           & first_release_date < ${oneYearFromNow}
@@ -409,7 +413,7 @@ const exploreGames = async (filters = {}) => {
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-    fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url, game_type;
+    fields name, slug, cover.url, cover.image_id, rating, first_release_date, genres.name, platforms.name, aggregated_rating, artworks.url, screenshots.url, game_type, version_parent, parent_game;
     where ${whereClause};
     ${sortClause};
     limit ${limit};
@@ -530,10 +534,12 @@ const getGamesByIds = async (gameIds) => {
       'https://api.igdb.com/v4/games',
       `
         fields name, slug, cover.url, cover.image_id, summary, storyline, first_release_date, 
-               rating, rating_count, genres.name, platforms.name, platforms.slug, 
+               rating, rating_count, genres.id, genres.name, platforms.name, platforms.slug, 
                artworks.url, artworks.image_id, screenshots.url, 
                involved_companies.company.name, involved_companies.developer, involved_companies.publisher, 
-               game_type;
+               game_type, 
+               similar_games.id, similar_games.name, similar_games.slug, 
+               similar_games.cover.url, similar_games.cover.image_id, similar_games.rating;
         where id = (${missingIds.join(',')});
         limit 500;
       `,
@@ -568,6 +574,73 @@ const getGamesByIds = async (gameIds) => {
   }
 };
 
+// Obtener candidatos para recomendaciones (datos básicos)
+const getRecommendationsCandidates = async (options = {}) => {
+  try {
+    const { genreIds = [], gameIds = [], limit = 10 } = options;
+    const token = await getAccessToken();
+
+    let whereClause = 'cover != null';
+    if (genreIds.length > 0) {
+      whereClause += ` & genres = (${genreIds.join(',')}) & rating > 70 & rating_count > 10`;
+    } else if (gameIds.length > 0) {
+      whereClause += ` & id = (${gameIds.join(',')})`;
+    } else {
+      return [];
+    }
+
+    const response = await axios.post(
+      'https://api.igdb.com/v4/games',
+      `
+        fields name, slug, cover.url, cover.image_id, rating, total_rating_count, first_release_date, genres.name;
+        where ${whereClause};
+        sort total_rating_count desc;
+        limit ${limit};
+      `,
+      {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error obteniendo candidatos de recomendación:', error.message);
+    return [];
+  }
+};
+
+// Obtener datos básicos de un juego (nombre y cover) de forma rápida
+const getBasicGameById = async (igdbId) => {
+  try {
+    const cached = await IgdbCache.getById(igdbId);
+    if (cached) return cached.data;
+
+    const token = await getAccessToken();
+    const response = await axios.post(
+      'https://api.igdb.com/v4/games',
+      `fields name, slug, cover.image_id; where id = ${igdbId};`,
+      {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+        },
+      }
+    );
+
+    const gameData = response.data[0];
+    if (gameData) {
+      await IgdbCache.upsert(gameData.id, gameData.slug, gameData.name, gameData);
+    }
+    return gameData;
+  } catch (error) {
+    console.error('❌ Error in getBasicGameById:', error.message);
+    return null;
+  }
+};
+
 module.exports = {
   getGamesByIds,
   searchGames,
@@ -578,4 +651,6 @@ module.exports = {
   exploreGames,     // ← Nuevo
   getGenres,        // ← Nuevo
   getPlatforms,     // ← Nuevo
+  getRecommendationsCandidates, // ← Nuevo
+  getBasicGameById,  // ← Nuevo
 };

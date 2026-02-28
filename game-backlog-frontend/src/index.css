@@ -5,6 +5,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+    body {
+        @apply bg-primary-navy text-white;
+    }
+}
+
 /* Custom Scrollbar for sleek dark mode aesthetics */
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;

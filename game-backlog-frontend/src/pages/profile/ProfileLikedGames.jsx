@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
-import { Gamepad2, ChevronDown, ArrowLeft, Save } from 'lucide-react';
+import { Gamepad2, ChevronDown, ArrowLeft } from 'lucide-react';
+import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import usePageTitle from '../../hooks/usePageTitle';
@@ -119,18 +120,18 @@ const ProfileLikedGames = () => {
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                         <span className="text-gray-400 text-sm">Sort by:</span>
-                        <select
+                        <CustomSelect
+                            options={[
+                                { value: 'recent', label: 'Recently Liked' },
+                                { value: 'name', label: 'Name (A-Z)' },
+                                { value: 'rating-high', label: 'Rating (High-Low)' },
+                                { value: 'rating-low', label: 'Rating (Low-High)' },
+                                { value: 'release-new', label: 'Release Date (Newest)' },
+                                { value: 'release-old', label: 'Release Date (Oldest)' },
+                            ]}
                             value={sortBy}
-                            onChange={(e) => { setSortBy(e.target.value); setVisibleCount(PAGE_SIZE); }}
-                            className="bg-primary-navy-dark text-white rounded-lg px-3 py-2 text-sm focus:outline-none"
-                        >
-                            <option value="recent">Recently Liked</option>
-                            <option value="name">Name (A-Z)</option>
-                            <option value="rating-high">Rating (High-Low)</option>
-                            <option value="rating-low">Rating (Low-High)</option>
-                            <option value="release-new">Release Date (Newest)</option>
-                            <option value="release-old">Release Date (Oldest)</option>
-                        </select>
+                            onChange={(val) => { setSortBy(val); setVisibleCount(PAGE_SIZE); }}
+                        />
                     </div>
                     <Link
                         to={`/profile/${username}/likes`}
