@@ -194,7 +194,13 @@ const Register = () => {
 
                 {/* Footer Links */}
                 <div className="mt-8 space-y-3 text-center">
-                  <Link to="/" className="block text-gray-400 hover:text-white text-sm transition-all">
+                  <div className="md:hidden">
+                    <span className="text-gray-400 text-sm">Already have an account? </span>
+                    <Link to="/login" className="text-primary-yellow hover:text-white text-sm transition-all font-semibold">
+                      Log In
+                    </Link>
+                  </div>
+                  <Link to="/" className="block text-gray-400 hover:text-white text-sm transition-all mt-4">
                     ← Back to home
                   </Link>
                 </div>

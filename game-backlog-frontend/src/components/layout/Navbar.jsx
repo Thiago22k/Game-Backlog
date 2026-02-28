@@ -199,7 +199,7 @@ const Navbar = ({ transparentMode = true }) => {
                           </div>
 
                           {/* List */}
-                          <div className="overflow-y-auto flex-1">
+                          <div className="overflow-y-auto flex-1 border-b border-gray-700 custom-scrollbar">
                             {notifications.length === 0 ? (
                               <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
                             ) : (
@@ -220,6 +220,15 @@ const Navbar = ({ transparentMode = true }) => {
                               ))
                             )}
                           </div>
+
+                          {/* Footer Link */}
+                          <Link
+                            to="/notifications"
+                            className="block text-center py-2.5 text-sm text-primary-yellow hover:bg-white/5 transition-colors rounded-b-xl"
+                            onClick={() => setNotifPanelOpen(false)}
+                          >
+                            View all notifications
+                          </Link>
                         </div>
                       )}
                     </div>
@@ -286,11 +295,18 @@ const Navbar = ({ transparentMode = true }) => {
             <div className="lg:hidden bg-primary-navy border-t border-gray-700 px-6 py-4 rounded-b-[2.5rem]">
               <div className="flex flex-col space-y-3">
                 <Link
+                  to="/explore"
+                  className="text-white text-sm font-medium"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Explore
+                </Link>
+                <Link
                   to="/collections"
                   className="text-white text-sm font-medium"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Explore Collections
+                  Collections
                 </Link>
 
                 {/* Search button mobile - OCULTO en páginas de auth */}

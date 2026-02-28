@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
     ME: '/auth/me',
   },
   GAMES: {
@@ -44,10 +45,7 @@ export const ENDPOINTS = {
   }
 };
 
-// Keys para localStorage
-export const STORAGE_KEYS = {
-  TOKEN: 'token',
-};
+
 
 // Subestados de reseñas
 export const REVIEW_SUB_STATUSES = {

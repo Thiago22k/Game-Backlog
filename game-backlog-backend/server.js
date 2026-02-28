@@ -13,13 +13,18 @@ const pool = require('./src/config/database');
 const requestLogger = require('./src/middlewares/requestLogger');
 const errorHandler = require('./src/middlewares/errorHandler');
 const { generalLimiter, authLimiter } = require('./src/middlewares/rateLimiter');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares globales
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 app.use(requestLogger); // Log de todas las peticiones
 
 // Servir archivos estáticos (como el avatar)

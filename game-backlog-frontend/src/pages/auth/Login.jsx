@@ -170,10 +170,16 @@ const Login = () => {
 
                 {/* Footer Links */}
                 <div className="mt-8 space-y-3 text-center">
+                  <div className="md:hidden">
+                    <span className="text-gray-400 text-sm">Don't have an account? </span>
+                    <Link to="/register" className="text-primary-yellow hover:text-white text-sm transition-all font-semibold">
+                      Sign Up
+                    </Link>
+                  </div>
                   <Link to="/forgot-password" className="block text-primary-yellow hover:text-white text-sm transition-all">
                     Forgot your password?
                   </Link>
-                  <Link to="/" className="block text-gray-400 hover:text-white text-sm transition-all">
+                  <Link to="/" className="block text-gray-400 hover:text-white text-sm transition-all mt-4">
                     ← Back to home
                   </Link>
                 </div>

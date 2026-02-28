@@ -1,14 +1,22 @@
 const Notification = require('../models/notification.model');
 
-// GET /api/notifications — recent 30 + unread count
+// GET /api/notifications
 const getNotifications = async (req, res) => {
     try {
         const userId = req.user.userId;
-        const [notifications, unreadCount] = await Promise.all([
-            Notification.getRecentForUser(userId),
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 30;
+        const offset = (page - 1) * limit;
+
+        const [notifications, unreadCount, totalCount] = await Promise.all([
+            Notification.getRecentForUser(userId, limit, offset),
             Notification.countUnread(userId),
+            Notification.countTotal(userId),
         ]);
-        res.json({ notifications, unreadCount });
+
+        const hasMore = offset + notifications.length < totalCount;
+
+        res.json({ notifications, unreadCount, hasMore, totalCount });
     } catch (error) {
         console.error('Error en getNotifications:', error);
         res.status(500).json({ error: 'Error al obtener notificaciones' });

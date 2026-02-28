@@ -340,12 +340,6 @@ const Landing = () => {
                     <Star className="text-primary-yellow inline-block mr-2" size={24} />
                     {isAuthenticated ? 'Recommended for You' : 'Recommended Games'}
                   </h2>
-                  <Link
-                    to="/explore"
-                    className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
-                  >
-                    Explore More
-                  </Link>
                 </div>
                 {recommendedGames.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

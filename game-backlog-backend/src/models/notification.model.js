@@ -36,8 +36,8 @@ const Notification = {
         return result.rows[0];
     },
 
-    // Get recent notifications for a user (last 30), enriched with actor info
-    async getRecentForUser(userId) {
+    // Get recent notifications for a user, enriched with actor info
+    async getRecentForUser(userId, limit = 30, offset = 0) {
         const query = `
             SELECT n.*,
                    u.username   AS actor_username,
@@ -47,10 +47,19 @@ const Notification = {
             JOIN users u ON n.actor_id = u.id
             WHERE n.recipient_id = $1
             ORDER BY n.created_at DESC
-            LIMIT 30
+            LIMIT $2 OFFSET $3
         `;
-        const result = await pool.query(query, [userId]);
+        const result = await pool.query(query, [userId, limit, offset]);
         return result.rows;
+    },
+
+    // Count total notifications for a user (for pagination)
+    async countTotal(userId) {
+        const result = await pool.query(
+            'SELECT COUNT(*) FROM notifications WHERE recipient_id = $1',
+            [userId]
+        );
+        return parseInt(result.rows[0].count, 10);
     },
 
     // Count unread notifications

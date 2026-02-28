@@ -93,6 +93,14 @@ const register = async (req, res) => {
     // Generar token
     const token = generateToken(newUser.id, newUser.username);
 
+    // Configurar cookie HttpOnly
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+    });
+
     // Responder
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
@@ -104,8 +112,7 @@ const register = async (req, res) => {
         avatar_url: newUser.avatar_url,
         avatar_static_url: newUser.avatar_static_url,
         banner_url: newUser.banner_url,
-      },
-      token,
+      }
     });
 
   } catch (error) {
@@ -158,6 +165,14 @@ const login = async (req, res) => {
     // Generar token
     const token = generateToken(user.id, user.username);
 
+    // Configurar cookie HttpOnly
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+    });
+
     // Responder (sin enviar el password)
     res.json({
       message: 'Login exitoso',
@@ -173,8 +188,7 @@ const login = async (req, res) => {
         social_twitch: user.social_twitch,
         social_discord: user.social_discord,
         social_steam: user.social_steam,
-      },
-      token,
+      }
     });
 
   } catch (error) {
@@ -303,9 +317,21 @@ const resetPassword = async (req, res) => {
   }
 }
 
+// Logout de usuario
+const logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+
+  res.json({ message: 'Sesión cerrada exitosamente' });
+};
+
 module.exports = {
   register,
   login,
+  logout,
   getProfile,
   forgotPassword,
   resetPassword,

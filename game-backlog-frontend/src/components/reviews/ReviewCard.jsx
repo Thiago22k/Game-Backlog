@@ -212,10 +212,10 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
         : review.content.substring(0, CONTENT_LIMIT) + '...';
 
     return (
-        <div id={`review-${review.id}`} className="bg-primary-navy-dark border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
+        <div id={`review-${review.id}`} className="bg-primary-navy-dark rounded-xl p-5">
             {/* Header: User Info & Meta */}
-            <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-4 gap-3 sm:gap-0">
+                <div className="flex items-start sm:items-center gap-3 w-full sm:w-auto">
                     <Link to={`/profile/${review.username}`} className="block flex-shrink-0 transition-transform hover:scale-105 active:scale-95">
                         <img
                             src={getAvatarUrl({
@@ -228,7 +228,7 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
                         />
                     </Link>
                     <div>
-                        <p className="font-semibold text-white flex items-center flex-wrap gap-y-1">
+                        <div className="font-semibold text-white flex items-center flex-wrap gap-y-1">
                             <Link to={`/profile/${review.username}`} className="hover:text-primary-yellow transition-colors hover:underline decoration-primary-yellow/30 underline-offset-4">
                                 {review.username}
                             </Link>
@@ -239,24 +239,24 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
                                     {review.game_name}
                                 </Link>
                             )}
-                        </p>
+                        </div>
                         <p className="text-xs text-gray-500">{formatDate(review.updated_at || review.created_at)}</p>
                     </div>
                 </div>
 
                 {/* Status Badges */}
-                <div className="flex flex-col items-end gap-2 text-right">
-                    <div className="flex gap-2 justify-end">
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary-yellow/20 text-primary-yellow border border-primary-yellow">
+                <div className="flex flex-col sm:items-end gap-2 sm:text-right w-full sm:w-auto mt-2 sm:mt-0">
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-primary-yellow/20 text-primary-yellow border border-primary-yellow whitespace-nowrap">
                             {getStatusLabel(review.status)}
                         </span>
                         {review.sub_status && (
-                            <span className="px-2 py-0.5 text-xs rounded-full bg-gray-800 text-gray-300 border border-gray-700">
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-gray-800 text-gray-300 border border-gray-700 whitespace-nowrap">
                                 {getSubStatusLabel(review.status, review.sub_status)}
                             </span>
                         )}
                         {review.platform && (
-                            <span className="px-2 py-0.5 text-xs rounded-full bg-blue-900/30 text-blue-400 border border-blue-900/50">
+                            <span className="px-2 py-0.5 text-xs rounded-full bg-blue-900/30 text-blue-400 border border-blue-900/50 whitespace-nowrap">
                                 {review.platform}
                             </span>
                         )}
