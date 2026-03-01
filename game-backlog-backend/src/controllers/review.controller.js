@@ -78,7 +78,7 @@ const reviewController = {
             const review = await Review.getUserReviewForGame(userId, gameId);
 
             if (!review) {
-                return res.status(404).json({ error: 'Review not found' });
+                return res.status(200).json(null);
             }
 
             res.json(review);

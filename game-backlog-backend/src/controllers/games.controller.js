@@ -39,8 +39,8 @@ const getGameDetails = async (req, res) => {
     const game = await igdbService.getGameById(id);
 
     if (!game) {
-      return res.status(404).json({
-        error: 'Juego no encontrado'
+      return res.status(200).json({
+        game: null
       });
     }
 

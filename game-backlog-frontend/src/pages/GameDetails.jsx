@@ -307,12 +307,12 @@ const GameDetails = () => {
             style={{
               backgroundImage: `
         linear-gradient(
-          to bottom,
-          rgba(18, 24, 35, 0.6) 0%,
-          rgba(18, 24, 35, 0.75) 50%,
-          rgba(18, 24, 35, 0.9) 70%,
-          rgba(18, 24, 35, 1) 85%
-        ),
+  to bottom,
+  rgba(15, 17, 26, 0.6) 0%,
+  rgba(15, 17, 26, 0.75) 50%,
+  rgba(15, 17, 26, 0.9) 70%,
+  rgba(15, 17, 26, 1) 85%
+),
         url(${banner})
       `,
             }}
@@ -837,7 +837,7 @@ const GameStatsPanel = ({ stats, game, myReview, onAddCollection, onStatsUpdate,
   const handleLikeClick = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      navigate('/login');
+      toast.error('Log in to like games');
       return;
     }
     await toggleLike(game.name, game.cover?.image_id);

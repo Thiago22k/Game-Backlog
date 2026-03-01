@@ -7,6 +7,9 @@ const authenticateToken = (req, res, next) => {
     const token = req.cookies?.token;
 
     if (!token) {
+      if (req.originalUrl === '/api/auth/me') {
+        return res.status(200).json({ user: null });
+      }
       return res.status(401).json({
         error: 'Token no proporcionado'
       });

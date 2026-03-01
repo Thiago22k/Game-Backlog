@@ -231,11 +231,11 @@ const Settings = () => {
               <div className="flex justify-between mb-2">
                 <label className="text-sm font-medium text-gray-400">Bio</label>
                 <span className={`text-xs ${profileData.bio.length > 190 ? 'text-red-400' : 'text-gray-500'}`}>
-                  {profileData.bio.length}/200
+                  {profileData.bio.length}/40
                 </span>
               </div>
               <textarea
-                maxLength={200}
+                maxLength={40}
                 rows={3}
                 value={profileData.bio}
                 onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}

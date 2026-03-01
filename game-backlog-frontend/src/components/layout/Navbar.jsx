@@ -102,8 +102,8 @@ const Navbar = ({ transparentMode = true }) => {
   // Detectar si estamos en páginas de autenticación
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
     setProfileDropdownOpen(false);
   };
