@@ -77,11 +77,16 @@ const searchGames = async (query, limit = 10) => {
   try {
     const token = await getAccessToken();
 
+    // Mitigate APIScript injection by escaping double quotes and limiting length
+    const sanitizedQuery = typeof query === 'string'
+      ? query.replace(/"/g, '\\"').substring(0, 100)
+      : '';
+
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
         fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type, version_parent, parent_game;
-        search "${query}";
+        search "${sanitizedQuery}";
         limit ${limit};
       `,
       {

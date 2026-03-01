@@ -18,6 +18,12 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Security headers
+const helmet = require('helmet');
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" } // Required to allow images to load on the frontend
+}));
+
 // Middlewares globales
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',

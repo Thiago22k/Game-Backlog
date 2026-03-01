@@ -9,6 +9,7 @@ const requiredEnvVars = [
   'JWT_EXPIRES_IN',
   'IGDB_CLIENT_ID',
   'IGDB_CLIENT_SECRET',
+  'FRONTEND_URL',
 ];
 
 const validateEnv = () => {

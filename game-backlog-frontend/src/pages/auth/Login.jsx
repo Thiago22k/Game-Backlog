@@ -47,8 +47,11 @@ const Login = () => {
 
     if (result.success) {
       const redirect = localStorage.getItem('redirectAfterLogin');
-      if (redirect) {
-        localStorage.removeItem('redirectAfterLogin');
+      localStorage.removeItem('redirectAfterLogin');
+
+      const isRelative = (url) => url && url.startsWith('/') && !url.startsWith('//');
+
+      if (isRelative(redirect)) {
         navigate(redirect);
       } else {
         navigate('/');

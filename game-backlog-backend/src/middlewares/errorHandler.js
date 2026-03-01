@@ -4,10 +4,6 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log del error en consola (en desarrollo)
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error completo:', err);
-  }
 
   // Error de PostgreSQL - violación de constraint único
   if (err.code === '23505') {
@@ -33,10 +29,14 @@ const errorHandler = (err, req, res, next) => {
     error = new AppError(message, 401);
   }
 
-  // Respuesta al cliente
+  // Log del error en consola (siempre visible para depuración del admin localmente y en logs en producción)
+  if (process.env.NODE_ENV !== 'test') {
+    console.error('Error completo:', err);
+  }
+
+  // Respuesta al cliente (jamás incluir stack trace por seguridad)
   res.status(error.statusCode || 500).json({
     error: error.message || 'Error interno del servidor',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };
 

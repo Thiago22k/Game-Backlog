@@ -9,3 +9,14 @@ export const sanitizeSocialHandle = (handle) => {
     // Solo permitir alfanuméricos, guiones, guiones bajos y puntos
     return handle.replace(/[^a-zA-Z0-9_\-\.]/g, '');
 };
+
+/**
+ * Sanitiza la biografía del usuario.
+ * @param {string} bio - La biografía a sanitizar.
+ * @returns {string|null} - Biografía limpia.
+ */
+export const sanitizeBio = (bio) => {
+    if (!bio) return null;
+    // eslint-disable-next-line no-control-regex
+    return bio.trim().replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
+};

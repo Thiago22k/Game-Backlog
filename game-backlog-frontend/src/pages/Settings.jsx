@@ -11,7 +11,7 @@ import SteamIcon from '../assets/steam-icon.svg?react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import usePageTitle from '../hooks/usePageTitle';
-import { sanitizeSocialHandle } from '../utils/sanitize';
+import { sanitizeSocialHandle, sanitizeBio } from '../utils/sanitize';
 
 const Settings = () => {
   const { user, updateUser, logout } = useAuth();
@@ -135,6 +135,7 @@ const Settings = () => {
     // Sanitizar handles antes de enviar
     const sanitizedData = {
       ...profileData,
+      bio: sanitizeBio(profileData.bio),
       social_twitch: sanitizeSocialHandle(profileData.social_twitch),
       social_discord: sanitizeSocialHandle(profileData.social_discord),
       social_steam: sanitizeSocialHandle(profileData.social_steam),
@@ -147,6 +148,7 @@ const Settings = () => {
       // Actualizar estado local con los valores ya sanitizados para consistencia
       setProfileData(prev => ({
         ...prev,
+        bio: sanitizedData.bio || '',
         social_twitch: sanitizedData.social_twitch || '',
         social_discord: sanitizedData.social_discord || '',
         social_steam: sanitizedData.social_steam || '',

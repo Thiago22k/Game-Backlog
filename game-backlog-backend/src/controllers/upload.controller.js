@@ -3,6 +3,7 @@ const path = require('path');
 const User = require('../models/user.model');
 const fs = require('fs');
 const sharp = require('sharp');
+const { fromBuffer } = require('file-type');
 
 // Asegurar que exista el directorio
 const uploadDir = 'public/uploads/avatars';
@@ -37,8 +38,13 @@ const uploadAvatar = async (req, res) => {
             return res.status(400).json({ error: 'No se subió ningún archivo' });
         }
 
+        const detected = await fromBuffer(req.file.buffer);
+        if (!detected || !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(detected.mime)) {
+            return res.status(400).json({ error: 'Tipo de archivo de avatar no permitido' });
+        }
+
         const userId = req.user.userId;
-        const isGif = req.file.mimetype === 'image/gif';
+        const isGif = detected.mime === 'image/gif';
 
         // Generar nombre de archivo único
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -157,6 +163,11 @@ const uploadBanner = async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No se subió ningún archivo' });
+        }
+
+        const detected = await fromBuffer(req.file.buffer);
+        if (!detected || !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(detected.mime)) {
+            return res.status(400).json({ error: 'Tipo de archivo de banner no permitido' });
         }
 
         const userId = req.user.userId;

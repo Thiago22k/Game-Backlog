@@ -254,7 +254,9 @@ const forgotPassword = async (req, res) => {
       expiresIn: '15m'
     });
 
-    const resetLink = `http://localhost:5173/reset-password?id=${user.id}&token=${token}`;
+    // Usar FRONTEND_URL del entorno o el predeterminado para desarrollo
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetLink = `${frontendUrl}/reset-password?id=${user.id}&token=${token}`;
 
     // Enviar email
     if (transporter) {
