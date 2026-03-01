@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { getAvatarUrl } from '../utils/avatar';
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import { Bell, Check, Loader2 } from 'lucide-react';
 
 const relativeTime = (dateStr) => {
@@ -33,6 +34,9 @@ const notifMessage = (notif) => {
     }
     if (notif.type === 'comment_review') {
         return <><span className="font-semibold text-white">@{actor}</span>{' commented on your review for '}<span className="italic">«{gameName}»</span></>;
+    }
+    if (notif.type === 'NEW_FOLLOWER') {
+        return <><span className="font-semibold text-white">@{actor}</span>{' started following you'}</>;
     }
     return 'New notification';
 };
@@ -115,6 +119,11 @@ const Notifications = () => {
         }
 
         // Navigate
+        if (notif.type === 'NEW_FOLLOWER') {
+            navigate(`/profile/${notif.actor_username}`);
+            return;
+        }
+
         const isCollection = notif.type.includes('COLLECTION');
         const target = isCollection
             ? `/collections/${notif.entity_id}`
@@ -231,6 +240,7 @@ const Notifications = () => {
                     )}
                 </div>
             </div>
+            <Footer />
         </div>
     );
 };

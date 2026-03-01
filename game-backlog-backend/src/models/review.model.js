@@ -55,6 +55,13 @@ const Review = {
         return result.rows[0];
     },
 
+    // 5.b Borrar una reseña por su ID (Admin)
+    async deleteReviewById(reviewId) {
+        const query = 'DELETE FROM reviews WHERE id = $1 RETURNING *';
+        const result = await pool.query(query, [reviewId]);
+        return result.rows[0];
+    },
+
     // 6. Obtener las reseñas de un juego determinado
     async getReviewsByGame(igdbGameId, currentUserId = null, limit = 10, offset = 0) {
         const query = `
@@ -173,6 +180,24 @@ const Review = {
             RETURNING *
         `;
         const result = await pool.query(query, [reviewId, userId, reason]);
+        return result.rows[0];
+    },
+
+    // 11.5 Reportar un comentario de reseña
+    async reportComment(commentId, userId, reason, details) {
+        const checkQuery = 'SELECT id FROM review_comment_reports WHERE comment_id = $1 AND user_id = $2 AND status = $3';
+        const existing = await pool.query(checkQuery, [commentId, userId, 'pending']);
+
+        if (existing.rows.length > 0) {
+            throw new Error("Ya has reportado este comentario y el reporte sigue pendiente de revisión.");
+        }
+
+        const query = `
+            INSERT INTO review_comment_reports (comment_id, user_id, reason, details)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const result = await pool.query(query, [commentId, userId, reason, details || null]);
         return result.rows[0];
     },
 

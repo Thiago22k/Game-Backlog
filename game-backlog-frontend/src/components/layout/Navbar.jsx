@@ -37,6 +37,9 @@ const notifMessage = (notif) => {
   if (notif.type === 'comment_review') {
     return <><span className="font-semibold text-white">@{actor}</span>{' commented on your review for '}<span className="italic">«{gameName}»</span></>;
   }
+  if (notif.type === 'NEW_FOLLOWER') {
+    return <><span className="font-semibold text-white">@{actor}</span>{' started following you'}</>;
+  }
   return 'New notification';
 };
 
@@ -209,11 +212,15 @@ const Navbar = ({ transparentMode = true }) => {
                                   notif={notif}
                                   onRead={() => {
                                     markOneRead(notif.id);
-                                    const isCollection = notif.type.includes('COLLECTION');
-                                    const target = isCollection
-                                      ? `/collections/${notif.entity_id}`
-                                      : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId}`;
-                                    navigate(target);
+                                    if (notif.type === 'NEW_FOLLOWER') {
+                                      navigate(`/profile/${notif.actor_username}`);
+                                    } else {
+                                      const isCollection = notif.type.includes('COLLECTION');
+                                      const target = isCollection
+                                        ? `/collections/${notif.entity_id}`
+                                        : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId}`;
+                                      navigate(target);
+                                    }
                                     setNotifPanelOpen(false);
                                   }}
                                 />
@@ -266,6 +273,15 @@ const Navbar = ({ transparentMode = true }) => {
                           >
                             Settings
                           </Link>
+                          {user?.role === 'admin' && (
+                            <Link
+                              to="/admin"
+                              className="block px-4 py-2 text-sm text-primary-yellow hover:bg-primary-navy hover:text-white transition-colors border-t border-gray-700 mt-2 pt-2"
+                              onClick={() => setProfileDropdownOpen(false)}
+                            >
+                              Admin Panel
+                            </Link>
+                          )}
                           <hr className="my-2 border-gray-700" />
                           <button
                             onClick={handleLogout}
@@ -339,6 +355,15 @@ const Navbar = ({ transparentMode = true }) => {
                     >
                       Settings
                     </Link>
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        className="text-primary-yellow text-sm font-medium"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        Admin Panel
+                      </Link>
+                    )}
                     <button
                       onClick={() => {
                         handleLogout();

@@ -286,6 +286,43 @@ const Collection = {
 
         const result = await pool.query(query, [limit]);
         return result.rows;
+    },
+
+    // Reportar una colección
+    async reportCollection(collectionId, userId, reason, details) {
+        // Verificar si ya existe un reporte pendiente de este usuario para esta colección
+        const checkQuery = 'SELECT id FROM collection_reports WHERE collection_id = $1 AND user_id = $2 AND status = $3';
+        const existing = await pool.query(checkQuery, [collectionId, userId, 'pending']);
+
+        if (existing.rows.length > 0) {
+            throw new Error("Ya has reportado esta colección y el reporte sigue pendiente de revisión.");
+        }
+
+        const query = `
+            INSERT INTO collection_reports (collection_id, user_id, reason, details)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const result = await pool.query(query, [collectionId, userId, reason, details || null]);
+        return result.rows[0];
+    },
+
+    // Reportar comentario de colección
+    async reportComment(commentId, userId, reason, details) {
+        const checkQuery = 'SELECT id FROM collection_comment_reports WHERE comment_id = $1 AND user_id = $2 AND status = $3';
+        const existing = await pool.query(checkQuery, [commentId, userId, 'pending']);
+
+        if (existing.rows.length > 0) {
+            throw new Error("Ya has reportado este comentario y el reporte sigue pendiente de revisión.");
+        }
+
+        const query = `
+            INSERT INTO collection_comment_reports (comment_id, user_id, reason, details)
+            VALUES ($1, $2, $3, $4)
+            RETURNING *
+        `;
+        const result = await pool.query(query, [commentId, userId, reason, details || null]);
+        return result.rows[0];
     }
 };
 

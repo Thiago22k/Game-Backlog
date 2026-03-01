@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from '../../api/axios';
 import Navbar from '../../components/layout/Navbar';
+import Footer from '../../components/layout/Footer';
 import CollectionCard from '../../components/collections/CollectionCard';
 import { Library, TrendingUp, Sparkles, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -110,6 +111,7 @@ const ExploreCollections = () => {
                     </div>
                 )}
             </main>
+            <Footer />
         </div>
     );
 };

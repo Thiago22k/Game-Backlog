@@ -502,6 +502,48 @@ const getUserLikedCollections = async (req, res) => {
     }
 };
 
+const reportCollection = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { id } = req.params;
+        const { reason, details } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({ error: 'La razón del reporte es obligatoria' });
+        }
+
+        const report = await Collection.reportCollection(id, userId, reason, details);
+        res.status(201).json({ message: 'Colección reportada exitosamente', report });
+    } catch (error) {
+        console.error('Error en reportCollection:', error);
+        if (error.message.includes('Ya has reportado') || error.code === '23505') {
+            return res.status(400).json({ error: 'Ya has reportado esta colección previamente.' });
+        }
+        res.status(500).json({ error: 'Error al reportar la colección' });
+    }
+};
+
+const reportCommentAction = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { commentId } = req.params;
+        const { reason, details } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({ error: 'La razón del reporte es obligatoria' });
+        }
+
+        const report = await Collection.reportComment(commentId, userId, reason, details);
+        res.status(201).json({ message: 'Comentario reportado exitosamente', report });
+    } catch (error) {
+        console.error('Error en reportCommentAction:', error);
+        if (error.message.includes('Ya has reportado') || error.code === '23505') {
+            return res.status(400).json({ error: 'Ya has reportado este comentario previamente.' });
+        }
+        res.status(500).json({ error: 'Error al reportar el comentario' });
+    }
+};
+
 module.exports = {
     createCollection,
     getUserCollections,
@@ -515,5 +557,7 @@ module.exports = {
     addGameToCollection,
     checkGameInCollections,
     getExploreCollections,
-    getUserLikedCollections
+    getUserLikedCollections,
+    reportCollection,
+    reportCommentAction
 };

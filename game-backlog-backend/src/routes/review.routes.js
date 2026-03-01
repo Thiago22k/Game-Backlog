@@ -43,4 +43,7 @@ router.delete('/:reviewId/comments/:commentId', authenticateToken, reviewControl
 // Reportar reseña
 router.post('/:reviewId/report', authenticateToken, reviewController.reportReview);
 
+// Reportar comentario
+router.post('/comments/:commentId/report', authenticateToken, reviewController.reportCommentAction);
+
 module.exports = router;

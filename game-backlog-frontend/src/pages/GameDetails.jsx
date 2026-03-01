@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink, Heart, Library, MessageSquare, XCircle, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
+import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink, Heart, Compass, MessageSquare, XCircle, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
@@ -9,9 +9,9 @@ import usePageTitle from '../hooks/usePageTitle';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import NotFound from '../pages/NotFound';
 import StarRating from '../components/games/StarRating';
-import GameLikeButton from '../components/games/GameLikeButton';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 import AddToCollectionModal from '../components/collections/AddToCollectionModal';
 import ReviewsPanel from '../components/reviews/ReviewsPanel';
@@ -65,7 +65,7 @@ const GameDetails = () => {
     { id: 'stats', label: 'Stats', icon: LayoutDashboard },
     { id: 'gallery', label: 'Gallery', icon: ImageIcon },
     { id: 'details', label: 'Details', icon: Info },
-    { id: 'similar', label: 'Similar', icon: Library },
+    { id: 'similar', label: 'Similar', icon: Compass },
   ];
 
   usePageTitle(game?.name);
@@ -76,6 +76,7 @@ const GameDetails = () => {
     const fetchGameData = async () => {
       setLoading(true);
       setError(null);
+      setNotFound(false);
       try {
         const gameRes = await axios.get(`${ENDPOINTS.GAMES.SEARCH.replace('/search', '')}/igdb/${slug}`);
         if (!isMounted) return;
@@ -290,23 +291,8 @@ const GameDetails = () => {
     );
   }
 
-  if (error || !game || !game.name) {
-    return (
-      <div className="min-h-screen bg-primary-navy">
-        <Navbar />
-        <div className="flex items-center justify-center h-[80vh]">
-          <div className="text-center">
-            <p className="text-gray-400 mb-6 text-lg">{error || 'Game not found'}</p>
-            <button
-              onClick={() => navigate('/explore')}
-              className="bg-primary-yellow text-primary-navy-dark px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition"
-            >
-              Back to Explore
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  if (error || notFound || !game || !game.name) {
+    return <NotFound />;
   }
 
   return (
@@ -784,6 +770,8 @@ const GameDetails = () => {
           onSaveSuccess={handleReviewUpdated}
         />
       )}
+
+      <Footer />
     </div>
   );
 };

@@ -27,6 +27,10 @@ router.post('/:id/like', collectionsController.toggleLike);
 router.post('/:id/comments', collectionsController.addComment);
 router.delete('/:id/comments/:commentId', collectionsController.deleteComment);
 
+// --- MODERATION ---
+router.post('/:id/report', collectionsController.reportCollection);
+router.post('/comments/:commentId/report', collectionsController.reportCommentAction);
+
 // Opcionalmente público, al final lo extraemos del auth obligatorio
 
 module.exports = router;

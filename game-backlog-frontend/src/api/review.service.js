@@ -73,6 +73,12 @@ const reviewService = {
     reportReview: async (reviewId, reason) => {
         const response = await axios.post(ENDPOINTS.REVIEWS.REPORT(reviewId), { reason });
         return response.data;
+    },
+
+    // Reportar comentario
+    reportComment: async (commentId, reason, details) => {
+        const response = await axios.post(`/reviews/comments/${commentId}/report`, { reason, details });
+        return response.data;
     }
 };
 

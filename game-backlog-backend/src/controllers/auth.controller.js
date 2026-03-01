@@ -23,9 +23,9 @@ nodemailer.createTestAccount((err, account) => {
 });
 
 // Generar JWT
-const generateToken = (userId, username) => {
+const generateToken = (userId, username, role) => {
   return jwt.sign(
-    { userId, username },
+    { userId, username, role },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN }
   );
@@ -56,7 +56,7 @@ const register = async (req, res) => {
     // Validar username
     if (!isValidUsername(username)) {
       return res.status(400).json({
-        error: 'Username debe tener entre 3-50 caracteres y solo letras, números y guiones bajos'
+        error: 'Username debe tener entre 3-15 caracteres y solo letras, números y guiones bajos'
       });
     }
 
@@ -91,7 +91,7 @@ const register = async (req, res) => {
     const newUser = await User.create(username, email, hashedPassword);
 
     // Generar token
-    const token = generateToken(newUser.id, newUser.username);
+    const token = generateToken(newUser.id, newUser.username, newUser.role);
 
     // Configurar cookie HttpOnly
     res.cookie('token', token, {
@@ -108,6 +108,7 @@ const register = async (req, res) => {
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
+        role: newUser.role,
         is_profile_public: newUser.is_profile_public,
         avatar_url: newUser.avatar_url,
         avatar_static_url: newUser.avatar_static_url,
@@ -163,7 +164,14 @@ const login = async (req, res) => {
     }
 
     // Generar token
-    const token = generateToken(user.id, user.username);
+    const token = generateToken(user.id, user.username, user.role);
+
+    // Verificar estado del usuario
+    if (user.status === 'banned') {
+      return res.status(403).json({
+        error: 'Tu cuenta ha sido suspendida por violar las normas de la comunidad.'
+      });
+    }
 
     // Configurar cookie HttpOnly
     res.cookie('token', token, {
@@ -180,6 +188,7 @@ const login = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
+        role: user.role,
         is_profile_public: user.is_profile_public,
         avatar_url: user.avatar_url,
         avatar_static_url: user.avatar_static_url,

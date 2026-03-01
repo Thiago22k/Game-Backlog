@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { upload, uploadAvatar, deleteAvatar, uploadBanner, deleteBanner } = require('../controllers/upload.controller');
+const userController = require('../controllers/user.controller');
 const { authenticateToken } = require('../middlewares/auth');
 
 // Ruta protegida para subir avatar. El campo form-data debe llamarse 'avatar'
@@ -10,6 +11,9 @@ router.delete('/avatar', authenticateToken, deleteAvatar);
 // Ruta protegida para subir banner. El campo form-data debe llamarse 'banner'
 router.post('/banner', authenticateToken, upload.single('banner'), uploadBanner);
 router.delete('/banner', authenticateToken, deleteBanner);
+
+// Ruta protegida para reportar a un usuario
+router.post('/:id/report', authenticateToken, userController.reportUser);
 
 // Manejo de errores de multer
 router.use((error, req, res, next) => {

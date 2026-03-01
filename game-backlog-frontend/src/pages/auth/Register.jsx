@@ -122,6 +122,7 @@ const Register = () => {
                         onChange={handleChange}
                         required
                         disabled={isLoading}
+                        maxLength={15}
                         className="w-full bg-white bg-opacity-10 text-white px-4 py-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-yellow placeholder-gray-500 disabled:opacity-50"
                         placeholder="Choose a username"
                       />

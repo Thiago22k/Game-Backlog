@@ -12,6 +12,7 @@ import ProfileStats from '../pages/profile/ProfileStats';
 import ProfileCollections from '../pages/profile/ProfileCollections';
 import ProfileActivity from '../pages/profile/ProfileActivity';
 import ProfileLikes from '../pages/profile/ProfileLikes';
+import ProfileSocial from '../pages/profile/ProfileSocial';
 import ProfileLikedGames from '../pages/profile/ProfileLikedGames';
 import ProfileLikedCollections from '../pages/profile/ProfileLikedCollections';
 import CollectionForm from '../components/collections/CollectionForm';
@@ -22,8 +23,12 @@ import ExploreCollections from '../pages/collections/ExploreCollections';
 import GameDetails from '../pages/GameDetails';
 import NotFound from '../pages/NotFound';
 import Notifications from '../pages/Notifications';
+import TermsOfService from '../pages/TermsOfService';
+import LegalPrivacy from '../pages/LegalPrivacy';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
+import AdminRoute from '../components/routing/AdminRoute';
+import AdminDashboard from '../pages/moderation/AdminDashboard';
 
 const ProfileRedirect = () => {
   const { user, isAuthenticated } = useAuth();
@@ -115,6 +120,7 @@ const AppRoutes = () => {
           <Route path="likes" element={<ProfileLikes />} />
           <Route path="likes/games" element={<ProfileLikedGames />} />
           <Route path="likes/collections" element={<ProfileLikedCollections />} />
+          <Route path="social" element={<ProfileSocial />} />
         </Route>
 
         <Route
@@ -152,6 +158,20 @@ const AppRoutes = () => {
             </PrivateRoute>
           }
         />
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+
+        {/* Legal Pages */}
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/privacy" element={<LegalPrivacy />} />
 
         {/* 404 Not Found Page */}
         <Route path="*" element={<NotFound />} />

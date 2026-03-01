@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, Check, Play, ShoppingCart, Trash2, Library, Archive, Gamepad2, Plus, ArrowRight, Heart, MessageSquare } from 'lucide-react';
+import { Star, Check, Play, ShoppingCart, Trash2, Library, Archive, Gamepad2, Plus, ArrowRight, Heart, MessageSquare, UserPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const STATUS_CONFIG = {
@@ -160,6 +160,25 @@ const ActivityItem = ({ activity, username }) => {
                         </div>
                     )}
                     <span className="text-xs text-gray-500 mt-2 block">{timeAgo}</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (action_type === 'STARTED_FOLLOWING') {
+        return (
+            <div className="flex gap-4 p-4 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 items-center">
+                <div className="shrink-0 p-3 rounded-xl bg-teal-500/10">
+                    <UserPlus className="text-teal-400" size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-300">
+                        <span className="font-semibold text-white">{username}</span> started following{" "}
+                        <Link to={`/profile/${metadata.target_username}`} className="font-bold text-primary-yellow hover:underline">
+                            {metadata.target_username}
+                        </Link>
+                    </p>
+                    <span className="text-xs text-gray-500 mt-1 block">{timeAgo}</span>
                 </div>
             </div>
         );

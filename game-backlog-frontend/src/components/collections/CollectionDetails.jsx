@@ -6,6 +6,7 @@ import { useCollections } from '../../hooks/useCollections';
 import { useGames } from '../../hooks/useGames';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../layout/Navbar';
+import Footer from '../layout/Footer';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import usePageTitle from '../../hooks/usePageTitle';
@@ -14,6 +15,7 @@ import { ASSETS_BASE_URL } from '../../utils/constants';
 import ConfirmModal from '../common/ConfirmModal';
 import ReportModal from '../common/ReportModal';
 import { getAvatarUrl } from '../../utils/avatar';
+import axios from '../../api/axios';
 
 const CollectionDetails = () => {
     const { id } = useParams();
@@ -276,28 +278,41 @@ const CollectionDetails = () => {
         setIsReportModalOpen(true);
     };
 
-    const handleSubmitReport = async (e) => {
-        e.preventDefault();
-        if (!reportReason) {
+    const handleSubmitReport = async (submitReason, submitDetails) => {
+        if (!submitReason) {
             toast.error('Please select a reason');
             return;
         }
 
         setIsSubmittingReport(true);
 
-        // Simular envío
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            if (reportType === 'collection') {
+                await axios.post(`/collections/${id}/report`, {
+                    reason: submitReason,
+                    details: submitDetails
+                });
+            } else if (reportType === 'comment') {
+                await axios.post(`/collections/comments/${reportItemId}/report`, {
+                    reason: submitReason,
+                    details: submitDetails
+                });
+            }
 
-        toast.success(`Report for ${reportType} submitted successfully. Thank you!`, {
-            duration: 5000,
-            icon: '✅'
-        });
+            toast.success(`Report for ${reportType} submitted successfully. Thank you!`, {
+                duration: 5000,
+                icon: '✅'
+            });
 
-        setIsReportModalOpen(false);
-        setReportReason('');
-        setReportDetails('');
-        setReportItemId(null);
-        setIsSubmittingReport(false);
+            setIsReportModalOpen(false);
+            setReportReason('');
+            setReportDetails('');
+            setReportItemId(null);
+        } catch (error) {
+            toast.error(error.response?.data?.error || `Failed to submit report for ${reportType}`);
+        } finally {
+            setIsSubmittingReport(false);
+        }
     };
 
     const handleAddComment = async (e) => {
@@ -345,6 +360,7 @@ const CollectionDetails = () => {
                 <div className="flex justify-center items-center h-[calc(100vh-64px)]">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary-yellow"></div>
                 </div>
+                <Footer />
             </div>
         );
     }
@@ -373,6 +389,7 @@ const CollectionDetails = () => {
                         </p>
                     </div>
                 </main>
+                <Footer />
             </div>
         );
     }
@@ -731,10 +748,10 @@ const CollectionDetails = () => {
                 type={reportType}
                 title={reportType === 'collection' ? 'Report Collection' : 'Report Comment'}
                 options={reportType === 'collection' ? [
-                    { value: 'inappropriate_content', label: 'Inappropriate Title/Description' },
-                    { value: 'spam', label: 'Spam' },
-                    { value: 'offensive', label: 'Offensive Content' },
-                    { value: 'other', label: 'Other' }
+                    { value: 'Inappropriate Title/Description', label: 'Inappropriate Title/Description' },
+                    { value: 'Spam', label: 'Spam' },
+                    { value: 'Offensive Content', label: 'Offensive Content' },
+                    { value: 'Other', label: 'Other' }
                 ] : [
                     { value: 'harassment', label: 'Harassment' },
                     { value: 'hate_speech', label: 'Hate Speech' },
@@ -748,11 +765,11 @@ const CollectionDetails = () => {
                     setReportItemId(null);
                 }}
                 onSubmit={({ reason, details }) => {
-                    // Update state variables to match expectation of handleSubmitReport simulation
+                    // Update state variables for consistency if needed
                     setReportReason(reason);
                     setReportDetails(details);
-                    // Trigger the actual submission
-                    handleSubmitReport({ preventDefault: () => { } });
+                    // Trigger the actual submission passing the new values directly
+                    handleSubmitReport(reason, details);
                 }}
             />
 
@@ -765,6 +782,7 @@ const CollectionDetails = () => {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false })}
             />
+            <Footer />
         </div>
     );
 };

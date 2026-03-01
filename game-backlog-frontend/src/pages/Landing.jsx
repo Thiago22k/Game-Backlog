@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Flame, Clock, Trophy, ClipboardList, Star, Gamepad2 } from 'lucide-react';
+import { Flame, Clock, Trophy, ClipboardList, Star, Gamepad2, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
@@ -15,6 +16,8 @@ import { useGames } from '../hooks/useGames';
 import usePageTitle from '../hooks/usePageTitle';
 import toast from 'react-hot-toast';
 import { formatIGDBImage } from '../utils/formatters';
+import { getAvatarUrl } from '../utils/avatar';
+import ssCtaImage from '../assets/ss_cta.png';
 
 // Constante a nivel de módulo — no se recrea en cada render
 const STATUS_LABELS = {
@@ -259,7 +262,7 @@ const Landing = () => {
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {loading ? (
           <>
@@ -437,58 +440,138 @@ const Landing = () => {
           </>
         )}
 
-        {/* Features Section */}
-        <div className="py-16">
-          <h2 className="text-3xl font-bold text-center text-primary-yellow mb-12">
-            Why Stackd?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: ClipboardList, title: 'Organize Your Backlog', desc: "Keep track of all the games you want to play and the ones you've completed", color: 'text-blue-400' },
-              { icon: Star, title: 'Rate Your Games', desc: 'Assign ratings from 1 to 5 stars to each game you complete', color: 'text-primary-yellow' },
-              { icon: Gamepad2, title: 'Discover New Titles', desc: 'Explore thousands of games thanks to integration with IGDB', color: 'text-purple-400' },
-            ].map(({ icon: Icon, title, desc, color }) => (
-              <div
-                key={title}
-                className="bg-primary-navy-dark p-8 rounded-2xl shadow-lg text-center border border-gray-700 hover:border-primary-yellow transition-all flex flex-col items-center"
-              >
-                <div className={`mb-6 p-4 rounded-full bg-gray-800 bg-opacity-50 ${color}`}>
-                  <Icon size={40} />
+        {/* Features Section (Bento Grid) */}
+        <div className="py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Everything in One Place
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Purpose-built tools to manage your gaming life without the clutter.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[minmax(280px,auto)]">
+
+            {/* Main Block (Left) - Organization */}
+            <div className="md:col-span-8 bg-primary-navy-dark rounded-3xl p-8 md:p-10 border border-gray-800/60 shadow-lg relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-900/10 to-transparent pointer-events-none"></div>
+
+              <div className="relative z-10 h-full flex flex-col justify-between">
+                <div>
+                  <div className="mb-6 p-4 rounded-2xl bg-gray-800/40 w-fit text-blue-400">
+                    <ClipboardList size={32} />
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Your Ultimate Backlog</h3>
+                  <p className="text-gray-400 text-lg max-w-md">
+                    Sort, filter, and track every single game. Move titles from wishlist to currently playing, and finally to completed.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-                <p className="text-gray-400">{desc}</p>
+
+                {/* Decorative Elements */}
+                <div className="flex gap-3 mt-8 opacity-80 select-none">
+                  <span className="px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded-full text-xs font-semibold tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Completed
+                  </span>
+                  <span className="px-3 py-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full text-xs font-semibold tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span> Playing
+                  </span>
+                  <span className="px-3 py-1.5 bg-gray-700/50 text-gray-300 border border-gray-600/30 rounded-full text-xs font-semibold tracking-wider flex items-center gap-1.5 hidden sm:flex">
+                    <Clock size={12} /> Wishlist
+                  </span>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Top Right Block - Rating/Community */}
+            <div className="md:col-span-4 bg-primary-navy-dark rounded-3xl p-8 border border-gray-800/60 shadow-lg relative overflow-hidden flex flex-col justify-center">
+              <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-yellow-900/10 to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="mb-5 flex gap-1 text-primary-yellow/80">
+                  <Star size={24} className="fill-current" />
+                  <Star size={24} className="fill-current" />
+                  <Star size={24} className="fill-current" />
+                  <Star size={24} className="fill-current" />
+                  <Star size={24} className="fill-current opacity-30" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Rate & Review</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Leave your verdict. Score the games you beat and share your thoughts with the community.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Left Block - Discovery (Swapped to 4 cols) */}
+            <div className="md:col-span-4 bg-primary-navy-dark rounded-3xl p-8 border border-gray-800/60 shadow-lg relative overflow-hidden flex flex-col justify-center">
+              <div className="absolute bottom-0 left-0 w-full h-full bg-gradient-to-tr from-purple-900/10 to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="mb-5 p-3 rounded-xl bg-gray-800/40 w-fit text-purple-400 border border-purple-500/10">
+                  <Gamepad2 size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Powered by IGDB</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  Access metadata for thousands of games. If it exists, you can add it to your library.
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Right Block - Social/Community (Swapped to 8 cols) */}
+            <div className="md:col-span-8 bg-primary-navy-dark rounded-3xl p-8 border border-gray-800/60 shadow-lg relative overflow-hidden flex flex-col justify-center">
+              <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-pink-900/10 to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="p-3 rounded-xl bg-gray-800/40 w-fit text-pink-400 border border-pink-500/10">
+                    <Users size={24} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white">Connect & Follow</h3>
+                </div>
+                <p className="text-gray-400 text-lg max-w-lg leading-relaxed">
+                  Find friends, follow top reviewers, and get real-time Activity Feed updates when someone plays or rates a game.
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
 
-        {/* CTA Section */}
+        {/* Cinematic CTA Section */}
         {!isAuthenticated && (
-          <div className="py-16 text-center">
-            <div className="bg-primary-navy-dark rounded-2xl p-12 border-2 border-primary-yellow">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                Start Organizing Your Backlog Today
+          <div className="py-24 relative overflow-hidden mt-12 mb-12 rounded-3xl mx-4 sm:mx-6 lg:mx-8 bg-primary-navy-dark border border-gray-800/50 shadow-2xl">
+            {/* Background Image with blur */}
+            <div className="absolute inset-0 z-0">
+              <img src={ssCtaImage} alt="Dashboard Preview" className="w-full h-full object-cover opacity-20 blur-sm" />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary-navy-dark via-primary-navy-dark/80 to-transparent"></div>
+            </div>
+
+            {/* Ambient Background Blur */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-yellow/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+
+            <div className="relative z-10 max-w-4xl mx-auto text-center px-4">
+              <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
+                Your Gaming Legacy, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-yellow to-yellow-600">Documented.</span>
               </h2>
-              <p className="text-gray-400 mb-8 max-w-2xl mx-auto text-lg">
-                Join gamers who are already organizing their game collections
+              <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+                Join fellow players tracking their completions, sharing reviews, and building the ultimate game library. No algorithms, just your games.
               </p>
+
               <Link
                 to="/register"
-                className="inline-block bg-gradient-get-started hover:opacity-90 text-primary-navy px-10 py-4 rounded-lg text-lg font-bold transition"
+                className="inline-flex items-center justify-center gap-3 bg-primary-yellow text-primary-navy-dark px-10 py-5 rounded-xl text-lg font-bold hover:bg-yellow-400 transition-all hover:-translate-y-1"
               >
-                Create Free Account
+                <Gamepad2 size={24} className="animate-pulse" />
+                Start Building Your Library
               </Link>
+
+              <p className="mt-8 text-sm text-gray-500 font-medium">
+                Ad-free experience.
+              </p>
             </div>
           </div>
         )}
-      </div>
+      </main>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-primary-navy-dark border-t border-gray-800 py-8 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-gray-500">© 2026 Stackd. Game data powered by IGDB.</p>
-        </div>
-      </footer>
+      <Footer />
     </div >
   );
 };

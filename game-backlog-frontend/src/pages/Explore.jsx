@@ -7,6 +7,7 @@ import { useGames } from '../hooks/useGames';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
@@ -442,7 +443,7 @@ const Explore = () => {
                   value={sortBy}
                   onChange={setSortBy}
                   containerClassName="w-full"
-                  className="w-full bg-primary-navy rounded-lg"
+                  className="w-full bg-primary-navy-ultra-dark rounded-lg"
                 />
               </div>
 
@@ -460,7 +461,7 @@ const Explore = () => {
                   value={timeRange}
                   onChange={setTimeRange}
                   containerClassName="w-full"
-                  className="w-full bg-primary-navy rounded-lg"
+                  className="w-full bg-primary-navy-ultra-dark rounded-lg"
                 />
               </div>
 
@@ -469,7 +470,7 @@ const Explore = () => {
                 <label className="block text-sm text-gray-400 mb-2">Genres</label>
                 <button
                   onClick={() => setGenreDropdownOpen((o) => !o)}
-                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
+                  className="w-full bg-primary-navy-ultra-dark text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
                 >
                   <span>{selectedGenres.length === 0 ? 'All Genres' : `${selectedGenres.length} selected`}</span>
                   <ChevronDown size={16} />
@@ -496,7 +497,7 @@ const Explore = () => {
                 <label className="block text-sm text-gray-400 mb-2">Platforms</label>
                 <button
                   onClick={() => setPlatformDropdownOpen((o) => !o)}
-                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
+                  className="w-full bg-primary-navy-ultra-dark text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
                 >
                   <span>{selectedPlatforms.length === 0 ? 'All Platforms' : `${selectedPlatforms.length} selected`}</span>
                   <ChevronDown size={16} />
@@ -523,7 +524,7 @@ const Explore = () => {
                 <label className="block text-sm text-gray-400 mb-2">Category</label>
                 <button
                   onClick={() => setGameTypeDropdownOpen((o) => !o)}
-                  className="w-full bg-primary-navy text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
+                  className="w-full bg-primary-navy-ultra-dark text-white rounded-lg px-3 py-2 flex items-center justify-between focus:outline-none"
                 >
                   <span>{selectedGameTypes.length === 0 ? 'All Categories' : `${selectedGameTypes.length} selected`}</span>
                   <ChevronDown size={16} />
@@ -621,6 +622,8 @@ const Explore = () => {
           </>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 };

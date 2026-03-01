@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Outlet, useNavigate, useParams, useLocation, Link } from 'react-router-dom';
-import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart, Flag } from 'lucide-react';
+import { Trophy, Star, LayoutDashboard, Gamepad2, Library, Lock, Camera, Trash2, Pencil, X, Settings as SettingsIcon, Image as ImageIcon, User as UserIcon, Link as LinkIcon, LayoutList, Heart, Flag, UserPlus, UserMinus, Users } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
 import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
+import { useFollow } from '../../hooks/useFollow';
 import TwitchIcon from '../../assets/twitch-icon.svg?react';
 import DiscordIcon from '../../assets/discord-icon.svg?react';
 import SteamIcon from '../../assets/steam-icon.svg?react';
 import Navbar from '../../components/layout/Navbar';
+import Footer from '../../components/layout/Footer';
 import NotFound from '../NotFound';
 import axios from '../../api/axios';
 import toast from 'react-hot-toast';
@@ -46,9 +48,11 @@ const ProfileLayout = () => {
     const { username } = useParams();
     const location = useLocation();
     const gamesHook = useGames();
-    const { games, getUserGames } = gamesHook;
+    const { games, getUserGames, profileUserId } = gamesHook;
     const { collections, getUserCollections } = useCollections();
+    const { followUser, unfollowUser, checkFollowStatus, loading: followLoading } = useFollow();
 
+    const [isFollowing, setIsFollowing] = useState(false);
     const [isCustomizationModalOpen, setIsCustomizationModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [reportReason, setReportReason] = useState('');
@@ -83,6 +87,39 @@ const ProfileLayout = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [username]);
+
+    // Verificar si sigue al usuario una vez que tenemos su profileUserId
+    useEffect(() => {
+        const fetchFollow = async () => {
+            if (user && !isOwner && profileUserId) {
+                const status = await checkFollowStatus(profileUserId);
+                setIsFollowing(status);
+            }
+        };
+        fetchFollow();
+    }, [user, isOwner, profileUserId, checkFollowStatus]);
+
+    const handleToggleFollow = async () => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        if (!profileUserId) return;
+
+        try {
+            if (isFollowing) {
+                await unfollowUser(profileUserId);
+                setIsFollowing(false);
+                toast.success(`Unfollowed ${username}`);
+            } else {
+                await followUser(profileUserId);
+                setIsFollowing(true);
+                toast.success(`Followed ${username}`);
+            }
+        } catch (error) {
+            // error ya manejado en el hook
+        }
+    };
 
     // Lógica para subida de avatar y banner
     const hiddenFileInputRef = useRef(null);
@@ -222,20 +259,32 @@ const ProfileLayout = () => {
             return;
         }
 
+        if (!profileUserId) {
+            toast.error('Cannot report this user');
+            return;
+        }
+
         setIsSubmittingReport(true);
 
-        // Simular envío
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            await axios.post(`/users/${profileUserId}/report`, {
+                reason: reportReason,
+                details: reportDetails
+            });
 
-        toast.success('Report submitted successfully. Thank you for helping us keep the community safe!', {
-            duration: 5000,
-            icon: '✅'
-        });
+            toast.success('Report submitted successfully. Thank you for helping us keep the community safe!', {
+                duration: 5000,
+                icon: '✅'
+            });
 
-        setIsReportModalOpen(false);
-        setReportReason('');
-        setReportDetails('');
-        setIsSubmittingReport(false);
+            setIsReportModalOpen(false);
+            setReportReason('');
+            setReportDetails('');
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to submit report');
+        } finally {
+            setIsSubmittingReport(false);
+        }
     };
 
 
@@ -245,6 +294,7 @@ const ProfileLayout = () => {
         { name: 'Collections', path: `/profile/${username}/collections`, icon: Library },
         { name: 'Activity', path: `/profile/${username}/activity`, icon: LayoutList },
         { name: 'Likes', path: `/profile/${username}/likes`, icon: Heart },
+        { name: 'Social', path: `/profile/${username}/social`, icon: Users },
     ];
 
     const currentPath = location.pathname;
@@ -415,6 +465,32 @@ const ProfileLayout = () => {
                             </button>
                         </div>
                     )}
+
+                    {!isOwner && user && profileUserId && (
+                        <div className="flex gap-3 mb-2 shrink-0">
+                            <button
+                                onClick={handleToggleFollow}
+                                disabled={followLoading}
+                                className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold transition-all shadow-lg backdrop-blur-md disabled:opacity-50
+                                        ${isFollowing
+                                        ? 'bg-black/40 hover:bg-black/60 text-white border border-gray-600'
+                                        : 'bg-primary-yellow hover:bg-white text-primary-navy-dark border border-primary-yellow/50'
+                                    }`}
+                            >
+                                {isFollowing ? (
+                                    <>
+                                        <UserMinus size={18} />
+                                        Unfollow
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus size={18} />
+                                        Follow
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -432,8 +508,8 @@ const ProfileLayout = () => {
                 ) : (
                     <>
                         {/* Tab Navigation */}
-                        <div className="border-b border-gray-700 mb-8">
-                            <nav className="-mb-px flex space-x-8">
+                        <div className="border-b border-gray-700 mb-8 overflow-x-auto lg:overflow-x-visible custom-scrollbar">
+                            <nav className="-mb-px flex space-x-6 sm:space-x-8 px-1">
                                 {tabs.map((tab) => {
                                     // Comprobar active exacto para stats ('/profile/username') y parcial para otros
                                     const isActive =
@@ -633,6 +709,7 @@ const ProfileLayout = () => {
                 onConfirm={confirmModal.onConfirm}
                 onCancel={() => setConfirmModal({ isOpen: false, title: '', message: '', onConfirm: () => { }, variant: 'default', isLoading: false })}
             />
+            <Footer />
         </div>
     );
 };

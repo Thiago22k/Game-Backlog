@@ -248,10 +248,32 @@ const reviewController = {
         } catch (error) {
             console.error('Error reporting review:', error);
             // Para atrapar el error de duplicados
-            if (error.message.includes('Ya has reportado')) {
-                return res.status(400).json({ error: error.message });
+            if (error.message.includes('Ya has reportado') || error.code === '23505') {
+                return res.status(400).json({ error: 'Ya has reportado esta reseña previamente.' });
             }
             res.status(500).json({ error: 'Failed to report review' });
+        }
+    },
+
+    // 8.5 Reportar comentario de reseña
+    async reportCommentAction(req, res) {
+        try {
+            const { commentId } = req.params;
+            const userId = req.user.userId;
+            const { reason, details } = req.body;
+
+            if (!reason) {
+                return res.status(400).json({ error: 'Reason is required' });
+            }
+
+            const report = await Review.reportComment(commentId, userId, reason, details);
+            res.json({ message: 'Comment reported successfully', report });
+        } catch (error) {
+            console.error('Error reporting comment:', error);
+            if (error.message.includes('Ya has reportado') || error.code === '23505') {
+                return res.status(400).json({ error: 'Ya has reportado este comentario previamente.' });
+            }
+            res.status(500).json({ error: 'Failed to report comment' });
         }
     },
 

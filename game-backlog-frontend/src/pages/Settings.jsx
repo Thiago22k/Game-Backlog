@@ -9,6 +9,7 @@ import TwitchIcon from '../assets/twitch-icon.svg?react';
 import DiscordIcon from '../assets/discord-icon.svg?react';
 import SteamIcon from '../assets/steam-icon.svg?react';
 import Navbar from '../components/layout/Navbar';
+import Footer from '../components/layout/Footer';
 import usePageTitle from '../hooks/usePageTitle';
 import { sanitizeSocialHandle } from '../utils/sanitize';
 
@@ -473,11 +474,12 @@ const Settings = () => {
                   <input
                     type="text"
                     required
+                    maxLength={15}
                     value={usernameData.newUsername}
                     onChange={(e) => setUsernameData({ ...usernameData, newUsername: e.target.value })}
                     className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Can only be changed once every 30 days</p>
+                  <p className="text-xs text-gray-500 mt-1">Maximum 15 characters. Can only be changed once every 30 days.</p>
                 </div>
 
                 <div>
@@ -615,6 +617,7 @@ const Settings = () => {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 };

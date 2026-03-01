@@ -143,12 +143,8 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
         try {
             if (reportModal.type === 'review') {
                 await reviewService.reportReview(review.id, reason + (details ? `: ${details}` : ''));
-            } else {
-                // Here we would need a reviewService.reportComment if we have it, 
-                // for now we'll use a generic approach or simulate it.
-                // Assuming reviewService.reportReview can handle types or we add reportComment
-                // Based on existing code, there was only reportReview.
-                await reviewService.reportReview(review.id, `Replied Comment ID ${reportModal.itemId} Reported for ${reason}: ${details}`);
+            } else if (reportModal.type === 'reply') {
+                await reviewService.reportComment(reportModal.itemId, reason, details);
             }
             toast.success("Report submitted successfully. Thank you!");
             setReportModal(prev => ({ ...prev, isOpen: false }));

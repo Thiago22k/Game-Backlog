@@ -15,6 +15,8 @@ export const useGames = () => {
   const [profileSocialDiscord, setProfileSocialDiscord] = useState(null);
   const [profileSocialSteam, setProfileSocialSteam] = useState(null);
 
+  const [profileUserId, setProfileUserId] = useState(null);
+
   // Obtener juegos del usuario (puede ser propio o de otro por username)
   const getUserGames = useCallback(async (username = null, status = null, showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -31,6 +33,9 @@ export const useGames = () => {
 
       const response = await axios.get(url);
       setGames(response.data.games);
+      if (response.data.user_id !== undefined) {
+        setProfileUserId(response.data.user_id);
+      }
       if (response.data.is_profile_public !== undefined) {
         setIsProfilePublic(response.data.is_profile_public);
       }
@@ -58,6 +63,7 @@ export const useGames = () => {
       return {
         success: true,
         data: response.data.games,
+        profileUserId: response.data.user_id,
         isProfilePublic: response.data.is_profile_public,
         profileAvatarUrl: response.data.avatar_url,
         profileAvatarStaticUrl: response.data.avatar_static_url,
@@ -153,6 +159,7 @@ export const useGames = () => {
     userGames: games,
     loading,
     error,
+    profileUserId,
     isProfilePublic,
     profileAvatarUrl,
     profileAvatarStaticUrl,

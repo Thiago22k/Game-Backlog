@@ -14,6 +14,7 @@ CREATE TABLE users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -148,6 +149,30 @@ CREATE TABLE review_reports (
     review_id INTEGER NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reason VARCHAR(255) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reportes de perfil
+CREATE TABLE profile_reports (
+    id SERIAL PRIMARY KEY,
+    reported_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reporter_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason VARCHAR(255) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Reportes de colecciones
+CREATE TABLE collection_reports (
+    id SERIAL PRIMARY KEY,
+    collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reason VARCHAR(255) NOT NULL,
+    details TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'resolved', 'dismissed')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

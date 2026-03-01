@@ -53,6 +53,8 @@ const uploadRoutes = require('./src/routes/upload.routes');
 const activityRoutes = require('./src/routes/activity.routes');
 const notificationsRoutes = require('./src/routes/notifications.routes');
 const reviewRoutes = require('./src/routes/review.routes');
+const followRoutes = require('./src/routes/follow.routes');
+const moderationRoutes = require('./src/routes/moderation.routes');
 
 // Usar rutas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit más estricto para auth
@@ -63,6 +65,8 @@ app.use('/api/users', uploadRoutes); // Mapeamos users/avatar a nuestros uploadR
 app.use('/api/activity', activityRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api', followRoutes); // Montado en /api porque tiene rutas tanto para /follows como para /users
+app.use('/api/moderation', moderationRoutes);
 
 // Debug: Ver rutas registradas
 console.log('📋 Rutas registradas:');

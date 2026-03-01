@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/user.model');
 
 const authenticateToken = (req, res, next) => {
   try {
@@ -12,11 +13,21 @@ const authenticateToken = (req, res, next) => {
     }
 
     // Verificar el token
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (err) {
         return res.status(403).json({
           error: 'Token inválido o expirado'
         });
+      }
+
+      // Check user status
+      const user = await User.findById(decoded.userId);
+      if (!user) {
+        return res.status(401).json({ error: 'User not found' });
+      }
+
+      if (user.status === 'banned') {
+        return res.status(403).json({ error: 'Tu cuenta ha sido suspendida.' });
       }
 
       // Agregar información del usuario al request
@@ -41,9 +52,13 @@ const optionalAuth = (req, res, next) => {
       return next();
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
       if (!err) {
-        req.user = decoded;
+        // En optional, no bloqueamos la petición pero tampoco agregamos el user si está baneado
+        const user = await User.findById(decoded.userId);
+        if (user && user.status !== 'banned') {
+          req.user = decoded;
+        }
       }
       next();
     });

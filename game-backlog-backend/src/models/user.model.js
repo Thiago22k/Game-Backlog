@@ -6,7 +6,7 @@ const User = {
     const query = `
       INSERT INTO users (username, email, password)
       VALUES ($1, $2, $3)
-      RETURNING id, username, email, is_profile_public, avatar_url, avatar_static_url, banner_url, created_at
+      RETURNING id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, created_at
     `;
     const values = [username, email, hashedPassword];
     const result = await pool.query(query, values);
@@ -29,7 +29,7 @@ const User = {
 
   // Buscar usuario por ID
   async findById(id) {
-    const query = 'SELECT id, username, email, is_profile_public, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
+    const query = 'SELECT id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0];
   },
@@ -96,6 +96,18 @@ const User = {
     return result.rows[0];
   },
 
+  // Banear usuario (Soft delete)
+  async banUser(userId) {
+    const query = `
+      UPDATE users 
+      SET status = 'banned', updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $1
+      RETURNING id, username, email, status
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows[0];
+  },
+
   // Actualizar avatar
   async updateAvatar(userId, avatarUrl, avatarStaticUrl = null) {
     const query = `
@@ -131,6 +143,25 @@ const User = {
     const result = await pool.query(query, [bio || null, social_twitch || null, social_discord || null, social_steam || null, userId]);
     return result.rows[0];
   },
+
+  // Reportar un perfil de usuario
+  async reportProfile(reportedUserId, reporterId, reason, details) {
+    // Verificar si ya existe un reporte pendiente de este usuario hacia el otro
+    const checkQuery = 'SELECT id FROM profile_reports WHERE reported_user_id = $1 AND reporter_id = $2 AND status = $3';
+    const existing = await pool.query(checkQuery, [reportedUserId, reporterId, 'pending']);
+
+    if (existing.rows.length > 0) {
+      throw new Error("Ya has reportado a este usuario y el reporte sigue pendiente de revisión.");
+    }
+
+    const query = `
+      INSERT INTO profile_reports (reported_user_id, reporter_id, reason, details)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `;
+    const result = await pool.query(query, [reportedUserId, reporterId, reason, details || null]);
+    return result.rows[0];
+  }
 };
 
 

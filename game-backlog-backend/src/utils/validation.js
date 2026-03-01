@@ -11,7 +11,7 @@ const isValidPassword = (password) => {
 
 // Validar username
 const isValidUsername = (username) => {
-  const usernameRegex = /^[a-zA-Z0-9_]{3,50}$/;
+  const usernameRegex = /^[a-zA-Z0-9_]{3,15}$/;
   return usernameRegex.test(username);
 };
 
