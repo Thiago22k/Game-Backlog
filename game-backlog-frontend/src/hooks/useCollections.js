@@ -6,7 +6,7 @@ export const useCollections = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const clearError = () => setError(null);
+    const clearError = useCallback(() => setError(null), []);
 
     // Obtener colecciones de un usuario (por username)
     const getUserCollections = useCallback(async (username, showLoader = true) => {

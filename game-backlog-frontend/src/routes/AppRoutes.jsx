@@ -1,34 +1,36 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
-import Login from '../pages/auth/Login';
-import Register from '../pages/auth/Register';
-import ForgotPassword from '../pages/auth/ForgotPassword';
-import ResetPassword from '../pages/auth/ResetPassword';
-import Landing from '../pages/Landing';
-import ProfileLayout from '../pages/profile/ProfileLayout';
-import ProfileGames from '../pages/profile/ProfileGames';
-import ProfileStats from '../pages/profile/ProfileStats';
-import ProfileCollections from '../pages/profile/ProfileCollections';
-import ProfileActivity from '../pages/profile/ProfileActivity';
-import ProfileLikes from '../pages/profile/ProfileLikes';
-import ProfileSocial from '../pages/profile/ProfileSocial';
-import ProfileLikedGames from '../pages/profile/ProfileLikedGames';
-import ProfileLikedCollections from '../pages/profile/ProfileLikedCollections';
-import CollectionForm from '../components/collections/CollectionForm';
-import CollectionDetails from '../components/collections/CollectionDetails';
-import Settings from '../pages/Settings';
-import Explore from '../pages/Explore';
-import ExploreCollections from '../pages/collections/ExploreCollections';
-import GameDetails from '../pages/GameDetails';
-import NotFound from '../pages/NotFound';
-import Notifications from '../pages/Notifications';
-import TermsOfService from '../pages/TermsOfService';
-import LegalPrivacy from '../pages/LegalPrivacy';
 import PrivateRoute from './PrivateRoute';
 import PublicRoute from './PublicRoute';
 import AdminRoute from '../components/routing/AdminRoute';
-import AdminDashboard from '../pages/moderation/AdminDashboard';
+
+const Login = lazy(() => import('../pages/auth/Login'));
+const Register = lazy(() => import('../pages/auth/Register'));
+const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
+const Landing = lazy(() => import('../pages/Landing'));
+const ProfileLayout = lazy(() => import('../pages/profile/ProfileLayout'));
+const ProfileGames = lazy(() => import('../pages/profile/ProfileGames'));
+const ProfileStats = lazy(() => import('../pages/profile/ProfileStats'));
+const ProfileCollections = lazy(() => import('../pages/profile/ProfileCollections'));
+const ProfileActivity = lazy(() => import('../pages/profile/ProfileActivity'));
+const ProfileLikes = lazy(() => import('../pages/profile/ProfileLikes'));
+const ProfileSocial = lazy(() => import('../pages/profile/ProfileSocial'));
+const ProfileLikedGames = lazy(() => import('../pages/profile/ProfileLikedGames'));
+const ProfileLikedCollections = lazy(() => import('../pages/profile/ProfileLikedCollections'));
+const CollectionForm = lazy(() => import('../components/collections/CollectionForm'));
+const CollectionDetails = lazy(() => import('../components/collections/CollectionDetails'));
+const Settings = lazy(() => import('../pages/Settings'));
+const Explore = lazy(() => import('../pages/Explore'));
+const ExploreCollections = lazy(() => import('../pages/collections/ExploreCollections'));
+const GameDetails = lazy(() => import('../pages/GameDetails'));
+const NotFound = lazy(() => import('../pages/NotFound'));
+const Notifications = lazy(() => import('../pages/Notifications'));
+const TermsOfService = lazy(() => import('../pages/TermsOfService'));
+const LegalPrivacy = lazy(() => import('../pages/LegalPrivacy'));
+const AdminDashboard = lazy(() => import('../pages/moderation/AdminDashboard'));
 
 const ProfileRedirect = () => {
   const { user, isAuthenticated } = useAuth();
@@ -60,122 +62,128 @@ const AppRoutes = () => {
         }}
       />
 
-      <Routes>
-        {/* Ruta raíz */}
-        <Route path="/" element={<Landing />} />
+      <Suspense fallback={
+        <div className="flex justify-center flex-col items-center h-screen bg-primary-navy">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-yellow border-t-transparent mb-4"></div>
+        </div>
+      }>
+        <Routes>
+          {/* Ruta raíz */}
+          <Route path="/" element={<Landing />} />
 
-        {/* Rutas públicas (solo para NO autenticados) */}
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <Login />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <PublicRoute>
-              <Register />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <PublicRoute>
-              <ForgotPassword />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <PublicRoute>
-              <ResetPassword />
-            </PublicRoute>
-          }
-        />
+          {/* Rutas públicas (solo para NO autenticados) */}
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <ForgotPassword />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPassword />
+              </PublicRoute>
+            }
+          />
 
-        {/* Explore públicos */}
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/collections" element={<ExploreCollections />} />
+          {/* Explore públicos */}
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/collections" element={<ExploreCollections />} />
 
-        {/* Game details público */}
-        <Route path="/game/:slug" element={<GameDetails />} />
+          {/* Game details público */}
+          <Route path="/game/:slug" element={<GameDetails />} />
 
-        {/* Collection details público (la vista decide si permite o no basado en privacidad) */}
-        <Route path="/collections/:id" element={<CollectionDetails />} />
+          {/* Collection details público (la vista decide si permite o no basado en privacidad) */}
+          <Route path="/collections/:id" element={<CollectionDetails />} />
 
-        {/* Rutas protegidas */}
-        <Route path="/profile" element={<ProfileRedirect />} />
+          {/* Rutas protegidas */}
+          <Route path="/profile" element={<ProfileRedirect />} />
 
-        {/* Profile Routes con Layout Anidado */}
-        <Route path="/profile/:username" element={<ProfileLayout />}>
-          <Route index element={<ProfileStats />} />
-          <Route path="games" element={<ProfileGames />} />
-          <Route path="collections" element={<ProfileCollections />} />
-          <Route path="activity" element={<ProfileActivity />} />
-          <Route path="likes" element={<ProfileLikes />} />
-          <Route path="likes/games" element={<ProfileLikedGames />} />
-          <Route path="likes/collections" element={<ProfileLikedCollections />} />
-          <Route path="social" element={<ProfileSocial />} />
-        </Route>
+          {/* Profile Routes con Layout Anidado */}
+          <Route path="/profile/:username" element={<ProfileLayout />}>
+            <Route index element={<ProfileStats />} />
+            <Route path="games" element={<ProfileGames />} />
+            <Route path="collections" element={<ProfileCollections />} />
+            <Route path="activity" element={<ProfileActivity />} />
+            <Route path="likes" element={<ProfileLikes />} />
+            <Route path="likes/games" element={<ProfileLikedGames />} />
+            <Route path="likes/collections" element={<ProfileLikedCollections />} />
+            <Route path="social" element={<ProfileSocial />} />
+          </Route>
 
-        <Route
-          path="/settings"
-          element={
-            <PrivateRoute>
-              <Settings />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/collections/new"
-          element={
-            <PrivateRoute>
-              <CollectionForm />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/collections/new"
+            element={
+              <PrivateRoute>
+                <CollectionForm />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/collections/:id/edit"
-          element={
-            <PrivateRoute>
-              <CollectionForm />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/collections/:id/edit"
+            element={
+              <PrivateRoute>
+                <CollectionForm />
+              </PrivateRoute>
+            }
+          />
 
-        <Route
-          path="/notifications"
-          element={
-            <PrivateRoute>
-              <Notifications />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/notifications"
+            element={
+              <PrivateRoute>
+                <Notifications />
+              </PrivateRoute>
+            }
+          />
 
-        {/* Admin Routes */}
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
+          {/* Admin Routes */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
 
-        {/* Legal Pages */}
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/privacy" element={<LegalPrivacy />} />
+          {/* Legal Pages */}
+          <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/privacy" element={<LegalPrivacy />} />
 
-        {/* 404 Not Found Page */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* 404 Not Found Page */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 };

@@ -46,8 +46,8 @@ const Login = () => {
     const result = await login(formData.identifier, formData.password);
 
     if (result.success) {
-      const redirect = localStorage.getItem('redirectAfterLogin');
-      localStorage.removeItem('redirectAfterLogin');
+      const redirect = sessionStorage.getItem('redirectAfterLogin');
+      sessionStorage.removeItem('redirectAfterLogin');
 
       const isRelative = (url) => url && url.startsWith('/') && !url.startsWith('//');
 

@@ -3,7 +3,6 @@ import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { Gamepad2, ChevronDown, ArrowLeft } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
-import { useGames } from '../../hooks/useGames';
 import usePageTitle from '../../hooks/usePageTitle';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
@@ -15,7 +14,6 @@ const PAGE_SIZE = 20;
 const ProfileLikedGames = () => {
     const { username } = useParams();
     const { user } = useAuth();
-    const { getUserGames } = useGames();
     // games from ProfileLayout outlet = always the profile owner's library
     const { games: ownerGames = [] } = useOutletContext() || {};
 
@@ -23,14 +21,19 @@ const ProfileLikedGames = () => {
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
     const [loading, setLoading] = useState(true);
     const [sortBy, setSortBy] = useState('recent');
-    const userGamesRef = useRef([]);
 
     usePageTitle(`${username}'s Liked Games`);
+
+    // Convertir ownerGames a un Map (O(1) lookup en lugar de O(N))
+    const ownerGamesMap = useMemo(
+        () => new Map(ownerGames.map(g => [g.igdb_game_id, g])),
+        [ownerGames]
+    );
 
     // Reactively merge owner's status/rating into liked games whenever ownerGames updates.
     const allGames = useMemo(() =>
         rawGames.map(g => {
-            const ownerEntry = ownerGames.find(og => og.igdb_game_id === g.igdb_game_id);
+            const ownerEntry = ownerGamesMap.get(g.igdb_game_id);
             return {
                 ...g,
                 game_details: {
@@ -40,7 +43,7 @@ const ProfileLikedGames = () => {
                 }
             };
         }),
-        [rawGames, ownerGames]
+        [rawGames, ownerGamesMap]
     );
 
     useEffect(() => {
@@ -50,12 +53,6 @@ const ProfileLikedGames = () => {
             try {
                 const res = await axios.get(`/games/likes/by-username/${username}`);
                 setRawGames(res.data.games || []);
-
-                // Load viewer's own data into userGamesRef for interactive card actions
-                if (user) {
-                    const ugRes = await getUserGames();
-                    userGamesRef.current = ugRes?.data ?? [];
-                }
             } catch {
                 setRawGames([]);
             } finally {
@@ -67,13 +64,13 @@ const ProfileLikedGames = () => {
     }, [username, user]);
 
     // ─── Card renderer ────────────────────────────────────────────────────
-    const renderGameCard = (g) => {
+    const renderGameCard = useCallback((g) => {
         const mappedGame = {
             ...g.game_details,
             id: g.igdb_game_id,
         };
         return <LikedGameCard game={mappedGame} />;
-    };
+    }, []);
 
     const sortedGames = useMemo(() => {
         const result = [...allGames];

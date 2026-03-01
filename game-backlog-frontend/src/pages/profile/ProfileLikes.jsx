@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { Gamepad2, Library } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useGames } from '../../hooks/useGames';
 import { useCollections } from '../../hooks/useCollections';
 import CollectionCard from '../../components/collections/CollectionCard';
 import InteractiveGameCard from '../../components/games/InteractiveGameCard';
@@ -21,9 +20,14 @@ const ProfileLikes = () => {
     const [loadingGames, setLoadingGames] = useState(true);
     const [loadingCollections, setLoadingCollections] = useState(true);
 
+    const ownerGamesMap = useMemo(
+        () => new Map(ownerGames.map(g => [g.igdb_game_id, g])),
+        [ownerGames]
+    );
+
     const likedGames = useMemo(() =>
         rawLikedGames.map(g => {
-            const ownerEntry = ownerGames.find(og => og.igdb_game_id === g.igdb_game_id);
+            const ownerEntry = ownerGamesMap.get(g.igdb_game_id);
             return {
                 ...g,
                 game_details: {
@@ -32,7 +36,7 @@ const ProfileLikes = () => {
                 }
             };
         }),
-        [rawLikedGames, ownerGames]
+        [rawLikedGames, ownerGamesMap]
     );
 
     useEffect(() => {
@@ -71,14 +75,14 @@ const ProfileLikes = () => {
 
     // ─── Render helpers ────────────────────────────────────────────────────
 
-    const renderGameCard = (g) => {
+    const renderGameCard = useCallback((g) => {
         const mappedGame = {
             ...g.game_details,
             id: g.igdb_game_id,
         };
 
         return <LikedGameCard game={mappedGame} />;
-    };
+    }, []);
 
     const Spinner = () => (
         <div className="flex justify-center items-center py-12">

@@ -16,7 +16,6 @@ import { useGames } from '../hooks/useGames';
 import usePageTitle from '../hooks/usePageTitle';
 import toast from 'react-hot-toast';
 import { formatIGDBImage } from '../utils/formatters';
-import { getAvatarUrl } from '../utils/avatar';
 import ssCtaImage from '../assets/ss_cta.png';
 
 // Constante a nivel de módulo — no se recrea en cada render

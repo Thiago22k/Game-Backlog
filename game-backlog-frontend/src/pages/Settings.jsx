@@ -55,7 +55,9 @@ const Settings = () => {
       toast.success('Email updated successfully!');
       setShowEmailModal(false);
       setEmailData({ newEmail: '', password: '' });
-      setTimeout(() => window.location.reload(), 1500);
+      setTimeout(() => {
+        updateUser({ ...user, email: emailData.newEmail });
+      }, 1500);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error updating email');
     } finally {
@@ -72,7 +74,9 @@ const Settings = () => {
       toast.success('Username updated successfully!');
       setShowUsernameModal(false);
       setUsernameData({ newUsername: '', password: '' });
-      setTimeout(() => window.location.reload(), 1500);
+      setTimeout(() => {
+        updateUser({ ...user, username: usernameData.newUsername });
+      }, 1500);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Error updating username');
     } finally {

@@ -30,9 +30,30 @@ export const useNotifications = () => {
             setUnreadCount(0);
             return;
         }
+
+        // Fetch inmediamente al montar
         fetchNotifications();
-        const intervalId = setInterval(fetchNotifications, POLL_INTERVAL);
-        return () => clearInterval(intervalId);
+
+        // Intervalo que solo dispara si la tab es visible
+        const intervalId = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                fetchNotifications();
+            }
+        }, POLL_INTERVAL);
+
+        // Disparar fetch si la pestaña vuelve a ser visible
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchNotifications();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, [isAuthenticated, fetchNotifications]);
 
     const markAllRead = useCallback(async () => {

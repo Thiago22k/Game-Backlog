@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreVertical, Archive, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
@@ -54,7 +54,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
     e.stopPropagation();
 
     if (!interactive) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      sessionStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       toast.error('Log in to add games to your library');
       return;
     }
@@ -67,7 +67,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
     e.stopPropagation();
 
     if (!user) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      sessionStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       toast.error('Log in to add games to your collection');
       return;
     }
@@ -226,6 +226,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             src={artworkUrl}
             alt={game.name}
             className="w-full h-32 object-cover rounded-lg"
+            loading="lazy"
             onError={(e) => {
               e.target.src = PLACEHOLDER_COVER;
             }}
@@ -238,6 +239,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             src={coverUrl}
             alt={game.name}
             className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
+            loading="lazy"
           />
         </div>
 
@@ -287,4 +289,4 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
   );
 };
 
-export default InteractiveGameCard;
+export default memo(InteractiveGameCard);

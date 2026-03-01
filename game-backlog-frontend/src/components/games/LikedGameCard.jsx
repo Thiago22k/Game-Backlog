@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FolderPlus, MoreVertical } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
@@ -41,7 +41,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
         e.stopPropagation();
 
         if (!user) {
-            localStorage.setItem('redirectAfterLogin', `/game/${slug}`);
+            sessionStorage.setItem('redirectAfterLogin', `/game/${slug}`);
             toast.error('Log in to add games to your collection');
             return;
         }
@@ -132,6 +132,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                         src={artworkUrl}
                         alt={game.name}
                         className="w-full h-32 object-cover rounded-lg"
+                        loading="lazy"
                         onError={(e) => {
                             e.target.src = PLACEHOLDER_COVER;
                         }}
@@ -144,6 +145,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                         src={coverUrl}
                         alt={game.name}
                         className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors bg-primary-navy-dark"
+                        loading="lazy"
                     />
                 </div>
 
@@ -184,4 +186,4 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
     );
 };
 
-export default LikedGameCard;
+export default memo(LikedGameCard);

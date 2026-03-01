@@ -43,6 +43,7 @@ const GameCard = ({ game, onAdd, onEdit, onDelete, showActions = true }) => {
           src={coverUrl}
           alt={name}
           className="w-full h-64 object-cover"
+          loading="lazy"
           onError={(e) => {
             e.target.src = PLACEHOLDER_COVER;
           }}

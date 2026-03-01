@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Plus, Check, MoreVertical, FolderPlus, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
@@ -51,7 +51,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
     e.stopPropagation();
 
     if (!interactive) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      sessionStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       toast.error('Log in to add games to your wishlist');
       return;
     }
@@ -70,7 +70,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
     e.stopPropagation();
 
     if (!user) {
-      localStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
+      sessionStorage.setItem('redirectAfterLogin', `/game/${game.slug || game.id}`);
       toast.error('Log in to add games to your collection');
       return;
     }
@@ -191,6 +191,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
             src={artworkUrl}
             alt={game.name}
             className="w-full h-32 object-cover rounded-lg"
+            loading="lazy"
             onError={(e) => {
               e.target.src = PLACEHOLDER_COVER;
             }}
@@ -203,6 +204,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
             src={coverUrl}
             alt={game.name}
             className="w-24 h-24 rounded-full object-cover border-4 border-primary-navy-dark group-hover:border-primary-yellow transition-colors"
+            loading="lazy"
           />
         </div>
 
@@ -267,4 +269,4 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
   );
 };
 
-export default AnticipatedGameCard;
+export default memo(AnticipatedGameCard);
