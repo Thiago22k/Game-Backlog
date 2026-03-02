@@ -138,7 +138,7 @@ const ProfileCollections = () => {
             )}
 
             {collections.length === 0 ? (
-                <div className="text-center py-16 bg-primary-navy-dark border border-gray-700 rounded-xl">
+                <div className="text-center py-16 bg-primary-navy-dark rounded-xl">
                     <div className="flex justify-center mb-4">
                         <div className="p-4 bg-primary-navy rounded-full">
                             <Library size={32} className="text-gray-500" />
@@ -159,7 +159,7 @@ const ProfileCollections = () => {
                     )}
                 </div>
             ) : processedCollections.length === 0 ? (
-                <div className="text-center py-16 bg-primary-navy-dark border border-gray-700 rounded-xl">
+                <div className="text-center py-16 bg-primary-navy-dark rounded-xl">
                     <p className="text-gray-400">
                         No collections match your filters.
                     </p>

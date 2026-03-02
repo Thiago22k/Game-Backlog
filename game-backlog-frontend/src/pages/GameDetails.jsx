@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Share2, Clock, Globe, ArrowLeft, Building2, Calendar, Check, Save, Plus, Target, ShoppingCart, Info, Star, Play, Trash2, Archive, Tag, ExternalLink, Heart, Compass, MessageSquare, XCircle, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Clock, ArrowLeft, Building2, Calendar, Check, Plus, ShoppingCart, Info, Play, Trash2, Archive, ExternalLink, Heart, Compass, MessageSquare, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
@@ -27,18 +27,42 @@ const STATUSES = [
   { id: 'dropped', label: 'Dropped', Icon: Trash2, color: 'bg-red-600 hover:bg-red-500', activeRing: 'ring-red-400' },
 ];
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
-const SectionTitle = ({ children }) => (
-  <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">{children}</h2>
-);
+const GAME_CATEGORIES = {
+  0: 'Main Game',
+  1: 'DLC / Addon',
+  2: 'Expansion',
+  3: 'Bundle',
+  4: 'Standalone Expansion',
+  5: 'Mod',
+  6: 'Episode',
+  7: 'Season',
+  8: 'Remake',
+  9: 'Remaster',
+  10: 'Expanded Game',
+  11: 'Port',
+  12: 'Fork',
+  13: 'Pack',
+  14: 'Update',
+};
 
-const InfoRow = ({ label, children }) => (
-  <div className="flex flex-col gap-1">
-    <span className="text-xs uppercase tracking-wider text-gray-500 font-semibold">{label}</span>
-    <div className="text-gray-200 text-sm">{children}</div>
-  </div>
-);
+const TABS = [
+  { id: 'stats', label: 'Stats', icon: LayoutDashboard },
+  { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+  { id: 'details', label: 'Details', icon: Info },
+  { id: 'similar', label: 'Similar', icon: Compass },
+];
 
+// ─── Pure helpers (defined once, not per render) ──────────────────────────────
+const formatNumber = (num) => {
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+};
+
+const renderStars = (rating) => {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+};
 
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -61,12 +85,6 @@ const GameDetails = () => {
   const [banner, setBanner] = useState(null);
   const [activeTab, setActiveTab] = useState('stats');
 
-  const tabs = [
-    { id: 'stats', label: 'Stats', icon: LayoutDashboard },
-    { id: 'gallery', label: 'Gallery', icon: ImageIcon },
-    { id: 'details', label: 'Details', icon: Info },
-    { id: 'similar', label: 'Similar', icon: Compass },
-  ];
 
   usePageTitle(game?.name);
 
@@ -164,24 +182,7 @@ const GameDetails = () => {
   // Derived category and parent game
   const categoryName = useMemo(() => {
     if (!game) return null;
-    const categories = {
-      0: 'Main Game',
-      1: 'DLC / Addon',
-      2: 'Expansion',
-      3: 'Bundle',
-      4: 'Standalone Expansion',
-      5: 'Mod',
-      6: 'Episode',
-      7: 'Season',
-      8: 'Remake',
-      9: 'Remaster',
-      10: 'Expanded Game',
-      11: 'Port',
-      12: 'Fork',
-      13: 'Pack',
-      14: 'Update'
-    };
-    return categories[game.game_type] || null;
+    return GAME_CATEGORIES[game.game_type] || null;
   }, [game]);
 
   const parentGame = useMemo(() => {
@@ -452,7 +453,7 @@ const GameDetails = () => {
             {/* Tab Navigation */}
             <div className="border-b border-gray-700">
               <nav className="-mb-px flex space-x-6">
-                {tabs.map((tab) => {
+                {TABS.map((tab) => {
                   const isActive = activeTab === tab.id;
                   const Icon = tab.icon;
                   return (
@@ -482,6 +483,7 @@ const GameDetails = () => {
                   <GameStatsPanel
                     stats={gameStats}
                     game={game}
+                    igdbScore={igdbScore}
                     myReview={myReview}
                     onAddCollection={handleAddToCollectionClick}
                     onStatsUpdate={fetchStats}
@@ -776,26 +778,6 @@ const GameDetails = () => {
   );
 };
 
-// ─── Description with expand/collapse (no header label) ───────────────────────
-const DescriptionSection = ({ summary }) => {
-  const [expanded, setExpanded] = useState(false);
-  const isLong = summary.length > 350;
-  const display = expanded || !isLong ? summary : `${summary.slice(0, 350)}…`;
-  return (
-    <div className="bg-primary-navy-dark border border-gray-700 rounded-2xl p-6">
-      <p className="text-gray-300 leading-relaxed whitespace-pre-line text-sm">{display}</p>
-      {isLong && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="mt-3 text-primary-yellow hover:underline font-medium text-sm"
-        >
-          {expanded ? 'Show less' : 'Read more'}
-        </button>
-      )}
-    </div>
-  );
-};
-
 export default GameDetails;
 
 // ─── Inline description in the Hero — no card, raw text ────────────────────
@@ -819,10 +801,19 @@ const InlineSummary = ({ summary }) => {
 };
 
 // ─── Community Stats Panel (right sidebar) ──────────────────────────────────
-const GameStatsPanel = ({ stats, game, myReview, onAddCollection, onStatsUpdate, onWriteReview }) => {
+const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onStatsUpdate, onWriteReview }) => {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const { liked, toggleLike, toggling } = useGameLikes(game?.id);
+
+  const handleLikeClick = useCallback(async (e) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      toast.error('Log in to like games');
+      return;
+    }
+    await toggleLike(game.name, game.cover?.image_id);
+    if (onStatsUpdate) onStatsUpdate();
+  }, [isAuthenticated, toggleLike, game, onStatsUpdate]);
 
   if (stats === null) {
     return (
@@ -834,39 +825,9 @@ const GameStatsPanel = ({ stats, game, myReview, onAddCollection, onStatsUpdate,
     );
   }
 
-  const handleLikeClick = async (e) => {
-    e.preventDefault();
-    if (!isAuthenticated) {
-      toast.error('Log in to like games');
-      return;
-    }
-    await toggleLike(game.name, game.cover?.image_id);
-    if (onStatsUpdate) onStatsUpdate();
-  };
-
-  const totalSaves = (stats?.playing || 0) + (stats?.completed || 0) + (stats?.backlog || 0) + (stats?.wishlist || 0) + (stats?.dropped || 0);
-
-  const igdbScoreValue = game?.rating ? Math.round(game.rating) : null;
-
   // Rating histogram buckets (10 buckets from 0.5 to 5.0)
   const ratingBuckets = stats?.ratingDistribution || Array.from({ length: 10 }).fill(0);
   const maxBucket = ratingBuckets.length > 0 ? Math.max(...ratingBuckets, 1) : 1;
-  // Determine which bucket matches the average rating to highlight it
-  // Using Math.round to make it more stable and representative of the nearest 0.5 step
-  const activeBucketIndex = Math.max(0, Math.min(9, Math.round((stats?.avgRating || 0) / 0.5) - 1));
-
-  // Helper to format large numbers like "12.4K"
-  const formatNumber = (num) => {
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
-
-  // Star display helper
-  const renderStars = (rating) => {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
-  };
 
   return (
     <div className="space-y-6">
@@ -933,9 +894,9 @@ const GameStatsPanel = ({ stats, game, myReview, onAddCollection, onStatsUpdate,
         <div className="bg-primary-navy-dark rounded-2xl p-6">
           <div className="flex justify-between items-center mb-5">
             <h4 className="text-xs font-black text-white uppercase tracking-wider">Community Rating</h4>
-            {igdbScoreValue && (
+            {igdbScore && (
               <div className="text-xs font-bold">
-                <span className="text-primary-yellow">{igdbScoreValue}</span>
+                <span className="text-primary-yellow">{igdbScore}</span>
                 <a
                   href={game.url || `https://www.igdb.com/games/${game.slug}`}
                   target="_blank"

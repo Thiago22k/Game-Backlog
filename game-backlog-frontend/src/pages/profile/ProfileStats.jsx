@@ -105,7 +105,7 @@ const ProfileStats = () => {
                 {/* ── ROW 1: Mini stat cards ── */}
                 <Link
                     to={`/profile/${username}/games`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                 >
                     <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Total Games</span>
                     <span className="text-4xl font-black text-white">{games.length}</span>
@@ -113,7 +113,7 @@ const ProfileStats = () => {
 
                 <Link
                     to={`/profile/${username}/collections`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                 >
                     <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Collections</span>
                     <span className="text-4xl font-black text-white">{collections?.length || 0}</span>
@@ -121,13 +121,13 @@ const ProfileStats = () => {
 
                 <Link
                     to={`/profile/${username}/likes/games`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                 >
                     <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Liked Games</span>
                     <span className="text-4xl font-black text-white">{likesCount}</span>
                 </Link>
 
-                <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-white/5 transition-all duration-200">
+                <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200">
                     <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5">Reviews</span>
                     <span className="text-4xl font-black text-white">{reviewsCount}</span>
                 </div>
@@ -140,14 +140,14 @@ const ProfileStats = () => {
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <Link
                             to={`/profile/${username}/games?status=completed`}
-                            className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                            className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-green-400 leading-none">{completed}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=backlog`}
-                            className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group"
+                            className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-indigo-400 leading-none">{backlog}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
@@ -167,14 +167,14 @@ const ProfileStats = () => {
                             to={`/profile/${username}/games?status=wishlist`}
                             className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-pink-400 transition-colors group"
                         >
-                            <span className="text-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
+                            <span className="w-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
                             Wishlist: <span className="text-white font-black">{wishlist}</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=dropped`}
                             className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-red-400 transition-colors group"
                         >
-                            <span className="text-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
+                            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
                             Dropped: <span className="text-white font-black">{dropped}</span>
                         </Link>
                     </div>
@@ -203,7 +203,7 @@ const ProfileStats = () => {
                                             to={`/profile/${username}/games?rating=${value}`}
                                             className="flex-1 flex flex-col items-center gap-2 group h-full cursor-pointer"
                                         >
-                                            <div className="flex-1 w-full bg-white/5 rounded-t-sm flex items-end relative">
+                                            <div className="flex-1 w-full bg-primary-navy-light rounded-t-sm flex items-end relative">
                                                 <div
                                                     className="w-full bg-amber-400 rounded-t-sm transition-all duration-500 group-hover:bg-amber-300 group-hover:scale-x-110"
                                                     style={{ height: `${(count / maxRatingCount) * 100}%` }}
@@ -242,7 +242,7 @@ const ProfileStats = () => {
                     {/* Last Completed Game (span 4/10 = 40%) */}
                     <Link
                         to={latestCompletedGame ? `/game/${latestCompletedGame.game_details?.slug || latestCompletedGame.igdb_game_id}` : '#'}
-                        className={`lg:col-span-4 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-5 hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group relative ${!latestCompletedGame ? 'pointer-events-none' : ''}`}
+                        className={`lg:col-span-4 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-5 hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group relative ${!latestCompletedGame ? 'pointer-events-none' : ''}`}
                     >
                         {latestCompletedGame ? (
                             <>
@@ -295,7 +295,7 @@ const ProfileStats = () => {
                             <Link
                                 key={index}
                                 to={game ? `/game/${game.game_details?.slug || game.igdb_game_id}` : '#'}
-                                className={`lg:col-span-3 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-4 hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group ${!game ? 'pointer-events-none' : ''}`}
+                                className={`lg:col-span-3 bg-primary-navy-dark rounded-2xl p-5 flex items-center gap-4 hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group ${!game ? 'pointer-events-none' : ''}`}
                             >
                                 {game ? (
                                     <>

@@ -301,7 +301,7 @@ const Review = {
             SELECT COUNT(*) 
             FROM reviews r
             JOIN users u ON r.user_id = u.id
-            WHERE u.username = $1
+            WHERE u.username ILIKE $1
         `;
         const result = await pool.query(query, [username]);
         return parseInt(result.rows[0].count, 10);

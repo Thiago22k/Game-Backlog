@@ -25,6 +25,21 @@ export function useCardMenu(cardId) {
         return () => _listeners.delete(handleChange);
     }, [cardId]);
 
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (event) => {
+            // If the click is outside any element with data-card-menu="cardId", close it
+            if (!event.target.closest(`[data-card-menu="${cardId}"]`)) {
+                _setGlobalOpen(null);
+            }
+        };
+
+        // Use mousedown instead of click to trigger before other click events if needed
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen, cardId]);
+
     const open = useCallback(() => _setGlobalOpen(cardId), [cardId]);
 
     const close = useCallback(() => {

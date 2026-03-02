@@ -49,3 +49,17 @@ export const getGameCover = (game) => {
   if (!game?.cover?.url) return PLACEHOLDER_COVER;
   return formatIGDBImage(game.cover.url, 't_cover_big');
 };
+
+/**
+ * Formatea un número a notación compacta (ej: 1200 -> 1.2k)
+ * @param {number} number 
+ * @returns {string}
+ */
+export const formatCompactNumber = (number) => {
+  if (number < 1000) return number.toString();
+
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(number).toLowerCase();
+};

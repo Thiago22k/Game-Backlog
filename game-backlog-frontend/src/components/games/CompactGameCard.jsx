@@ -17,7 +17,7 @@ const CompactGameCard = ({ game }) => {
     return (
         <Link
             to={`/game/${game.slug || game.id}`}
-            className="bg-primary-navy-dark rounded-xl overflow-hidden transition-all flex flex-row h-[120px] group relative block hover:ring-1 hover:ring-primary-yellow"
+            className="bg-primary-navy-dark rounded-xl overflow-hidden transition-all flex flex-row h-[120px] group relative block hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer"
         >
             {/* Cover Image */}
             <div className="w-[90px] h-full flex-shrink-0 relative overflow-hidden bg-gray-900">

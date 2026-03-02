@@ -581,6 +581,10 @@ const getGamesByIds = async (gameIds) => {
 
 // Obtener candidatos para recomendaciones (datos básicos)
 const getRecommendationsCandidates = async (options = {}) => {
+  const cacheKey = `rec_cand_${JSON.stringify(options)}`;
+  const cached = getFromMemoryCache(cacheKey);
+  if (cached) return cached;
+
   try {
     const { genreIds = [], gameIds = [], limit = 10 } = options;
     const token = await getAccessToken();
@@ -610,6 +614,7 @@ const getRecommendationsCandidates = async (options = {}) => {
       }
     );
 
+    setToMemoryCache(cacheKey, response.data, 24); // Cache recommendations for 24h
     return response.data;
   } catch (error) {
     console.error('❌ Error obteniendo candidatos de recomendación:', error.message);

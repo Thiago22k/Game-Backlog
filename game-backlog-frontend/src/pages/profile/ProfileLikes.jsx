@@ -117,7 +117,7 @@ const ProfileLikes = () => {
                 {loadingGames ? (
                     <Spinner />
                 ) : likedGames.length === 0 ? (
-                    <div className="text-center py-14 bg-primary-navy-dark border border-gray-700 rounded-xl">
+                    <div className="text-center py-14 bg-primary-navy-dark rounded-xl">
                         <Gamepad2 size={40} className="mx-auto text-gray-600 mb-3" />
                         <p className="text-gray-400">
                             {username === user?.username
@@ -159,7 +159,7 @@ const ProfileLikes = () => {
                 {loadingCollections ? (
                     <Spinner />
                 ) : likedCollections.length === 0 ? (
-                    <div className="text-center py-14 bg-primary-navy-dark border border-gray-700 rounded-xl">
+                    <div className="text-center py-14 bg-primary-navy-dark rounded-xl">
                         <Library size={40} className="mx-auto text-gray-600 mb-3" />
                         <p className="text-gray-400">
                             {username === user?.username

@@ -3,16 +3,24 @@ const pool = require('../config/database');
 const GameLikes = {
     // Toggle a like for a game (like/unlike)
     async toggleLike(igdbGameId, userId) {
-        const checkQuery = 'SELECT id FROM game_likes WHERE igdb_game_id = $1 AND user_id = $2';
-        const checkResult = await pool.query(checkQuery, [igdbGameId, userId]);
+        const query = `
+            WITH deleted AS (
+                DELETE FROM game_likes 
+                WHERE igdb_game_id = $1 AND user_id = $2 
+                RETURNING id
+            ), inserted AS (
+                INSERT INTO game_likes (igdb_game_id, user_id)
+                SELECT $1, $2 
+                WHERE NOT EXISTS (SELECT 1 FROM deleted)
+                RETURNING id
+            )
+            SELECT 'deleted' AS action FROM deleted
+            UNION ALL
+            SELECT 'inserted' AS action FROM inserted;
+        `;
+        const result = await pool.query(query, [igdbGameId, userId]);
 
-        if (checkResult.rows.length > 0) {
-            await pool.query('DELETE FROM game_likes WHERE igdb_game_id = $1 AND user_id = $2', [igdbGameId, userId]);
-            return { liked: false };
-        } else {
-            await pool.query('INSERT INTO game_likes (igdb_game_id, user_id) VALUES ($1, $2)', [igdbGameId, userId]);
-            return { liked: true };
-        }
+        return { liked: result.rows[0].action === 'inserted' };
     },
 
     // Get total like count for a game
@@ -43,7 +51,7 @@ const GameLikes = {
             SELECT gl.igdb_game_id, gl.created_at
             FROM game_likes gl
             JOIN users u ON gl.user_id = u.id
-            WHERE u.username = $1
+            WHERE u.username ILIKE $1
             ORDER BY gl.created_at DESC
         `;
         const result = await pool.query(query, [username]);

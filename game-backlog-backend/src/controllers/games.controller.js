@@ -93,14 +93,15 @@ const addGameToUser = async (req, res) => {
     // Agregar juego
     const newGame = await Game.addGame(userId, igdb_game_id, status || 'completed', rating);
 
-    // Registrar actividad en el log
-    const gameDetails = await igdbService.getGameById(igdb_game_id);
-    await Activity.logActivity(userId, 'ADDED_GAME', 'GAME', igdb_game_id, {
-      game_name: gameDetails?.name || 'Unknown Game',
-      status: status || 'completed',
-      rating: rating || null,
-      cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
-    });
+    // Registrar actividad en el log (Diferido para no bloquear la respuesta HTTP)
+    igdbService.getGameById(igdb_game_id).then(gameDetails => {
+      Activity.logActivity(userId, 'ADDED_GAME', 'GAME', igdb_game_id, {
+        game_name: gameDetails?.name || 'Unknown Game',
+        status: status || 'completed',
+        rating: rating || null,
+        cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
+      }).catch(err => console.error("Error asíncrono en addGameToUser Activity Log:", err));
+    }).catch(err => console.error("Error asíncrono obteniendo detalles de IGDB:", err));
 
     res.status(201).json({
       message: 'Juego agregado exitosamente',
@@ -257,19 +258,24 @@ const updateUserGame = async (req, res) => {
     // Actualizar
     const updatedGame = await Game.updateGame(userId, igdb_game_id, status, rating);
 
-    // Registrar actividad en el log (solo si hubo un cambio intencional)
-    const gameDetails = await igdbService.getGameById(igdb_game_id);
-    const metadata = {
-      game_name: gameDetails?.name || 'Unknown Game',
-      cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
-    };
+    // Registrar actividad en el log (Diferido asíncrono)
+    if ((status && status !== game.status) || (rating && rating !== game.rating)) {
+      igdbService.getGameById(igdb_game_id).then(gameDetails => {
+        const metadata = {
+          game_name: gameDetails?.name || 'Unknown Game',
+          cover_url: gameDetails?.cover?.image_id ? gameDetails.cover.image_id : null
+        };
 
-    if (status && status !== game.status) {
-      metadata.new_status = status;
-      await Activity.logActivity(userId, 'STATUS_CHANGED', 'GAME', igdb_game_id, metadata);
-    } else if (rating && rating !== game.rating) {
-      metadata.new_rating = rating;
-      await Activity.logActivity(userId, 'RATED_GAME', 'GAME', igdb_game_id, metadata);
+        if (status && status !== game.status) {
+          metadata.new_status = status;
+          Activity.logActivity(userId, 'STATUS_CHANGED', 'GAME', igdb_game_id, metadata)
+            .catch(err => console.error("Activity Log Error:", err));
+        } else if (rating && rating !== game.rating) {
+          metadata.new_rating = rating;
+          Activity.logActivity(userId, 'RATED_GAME', 'GAME', igdb_game_id, metadata)
+            .catch(err => console.error("Activity Log Error:", err));
+        }
+      }).catch(err => console.error("Error IGDB background fetching:", err));
     }
 
     res.json({

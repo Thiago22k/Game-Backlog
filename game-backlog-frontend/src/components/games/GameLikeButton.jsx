@@ -1,6 +1,7 @@
 import { Heart } from 'lucide-react';
 import { useGameLikes } from '../../hooks/useGameLikes';
 import { useAuth } from '../../context/AuthContext';
+import { formatCompactNumber } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 /**
@@ -61,7 +62,7 @@ const GameLikeButton = ({
             />
             {showCount && likesCount > 0 && (
                 <span className={`font-semibold tabular-nums ${s.text} ${liked ? 'text-pink-400' : 'text-gray-400'}`}>
-                    {likesCount}
+                    {formatCompactNumber(likesCount)}
                 </span>
             )}
         </button>

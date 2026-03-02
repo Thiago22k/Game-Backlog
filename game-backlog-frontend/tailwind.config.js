@@ -13,6 +13,7 @@ export default {
 
       colors: {
         primary: {
+          'navy-light': '#1b1d26',
           navy: '#0f111a',
           'navy-dark': '#12141d',
           'navy-ultra-dark': '#08090d',

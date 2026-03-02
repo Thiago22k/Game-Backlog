@@ -49,24 +49,25 @@ const getUserCollections = async (req, res) => {
         let targetUserId;
         let isProfilePublic = true;
         let targetUsername = null;
+        let targetUser = null;
 
         if (username) {
-            const user = await User.findByUsername(username);
-            if (!user) {
+            targetUser = await User.findByUsername(username);
+            if (!targetUser) {
                 return res.status(404).json({ error: 'Usuario no encontrado' });
             }
-            targetUserId = user.id;
-            isProfilePublic = user.is_profile_public;
-            targetUsername = user.username;
+            targetUserId = targetUser.id;
+            isProfilePublic = targetUser.is_profile_public;
+            targetUsername = targetUser.username;
 
             if (!isProfilePublic && targetUserId !== requestingUserId) {
                 return res.json({
                     collections: [],
                     is_profile_public: false,
                     username: targetUsername,
-                    avatar_url: user.avatar_url,
-                    avatar_static_url: user.avatar_static_url,
-                    banner_url: user.banner_url
+                    avatar_url: targetUser.avatar_url,
+                    avatar_static_url: targetUser.avatar_static_url,
+                    banner_url: targetUser.banner_url
                 });
             }
         } else {
@@ -80,8 +81,16 @@ const getUserCollections = async (req, res) => {
         const collectionsGamesMap = {};
         const allTopGameIdsSet = new Set();
 
+        const collectionIds = collections.map(c => c.id);
+        const allDbGames = await Collection.getGamesForMultipleCollections(collectionIds);
+        const gamesByCollection = {};
+        allDbGames.forEach(g => {
+            if (!gamesByCollection[g.collection_id]) gamesByCollection[g.collection_id] = [];
+            gamesByCollection[g.collection_id].push(g);
+        });
+
         for (let collection of collections) {
-            const dbGames = await Collection.getCollectionGames(collection.id);
+            const dbGames = gamesByCollection[collection.id] || [];
             const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
             collectionsGamesMap[collection.id] = top3Ids;
             top3Ids.forEach(id => allTopGameIdsSet.add(id));
@@ -91,11 +100,12 @@ const getUserCollections = async (req, res) => {
 
         if (allTopGameIds.length > 0) {
             const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+            const gamesMap = new Map(gamesDetails.map(g => [g.id, g]));
 
             for (let collection of collections) {
                 const top3Ids = collectionsGamesMap[collection.id];
                 collection.preview_games = top3Ids.map(id => {
-                    const det = gamesDetails.find(g => g.id === id);
+                    const det = gamesMap.get(id);
                     return det ? { id: det.id, cover: det.cover } : null;
                 }).filter(g => g !== null);
             }
@@ -109,9 +119,9 @@ const getUserCollections = async (req, res) => {
             collections,
             is_profile_public: isProfilePublic,
             username: targetUsername || req.user?.username,
-            avatar_url: username ? (await User.findByUsername(username)).avatar_url : undefined,
-            avatar_static_url: username ? (await User.findByUsername(username)).avatar_static_url : undefined,
-            banner_url: username ? (await User.findByUsername(username)).banner_url : undefined
+            avatar_url: targetUser ? targetUser.avatar_url : undefined,
+            avatar_static_url: targetUser ? targetUser.avatar_static_url : undefined,
+            banner_url: targetUser ? targetUser.banner_url : undefined
         });
     } catch (error) {
         console.error('Error en getUserCollections:', error);
@@ -140,9 +150,10 @@ const getCollectionDetails = async (req, res) => {
         if (dbGames.length > 0) {
             const igdbGameIds = dbGames.map(g => g.igdb_game_id);
             const gamesDetails = await igdbService.getGamesByIds(igdbGameIds);
+            const gamesMap = new Map(gamesDetails.map(g => [g.id, g]));
 
             collection.games = dbGames.map(cg => {
-                const details = gamesDetails.find(g => g.id === cg.igdb_game_id);
+                const details = gamesMap.get(cg.igdb_game_id);
                 return {
                     ...cg,
                     game_details: details || null
@@ -411,8 +422,15 @@ const getExploreCollections = async (req, res) => {
         const collectionsGamesMap = {};
         const allTopGameIdsSet = new Set();
 
+        const allDbGames = await Collection.getGamesForMultipleCollections(uniqueIds);
+        const gamesByCollection = {};
+        allDbGames.forEach(g => {
+            if (!gamesByCollection[g.collection_id]) gamesByCollection[g.collection_id] = [];
+            gamesByCollection[g.collection_id].push(g);
+        });
+
         for (const collId of uniqueIds) {
-            const dbGames = await Collection.getCollectionGames(collId);
+            const dbGames = gamesByCollection[collId] || [];
             const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
             collectionsGamesMap[collId] = top3Ids;
             top3Ids.forEach(id => allTopGameIdsSet.add(id));
@@ -424,11 +442,12 @@ const getExploreCollections = async (req, res) => {
         // Hacer UNA sola petición a IGDB con todos los IDs requeridos
         if (allTopGameIds.length > 0) {
             const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+            const gamesMap = new Map(gamesDetails.map(g => [g.id, g]));
 
             for (const collId of uniqueIds) {
                 const top3Ids = collectionsGamesMap[collId];
                 collectionPreviews[collId] = top3Ids.map(id => {
-                    const det = gamesDetails.find(g => g.id === id);
+                    const det = gamesMap.get(id);
                     return det ? { id: det.id, cover: det.cover } : null;
                 }).filter(g => g !== null);
             }
@@ -471,8 +490,16 @@ const getUserLikedCollections = async (req, res) => {
         const collectionsGamesMap = {};
         const allTopGameIdsSet = new Set();
 
+        const collectionIds = collections.map(c => c.id);
+        const allDbGames = await Collection.getGamesForMultipleCollections(collectionIds);
+        const gamesByCollection = {};
+        allDbGames.forEach(g => {
+            if (!gamesByCollection[g.collection_id]) gamesByCollection[g.collection_id] = [];
+            gamesByCollection[g.collection_id].push(g);
+        });
+
         for (const collection of collections) {
-            const dbGames = await Collection.getCollectionGames(collection.id);
+            const dbGames = gamesByCollection[collection.id] || [];
             const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
             collectionsGamesMap[collection.id] = top3Ids;
             top3Ids.forEach(id => allTopGameIdsSet.add(id));
@@ -482,10 +509,12 @@ const getUserLikedCollections = async (req, res) => {
 
         if (allTopGameIds.length > 0) {
             const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+            const gamesMap = new Map(gamesDetails.map(g => [g.id, g]));
+
             for (const collection of collections) {
                 const top3Ids = collectionsGamesMap[collection.id];
                 collection.preview_games = top3Ids.map(id => {
-                    const det = gamesDetails.find(g => g.id === id);
+                    const det = gamesMap.get(id);
                     return det ? { id: det.id, cover: det.cover } : null;
                 }).filter(g => g !== null);
             }

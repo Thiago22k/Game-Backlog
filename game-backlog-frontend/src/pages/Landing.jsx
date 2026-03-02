@@ -271,7 +271,7 @@ const Landing = () => {
                 <div className="h-8 w-48 bg-gray-700 rounded animate-pulse"></div>
                 <div className="h-6 w-24 bg-gray-700 rounded animate-pulse"></div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <InteractiveGameCardSkeleton key={`pop-skel-${i}`} />
                 ))}
@@ -284,7 +284,7 @@ const Landing = () => {
                 <div className="h-8 w-56 bg-gray-700 rounded animate-pulse"></div>
                 <div className="h-6 w-24 bg-gray-700 rounded animate-pulse"></div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <AnticipatedGameCardSkeleton key={`ant-skel-${i}`} />
                 ))}
@@ -320,7 +320,7 @@ const Landing = () => {
                   View all
                 </button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 {popularGames.map((game) => (
                   <InteractiveGameCard
                     key={game.id}

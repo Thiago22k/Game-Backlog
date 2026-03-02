@@ -34,6 +34,13 @@ const User = {
     return result.rows[0];
   },
 
+  // Buscar usuario por ID con contraseña (uso interno Auth/Settings)
+  async findByIdWithPassword(id) {
+    const query = 'SELECT * FROM users WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    return result.rows[0];
+  },
+
   // Cambiar contraseña
   async changePassword(userId, newHashedPassword) {
     const query = `

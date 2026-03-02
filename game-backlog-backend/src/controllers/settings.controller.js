@@ -1,7 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../models/user.model');
 const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase, isValidSocialHandle } = require('../utils/validation');
-const pool = require('../config/database');
 
 // Cambiar contraseña
 const changePassword = async (req, res) => {
@@ -24,10 +23,7 @@ const changePassword = async (req, res) => {
     }
 
     // Obtener usuario actual (con password)
-    const user = await User.findById(userId);
-    // Necesitamos modificar findById para que incluya password
-    const userWithPassword = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const currentUser = userWithPassword.rows[0];
+    const currentUser = await User.findByIdWithPassword(userId);
 
     if (!currentUser) {
       return res.status(404).json({
@@ -92,9 +88,7 @@ const updateEmail = async (req, res) => {
     }
 
     // Obtener usuario actual (con password)
-    const pool = require('../config/database');
-    const userWithPassword = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const currentUser = userWithPassword.rows[0];
+    const currentUser = await User.findByIdWithPassword(userId);
 
     if (!currentUser) {
       return res.status(404).json({
@@ -168,9 +162,7 @@ const updateUsername = async (req, res) => {
     }
 
     // Obtener usuario actual (con password)
-    const pool = require('../config/database');
-    const userWithPassword = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const currentUser = userWithPassword.rows[0];
+    const currentUser = await User.findByIdWithPassword(userId);
 
     if (!currentUser) {
       return res.status(404).json({
@@ -216,9 +208,7 @@ const deleteAccount = async (req, res) => {
     }
 
     // Obtener usuario actual (con password)
-    const pool = require('../config/database');
-    const userWithPassword = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    const currentUser = userWithPassword.rows[0];
+    const currentUser = await User.findByIdWithPassword(userId);
 
     if (!currentUser) {
       return res.status(404).json({

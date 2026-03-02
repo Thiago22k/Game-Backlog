@@ -1,6 +1,6 @@
 import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FolderPlus, MoreVertical } from 'lucide-react';
+import { FolderPlus, MoreHorizontal } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import GameLikeButton from './GameLikeButton';
 import StarRating from './StarRating';
@@ -12,7 +12,8 @@ import toast from 'react-hot-toast';
 const LikedGameCard = ({ game, showAddButton = true }) => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(`liked-${game.id || game.igdb_game_id}`);
+    const cardId = `liked-${game.id || game.igdb_game_id}`;
+    const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(cardId);
     const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
 
     // Obtener artwork (banner superior)
@@ -54,7 +55,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
             {/* Card Container */}
             <div
                 onClick={() => navigate(`/game/${slug}`)}
-                className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group h-full flex flex-col"
+                className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer group h-full flex flex-col"
             >
                 {/* Header con Botón Like, Rating (hover) y Options Menu */}
                 <div className="h-12 px-4 relative flex items-center justify-between w-full">
@@ -79,8 +80,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                         </div>
                     )}
 
-                    {/* Options Menu Button (Derecha) */}
-                    <div className="z-30 mt-1">
+                    <div className="z-30 mt-1" data-card-menu={cardId}>
                         <button
                             type="button"
                             onClick={(e) => {
@@ -90,38 +90,29 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                             }}
                             className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                         >
-                            <MoreVertical size={20} />
+                            <MoreHorizontal size={20} />
                         </button>
 
                         {/* Options Dropdown */}
                         {showOptionsMenu && (
-                            <>
-                                <div
-                                    className="fixed inset-0 z-40"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        closeOptionsMenu();
-                                    }}
-                                />
-                                <div
-                                    className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    {showAddButton && (
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                closeOptionsMenu();
-                                                handleAddToCollectionClick(e);
-                                            }}
-                                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
-                                        >
-                                            <FolderPlus size={16} />
-                                            <span>Add to Collection</span>
-                                        </button>
-                                    )}
-                                </div>
-                            </>
+                            <div
+                                className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {showAddButton && (
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            closeOptionsMenu();
+                                            handleAddToCollectionClick(e);
+                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
+                                    >
+                                        <FolderPlus size={16} />
+                                        <span>Add to Collection</span>
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -175,14 +166,16 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
             </div>
 
             {/* Add to Collection Modal */}
-            {isCollectionModalOpen && (
-                <AddToCollectionModal
-                    isOpen={isCollectionModalOpen}
-                    onClose={() => setIsCollectionModalOpen(false)}
-                    game={game}
-                />
-            )}
-        </div>
+            {
+                isCollectionModalOpen && (
+                    <AddToCollectionModal
+                        isOpen={isCollectionModalOpen}
+                        onClose={() => setIsCollectionModalOpen(false)}
+                        game={game}
+                    />
+                )
+            }
+        </div >
     );
 };
 

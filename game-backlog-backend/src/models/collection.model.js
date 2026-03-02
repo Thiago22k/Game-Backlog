@@ -83,13 +83,14 @@ const Collection = {
 
             // 2. Insertar nuevos
             if (gamesList && gamesList.length > 0) {
+                const placeholders = gamesList.map((_, i) => `($1, $${i * 2 + 2}, $${i * 2 + 3})`).join(', ');
                 const insertQuery = `
-          INSERT INTO collection_games (collection_id, igdb_game_id, sort_order)
-          VALUES ($1, $2, $3)
-        `;
-                for (let i = 0; i < gamesList.length; i++) {
-                    await client.query(insertQuery, [collectionId, gamesList[i].igdb_game_id, i]);
-                }
+                    INSERT INTO collection_games (collection_id, igdb_game_id, sort_order)
+                    VALUES ${placeholders}
+                `;
+
+                const params = [collectionId, ...gamesList.flatMap((g, i) => [g.igdb_game_id, i])];
+                await client.query(insertQuery, params);
             }
 
             await client.query('COMMIT');
@@ -111,6 +112,19 @@ const Collection = {
       ORDER BY sort_order ASC
     `;
         const result = await pool.query(query, [collectionId]);
+        return result.rows;
+    },
+
+    // Obtener juegos de múltiples colecciones (Resolución N+1)
+    async getGamesForMultipleCollections(collectionIds) {
+        if (!collectionIds || collectionIds.length === 0) return [];
+        const query = `
+            SELECT collection_id, igdb_game_id, sort_order
+            FROM collection_games
+            WHERE collection_id = ANY($1::int[])
+            ORDER BY collection_id, sort_order ASC
+        `;
+        const result = await pool.query(query, [collectionIds]);
         return result.rows;
     },
 
@@ -188,7 +202,7 @@ const Collection = {
             JOIN users creator       ON c.user_id          = creator.id
             LEFT JOIN collection_games cg  ON c.id = cg.collection_id
             LEFT JOIN collection_likes cl2 ON c.id = cl2.collection_id
-            WHERE liker.username = $1
+            WHERE liker.username ILIKE $1
               AND c.is_public    = true
             GROUP BY c.id, creator.username, creator.avatar_url, creator.avatar_static_url, cl.created_at
             ORDER BY cl.created_at DESC

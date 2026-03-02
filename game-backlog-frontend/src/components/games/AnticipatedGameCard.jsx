@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, Plus, Check, MoreVertical, FolderPlus, Heart } from 'lucide-react';
+import { Clock, Plus, Check, MoreHorizontal, FolderPlus, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import RatingBadge from '../common/RatingBadge';
 import toast from 'react-hot-toast';
@@ -13,7 +13,8 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isInWishlist, setIsInWishlist] = useState(game.status === 'wishlist');
-  const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(`anticipated-${game.id}`);
+  const cardId = `anticipated-${game.id}`;
+  const { isOpen: showOptionsMenu, open: openOptionsMenu, close: closeOptionsMenu, toggle: toggleOptionsMenu } = useCardMenu(cardId);
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const { liked, likesCount, toggling, toggleLike } = useGameLikes(game.id);
 
@@ -98,7 +99,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
     <div className="relative h-full">
       <div
         onClick={() => navigate(`/game/${game.slug || game.id}`)}
-        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:ring-2 hover:ring-primary-yellow transition-all cursor-pointer group h-full flex flex-col"
+        className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer group h-full flex flex-col"
       >
         {/* Header con Countdown */}
         <div className="h-12 flex items-center px-4 relative w-full">
@@ -115,8 +116,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
             </div>
           )}
 
-          {/* Options Menu Button (derecha) */}
-          <div className="absolute right-2 z-30">
+          <div className="absolute right-2 z-30" data-card-menu={cardId}>
             <button
               type="button"
               onClick={(e) => {
@@ -126,61 +126,52 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
               }}
               className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             >
-              <MoreVertical size={20} />
+              <MoreHorizontal size={20} />
             </button>
 
             {/* Options Dropdown */}
             {showOptionsMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
+              <div
+                className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Like option */}
+                <button
+                  type="button"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     closeOptionsMenu();
+                    if (!user) {
+                      toast.error('Log in to like games');
+                      return;
+                    }
+                    toggleLike(game.name, game.cover?.image_id);
                   }}
-                />
-                <div
-                  className="absolute right-0 top-full mt-1 w-48 bg-[#1e2330] rounded-lg shadow-xl border border-gray-700 py-1 z-50 overflow-hidden"
-                  onClick={(e) => e.stopPropagation()}
+                  disabled={toggling}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${liked
+                    ? 'text-pink-400 hover:bg-gray-800'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-pink-400'
+                    } ${toggling ? 'opacity-60 cursor-wait' : ''}`}
                 >
-                  {/* Like option */}
+                  <Heart size={16} className={liked ? 'fill-pink-400' : ''} />
+                  <span>{liked ? `Unlike${likesCount > 0 ? ` (${likesCount})` : ''}` : `Like${likesCount > 0 ? ` (${likesCount})` : ''}`}</span>
+                </button>
+
+                {showAddButton && (
                   <button
                     type="button"
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
                       closeOptionsMenu();
-                      if (!user) {
-                        toast.error('Log in to like games');
-                        return;
-                      }
-                      toggleLike(game.name, game.cover?.image_id);
+                      handleAddToCollectionClick(e);
                     }}
-                    disabled={toggling}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${liked
-                      ? 'text-pink-400 hover:bg-gray-800'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-pink-400'
-                      } ${toggling ? 'opacity-60 cursor-wait' : ''}`}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
                   >
-                    <Heart size={16} className={liked ? 'fill-pink-400' : ''} />
-                    <span>{liked ? `Unlike${likesCount > 0 ? ` (${likesCount})` : ''}` : `Like${likesCount > 0 ? ` (${likesCount})` : ''}`}</span>
+                    <FolderPlus size={16} />
+                    <span>Add to Collection</span>
                   </button>
-
-                  {showAddButton && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        closeOptionsMenu();
-                        handleAddToCollectionClick(e);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-gray-800 hover:text-primary-yellow transition-colors"
-                    >
-                      <FolderPlus size={16} />
-                      <span>Add to Collection</span>
-                    </button>
-                  )}
-                </div>
-              </>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -258,14 +249,16 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
       </div>
 
       {/* Add to Collection Modal */}
-      {isCollectionModalOpen && (
-        <AddToCollectionModal
-          isOpen={isCollectionModalOpen}
-          onClose={() => setIsCollectionModalOpen(false)}
-          game={game}
-        />
-      )}
-    </div>
+      {
+        isCollectionModalOpen && (
+          <AddToCollectionModal
+            isOpen={isCollectionModalOpen}
+            onClose={() => setIsCollectionModalOpen(false)}
+            game={game}
+          />
+        )
+      }
+    </div >
   );
 };
 

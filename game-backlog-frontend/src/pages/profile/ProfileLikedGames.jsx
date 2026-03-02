@@ -1,11 +1,9 @@
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { Gamepad2, ChevronDown, ArrowLeft } from 'lucide-react';
 import CustomSelect from '../../components/common/CustomSelect';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
-import InteractiveGameCard from '../../components/games/InteractiveGameCard';
-import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import LikedGameCard from '../../components/games/LikedGameCard';
 import axios from '../../api/axios';
 
@@ -145,7 +143,7 @@ const ProfileLikedGames = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-yellow" />
                 </div>
             ) : allGames.length === 0 ? (
-                <div className="text-center py-14 bg-primary-navy-dark border border-gray-700 rounded-xl">
+                <div className="text-center py-14 bg-primary-navy-dark rounded-xl">
                     <Gamepad2 size={40} className="mx-auto text-gray-600 mb-3" />
                     <p className="text-gray-400">
                         {username === user?.username
