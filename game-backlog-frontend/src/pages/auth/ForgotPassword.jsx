@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from '../../api/axios'; // Importar axios interceptor
+import usePageTitle from '../../hooks/usePageTitle';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    usePageTitle('Forgot Password');
 
     // Imágenes de fondo aleatorias
     const backgroundImages = [

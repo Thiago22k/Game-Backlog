@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Compass, AlertCircle } from 'lucide-react';
+import usePageTitle from '../hooks/usePageTitle';
 import bgImage from '../assets/404_bg.jpg';
 
 const NotFound = () => {
     const navigate = useNavigate();
+    usePageTitle('Page Not Found');
 
     let title = "Page Not Found";
     let description = "We searched for this page in your backlog, but it's buried under 400 other games you promised to play. We'll probably never find it.";

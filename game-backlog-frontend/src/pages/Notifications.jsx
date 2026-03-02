@@ -6,6 +6,7 @@ import { getAvatarUrl } from '../utils/avatar';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { Bell, Check, Loader2 } from 'lucide-react';
+import usePageTitle from '../hooks/usePageTitle';
 
 const relativeTime = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -44,6 +45,7 @@ const notifMessage = (notif) => {
 const Notifications = () => {
     const { isAuthenticated } = useAuth();
     const navigate = useNavigate();
+    usePageTitle('Notifications');
 
     const [notifications, setNotifications] = useState([]);
     const [page, setPage] = useState(1);

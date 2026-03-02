@@ -5,7 +5,7 @@ import Footer from '../../components/layout/Footer';
 import CollectionCard from '../../components/collections/CollectionCard';
 import { Library, TrendingUp, Sparkles, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
-import usePageTitle from '../../hooks/usePageTitle';
+import useSEO from '../../hooks/useSEO';
 
 const ExploreCollections = () => {
     const [collections, setCollections] = useState({
@@ -15,7 +15,7 @@ const ExploreCollections = () => {
     });
     const [loading, setLoading] = useState(true);
 
-    usePageTitle('Collections');
+    useSEO({ title: 'Collections', description: 'Explore curated game collections created by the Stackd community. Find your next favorite games.' });
 
     useEffect(() => {
         const fetchCollections = async () => {

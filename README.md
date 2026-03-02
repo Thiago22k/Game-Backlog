@@ -82,36 +82,35 @@ El proyecto está dividido en dos partes principales:
 ### Backend (`game-backlog-backend/`)
 - **`src/`**
   - **`config/`**: Configuración de conexión a base de datos y validación de `.env`.
-  - **`controllers/`**: Controladores de autenticación y de juegos.
-  - **`middlewares/`**: Verificación de tokens de autenticación, manejadores de errores y `rateLimiter`.
-  - **`models/`**: Consultas y modelos de datos principales (`User`, `Game`).
-  - **`routes/`**: Definición de las rutas del API bajo `/api/auth`, `/api/games` y `/api/settings`.
-  - **`services/`**: Lógica de interacción y autenticación de la API de IGDB/Twitch.
-- **`database-schema.sql`**: Script central de inicialización de la base de datos.
-- **`server.js`**: Punto de entrada de la aplicación, configuración de middlewares, rutas y servidor.
+  - **`controllers/`**: Controladores de autenticación, juegos, reseñas, perfil social, colecciones y moderación.
+  - **`middlewares/`**: Verificación de tokens de auth, validación de roles de usuario, manejadores de errores y `rateLimiter`.
+  - **`models/`**: Consultas y modelos de datos principales iterando sobre la BD PostgreSQL (`User`, `Game`, `Review`, `Collection`, etc.).
+  - **`routes/`**: Archivos de definición de cada endpoint de API (Auth, Games, Settings, Collections, Uploads, Activity, Notifications, Reviews, Follows y Moderation).
+  - **`services/`**: Lógica de interacción y caché con la API de IGDB/Twitch.
+- **`database-schema.sql`**: Script central de inicialización de la base de datos con tablas vinculadas relacionales.
+- **`server.js`**: Punto de entrada de la aplicación HTTP, configuración de middlewares (como `helmet` y `cors`), rutas y servidor express.
 
 ### Frontend (`game-backlog-frontend/`)
 - **`src/`**
-  - **`api/`**: Configuraciones de Axios para interactuar con el backend.
-  - **`components/`**: Componentes reutilizables agrupados (ej. `games/`, `layout/`).
-  - **`context/`**: Contextos para manejar estados globales (usualmente la autenticación del usuario).
-  - **`hooks/`**: Custom hooks (para abstraer lógica repetitiva).
-  - **`pages/`**: Páginas principales de la aplicación:
-    - `Landing.jsx`: Página de inicio pública.
-    - `Explore.jsx`: Buscador/Explorador de juegos de IGDB.
-    - `GameDetails.jsx`: Información a fondo de un juego.
-    - `Profile.jsx`: Vista del Backlog del usuario (juegos calificados, en lista de deseos, completados, etc.)
-    - `Settings.jsx`: Ajustes y preferencias del usuario.
-    - `auth/`: Vistas dedicadas de inicio de sesión y registro.
-  - **`routes/`**: Archivos de definición de rutas (públicas y privadas).
-  - **`App.jsx` & `main.jsx`**: Entradas principales de renderización en React.
-- **`tailwind.config.js` & `vite.config.js`**: Configuraciones de diseño y bundling.
+  - **`api/`**: Configuraciones de la instancia de Axios.
+  - **`components/`**: Componentes reutilizables de UI (tarjetas, botones, layouts) y módulos de características, incluyendo subcarpetas `games/`, `collections/`, `routing/`, etc.
+  - **`context/`**: Contextos para manejar estados globales clave, siendo la Autenticación el primordial.
+  - **`hooks/`**: Custom hooks de React (ej. para pre-carga y configuración asíncrona).
+  - **`pages/`**: Páginas y vistas principales divididas por funcionalidad.
+    - Se incluyen vistas de Landing, Explorar por IGDB, Panel de Administración, Configuración de Ajustes (`Settings`), y un riguroso árbol de sub-vistas bajo `profile/` para el usuario específico.
+    - Vistas legales auxiliares de `LegalPrivacy.jsx` y `TermsOfService.jsx`.
+  - **`routes/`**: Archivos que definen y empaquetan en lazy-loading los destinos: `AppRoutes.jsx`, con divisiones claras como `PrivateRoute`, `PublicRoute`, y `AdminRoute`.
+  - **`utils/`**: Utilitarios genéricos (parseos de fecha, transformadores numéricos de likes, etc.).
+- **`tailwind.config.js` & `vite.config.js`**: Reglamentaciones base del empaquetador y frameworks visuales interrelacionados.
 
 ---
 
 ## ⚙️ Funcionamiento General
 
-1. **Gestión de Cuentas:** Los usuarios pueden crear una cuenta y el sistema guarda sus contraseñas temporalmente usando `bcrypt`. En cada inicio de sesión se entrega un JSON Web Token (JWT).
-2. **Exploración:** El frontend se comunica con el endpoint del backend `/api/games/search` que, a su vez, consulta a la API de **IGDB**. Esto evita exponer las credenciales de Twitch en el frontend.
-3. **El Backlog (Profile):** Una vez que un usuario encuentra un juego, puede agregarlo a su lista mediante `/api/games/user` proporcionando el estado (ej. `completed`, `playing`, `wishlist`, `dropped`) y una calificación del 1 al 5.
-4. **Seguridad:** Rutas tanto de API como de frontend están protegidas (usando `PrivateRoute.jsx` en React y `authLimiter` o Middlewares de token en Express) para evitar acceso no autorizado. Además se integra una correcta estructura de claves en PostgreSQL e indexado para búsquedas rápidas.
+1. **Gestión de Cuentas y Seguridad:** Los usuarios pueden crear una cuenta, iniciar sesión y restablecer su contraseña de ser necesario mediante JWT. Las contraseñas están resguardadas con encriptación. Adicionalmente se aplican Rate Limiters y las rutas están protegidas según jerarquías u opciones de privacidad del perfil (público/privado).
+2. **Exploración Ampliada:** El frontend se basa en múltiples endpoints en `/api/games/...` que acceden indirectamente e iteran resultados de forma eficiente a IGDB. Se permite el filtrado avanzado y el trackeo de lo más anticipado.
+3. **El Backlog (Juegos y Perfil):** Los jugadores pueden mantener un historial individual de cada juego mediante los estados de Backlog (`completed`, `playing`, `wishlist`, `dropped`) y sus puntuaciones. Este ecosistema conforma el eje del Perfil de Usuario, que tiene amplias opciones estéticas (como upload de fotos mediante `multer`).
+4. **Reseñas (Reviews):** Los usuarios escriben reseñas analíticas por título jugado. La comunidad puede interactuar a través de botones de Like a lo largo del flujo y creando árboles de comentarios.
+5. **Colecciones y Listas:** La plataforma permite organizar y exponer listas de títulos catalogados por el usuario para su fácil descubrimiento público en una grilla exploratoria abierta a Likes comunitarios.
+6. **Entorno Social (Follows y Activity):** A fin de conectar usuarios con visiones similares de gaming, es posible seguir perfiles. Las acciones que sus integrantes efectúen (como añadir juegos, seguir personas, o escribir reseñas) irán poblando un muro o "Activity Feed" global y generando alertas hacia la bandeja centralizada de notificaciones visual en tiempo real.
+7. **Panel de Moderación y Reportes (Admin Dashboard):** Aquellos administradores designados poseen interfaz privilegiada para moderar cualquier contenido inapropiado o violatorio reportado internamente en cualquier subnivel (ya sea perfiles, colecciones, reseñas puntuales o mismos comentarios menores). Tienen la potestad técnica de desestimar reportes o de aplicar baneos correctivos a usuarios.

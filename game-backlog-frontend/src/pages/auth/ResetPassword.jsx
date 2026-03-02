@@ -3,12 +3,14 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from '../../api/axios'; // Importar axios interceptor
+import usePageTitle from '../../hooks/usePageTitle';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const id = searchParams.get('id');
     const token = searchParams.get('token');
+    usePageTitle('Reset Password');
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

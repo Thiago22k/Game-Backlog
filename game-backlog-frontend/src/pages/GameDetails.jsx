@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
 import { useGameLikes } from '../hooks/useGameLikes';
-import usePageTitle from '../hooks/usePageTitle';
+import useSEO from '../hooks/useSEO';
 import axios from '../api/axios';
 import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
@@ -86,7 +86,45 @@ const GameDetails = () => {
   const [activeTab, setActiveTab] = useState('stats');
 
 
-  usePageTitle(game?.name);
+  // ── SEO ──────────────────────────────────────────────────────────────────
+  const seoDescription = useMemo(() => {
+    if (!game) return undefined;
+    const parts = [game.name];
+    const dev = game?.involved_companies?.find(ic => ic.developer)?.company?.name;
+    if (dev) parts.push(`by ${dev}`);
+    if (game.genres?.length) parts.push(`— ${game.genres.map(g => g.name).join(', ')}`);
+    const base = parts.join(' ');
+    const summary = game.summary || game.storyline || '';
+    return summary ? `${base}. ${summary.slice(0, 150)}` : base;
+  }, [game]);
+
+  const seoImage = useMemo(() => game ? getGameCover(game) : undefined, [game]);
+
+  useSEO({ title: game?.name, description: seoDescription, image: seoImage });
+
+  // ── JSON-LD Structured Data ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!game) return;
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'VideoGame',
+      name: game.name,
+      ...(game.summary && { description: game.summary }),
+      ...(game.first_release_date && { datePublished: new Date(game.first_release_date * 1000).toISOString().split('T')[0] }),
+      ...(game.genres?.length && { genre: game.genres.map(g => g.name) }),
+      ...(game.platforms?.length && { gamePlatform: game.platforms.map(p => p.name) }),
+      ...(game.involved_companies?.find(ic => ic.developer) && {
+        author: { '@type': 'Organization', name: game.involved_companies.find(ic => ic.developer).company.name },
+      }),
+      ...(game.rating && { aggregateRating: { '@type': 'AggregateRating', ratingValue: Math.round(game.rating), bestRating: 100 } }),
+      ...(seoImage && { image: seoImage }),
+    };
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
+    return () => { document.head.removeChild(script); };
+  }, [game, seoImage]);
 
   // ── Fetch Game Data ──────────────────────────────────────────────────────
   useEffect(() => {

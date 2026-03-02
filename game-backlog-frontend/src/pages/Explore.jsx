@@ -12,7 +12,7 @@ import InteractiveGameCard from '../components/games/InteractiveGameCard';
 import AnticipatedGameCard from '../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCardSkeleton';
-import usePageTitle from '../hooks/usePageTitle';
+import useSEO from '../hooks/useSEO';
 import CustomSelect from '../components/common/CustomSelect';
 
 const TOP_PLATFORMS = [6, 167, 48, 169, 49, 130];
@@ -42,7 +42,7 @@ const Explore = () => {
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [showFilters, setShowFilters] = useState(false);
 
-  usePageTitle('Explore');
+  useSEO({ title: 'Explore Games', description: 'Browse, search, and discover new games. Filter by genre, platform, and more on Stackd.' });
 
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);

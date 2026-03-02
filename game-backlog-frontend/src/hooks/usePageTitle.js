@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import useSEO from './useSEO';
 
-const usePageTitle = (title) => {
-    useEffect(() => {
-        document.title = title ? `${title} | Stackd` : 'Stackd';
-    }, [title]);
-};
+/**
+ * Backward-compatible wrapper.
+ * Sets only the page title; use `useSEO` directly for richer metadata.
+ */
+const usePageTitle = (title) => useSEO({ title });
 
 export default usePageTitle;

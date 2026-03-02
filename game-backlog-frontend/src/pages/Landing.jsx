@@ -13,7 +13,7 @@ import AnticipatedGameCardSkeleton from '../components/games/AnticipatedGameCard
 import CompactGameCard from '../components/games/CompactGameCard';
 import ReviewPreviewCard from '../components/reviews/ReviewPreviewCard';
 import { useGames } from '../hooks/useGames';
-import usePageTitle from '../hooks/usePageTitle';
+import useSEO from '../hooks/useSEO';
 import toast from 'react-hot-toast';
 import { formatIGDBImage } from '../utils/formatters';
 import ssCtaImage from '../assets/ss_cta.png';
@@ -47,7 +47,7 @@ const Landing = () => {
       .sort((a, b) => (a.first_release_date || 0) - (b.first_release_date || 0))[0] || anticipatedGames[0];
   }, [anticipatedGames]);
 
-  usePageTitle(''); // Uses default 'Stackd'
+  useSEO({ title: '', description: 'Organize your game collection, track your progress, share reviews, and discover new titles on Stackd.' });
 
   // Ref para tener siempre los userGames frescos dentro de los handlers
   const userGamesRef = useRef(userGames);
