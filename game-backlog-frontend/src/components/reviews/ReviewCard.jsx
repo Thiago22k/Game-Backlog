@@ -12,7 +12,7 @@ import { Flag, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAvatarUrl } from '../../utils/avatar';
 
-const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
+const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted, hideFullReviewLink = false }) => {
     const { user } = useAuth();
     const [showSpoilers, setShowSpoilers] = useState(false);
     const [likes, setLikes] = useState(parseInt(review.likes_count) || 0);
@@ -231,7 +231,7 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
                             <span className="text-gray-400 font-normal ml-1 mr-2">rated with</span>
                             <RatingBadge rating={parseFloat(review.rating)} size="sm" type="stars" />
                             {review.game_name && (
-                                <Link to={`/games/${review.igdb_game_id}`} className="font-bold text-primary-yellow ml-1.5 hover:underline decoration-primary-yellow/30 underline-offset-4 transition-all hover:text-white">
+                                <Link to={`/game/${review.game_slug || review.igdb_game_id}`} className="font-bold text-primary-yellow ml-1.5 hover:underline decoration-primary-yellow/30 underline-offset-4 transition-all hover:text-white">
                                     {review.game_name}
                                 </Link>
                             )}
@@ -361,6 +361,17 @@ const ReviewCard = ({ review, onReviewUpdated, onReviewDeleted }) => {
                         >
                             Delete
                         </button>
+                    )}
+                    {!hideFullReviewLink && (
+                        <>
+                            <span className="text-gray-600 hidden sm:inline mx-1">|</span>
+                            <Link
+                                to={`/profile/${review.username}/reviews/${review.id}`}
+                                className="text-sm font-bold text-primary-yellow hover:text-white transition-colors whitespace-nowrap"
+                            >
+                                Read Full Review →
+                            </Link>
+                        </>
                     )}
                 </div>
             </div>

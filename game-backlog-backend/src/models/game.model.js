@@ -116,7 +116,15 @@ const Game = {
       WHERE igdb_game_id = $1
     `;
     const likesQuery = 'SELECT COUNT(*) FROM game_likes WHERE igdb_game_id = $1';
-    const collsQuery = 'SELECT COUNT(DISTINCT collection_id) FROM collection_games WHERE igdb_game_id = $1';
+    const collsQuery = `
+      SELECT 
+        COUNT(DISTINCT cg.collection_id) as total,
+        COUNT(DISTINCT CASE WHEN c.is_public = true THEN cg.collection_id END) as public_count,
+        COUNT(DISTINCT CASE WHEN c.is_public = false THEN cg.collection_id END) as private_count
+      FROM collection_games cg
+      JOIN collections c ON cg.collection_id = c.id
+      WHERE cg.igdb_game_id = $1
+    `;
     const reviewsQuery = 'SELECT COUNT(*) FROM reviews WHERE igdb_game_id = $1';
 
     const [statsRes, likesRes, collsRes, reviewsRes] = await Promise.all([
@@ -127,6 +135,8 @@ const Game = {
     ]);
 
     const s = statsRes.rows[0];
+    const cStats = collsRes.rows[0];
+
     return {
       likes: parseInt(likesRes.rows[0].count, 10),
       playing: parseInt(s.playing_count, 10),
@@ -136,7 +146,9 @@ const Game = {
       dropped: parseInt(s.dropped_count, 10),
       ratingsCount: parseInt(s.ratings_count, 10),
       avgRating: s.avg_rating ? parseFloat(s.avg_rating) : 0,
-      collectionsCount: parseInt(collsRes.rows[0].count, 10),
+      collectionsCount: parseInt(cStats.total, 10),
+      collectionsPublic: parseInt(cStats.public_count, 10),
+      collectionsPrivate: parseInt(cStats.private_count, 10),
       reviewsCount: parseInt(reviewsRes.rows[0].count, 10),
       ratingDistribution: [
         parseInt(s.r05, 10),
@@ -152,6 +164,63 @@ const Game = {
       ]
     };
   },
+
+  // Obtener usuarios por estadística de juego
+  async getUsersByGameStat(igdbGameId, stat) {
+    let query = '';
+    const values = [igdbGameId];
+
+    switch (stat) {
+      case 'likes':
+        query = `
+          SELECT u.id, u.username, u.avatar_url, gl.created_at AS stat_date
+          FROM game_likes gl
+          JOIN users u ON gl.user_id = u.id
+          WHERE gl.igdb_game_id = $1
+          ORDER BY gl.created_at DESC
+        `;
+        break;
+      case 'collections':
+        query = `
+          SELECT u.id, u.username, u.avatar_url, MIN(cg.created_at) AS stat_date
+          FROM collection_games cg
+          JOIN collections c ON cg.collection_id = c.id
+          JOIN users u ON c.user_id = u.id
+          WHERE cg.igdb_game_id = $1 AND c.is_public = true
+          GROUP BY u.id, u.username, u.avatar_url
+          ORDER BY stat_date DESC
+        `;
+        break;
+      case 'reviews':
+        query = `
+          SELECT u.id, u.username, u.avatar_url, r.created_at AS stat_date, r.rating
+          FROM reviews r
+          JOIN users u ON r.user_id = u.id
+          WHERE r.igdb_game_id = $1
+          ORDER BY r.created_at DESC
+        `;
+        break;
+      case 'playing':
+      case 'completed':
+      case 'backlog':
+      case 'wishlist':
+      case 'dropped':
+        query = `
+          SELECT u.id, u.username, u.avatar_url, ug.updated_at AS stat_date
+          FROM user_games ug
+          JOIN users u ON ug.user_id = u.id
+          WHERE ug.igdb_game_id = $1 AND ug.status = $2
+          ORDER BY ug.updated_at DESC
+        `;
+        values.push(stat);
+        break;
+      default:
+        throw new Error('Stat type not supported');
+    }
+
+    const { rows } = await pool.query(query, values);
+    return rows;
+  }
 };
 
 module.exports = Game;

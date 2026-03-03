@@ -295,6 +295,45 @@ const Review = {
         return result.rows[0];
     },
 
+    // 14.b Obtener reseña completa por ID (Incluye juego y status de like)
+    async getFullReviewById(reviewId, currentUserId = null) {
+        let query = '';
+        let values = [];
+
+        if (currentUserId) {
+            query = `
+                SELECT r.*, 
+                       u.username, u.avatar_url, u.avatar_static_url,
+                       g.name as game_name, g.slug as game_slug,
+                       (SELECT COUNT(*) FROM review_likes rl WHERE rl.review_id = r.id) as likes_count,
+                       (SELECT COUNT(*) FROM review_comments rc WHERE rc.review_id = r.id) as comments_count,
+                       EXISTS(SELECT 1 FROM review_likes rl WHERE rl.review_id = r.id AND rl.user_id = $2) as has_liked
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN igdb_cache g ON r.igdb_game_id = g.igdb_id
+                WHERE r.id = $1
+            `;
+            values = [reviewId, currentUserId];
+        } else {
+            query = `
+                SELECT r.*, 
+                       u.username, u.avatar_url, u.avatar_static_url,
+                       g.name as game_name, g.slug as game_slug,
+                       (SELECT COUNT(*) FROM review_likes rl WHERE rl.review_id = r.id) as likes_count,
+                       (SELECT COUNT(*) FROM review_comments rc WHERE rc.review_id = r.id) as comments_count,
+                       false as has_liked
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN igdb_cache g ON r.igdb_game_id = g.igdb_id
+                WHERE r.id = $1
+            `;
+            values = [reviewId];
+        }
+
+        const result = await pool.query(query, values);
+        return result.rows[0];
+    },
+
     // 15. Obtener el conteo de reseñas por nombre de usuario
     async getReviewCountByUsername(username) {
         const query = `
@@ -305,6 +344,49 @@ const Review = {
         `;
         const result = await pool.query(query, [username]);
         return parseInt(result.rows[0].count, 10);
+    },
+
+    // 16. Obtener reseñas por nombre de usuario
+    async getReviewsByUsername(username, limit = 10, offset = 0, currentUserId = null) {
+        let query = '';
+        let values = [];
+
+        if (currentUserId) {
+            query = `
+                SELECT r.*, 
+                       u.username, u.avatar_url, u.avatar_static_url,
+                       g.name as game_name, g.slug as game_slug,
+                       (SELECT COUNT(*) FROM review_likes rl WHERE rl.review_id = r.id) as likes_count,
+                       (SELECT COUNT(*) FROM review_comments rc WHERE rc.review_id = r.id) as comments_count,
+                       EXISTS(SELECT 1 FROM review_likes rl WHERE rl.review_id = r.id AND rl.user_id = $2) as has_liked
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN igdb_cache g ON r.igdb_game_id = g.igdb_id
+                WHERE u.username ILIKE $1
+                ORDER BY r.created_at DESC
+                LIMIT $3 OFFSET $4
+            `;
+            values = [username, currentUserId, limit, offset];
+        } else {
+            query = `
+                SELECT r.*, 
+                       u.username, u.avatar_url, u.avatar_static_url,
+                       g.name as game_name, g.slug as game_slug,
+                       (SELECT COUNT(*) FROM review_likes rl WHERE rl.review_id = r.id) as likes_count,
+                       (SELECT COUNT(*) FROM review_comments rc WHERE rc.review_id = r.id) as comments_count,
+                       false as has_liked
+                FROM reviews r
+                JOIN users u ON r.user_id = u.id
+                LEFT JOIN igdb_cache g ON r.igdb_game_id = g.igdb_id
+                WHERE u.username ILIKE $1
+                ORDER BY r.created_at DESC
+                LIMIT $2 OFFSET $3
+            `;
+            values = [username, limit, offset];
+        }
+
+        const result = await pool.query(query, values);
+        return result.rows;
     }
 };
 

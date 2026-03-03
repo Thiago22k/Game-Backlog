@@ -21,6 +21,7 @@ export const ENDPOINTS = {
     PLATFORMS: '/games/platforms',
     RECOMMENDATIONS: '/games/recommendations', // ← Nuevo
     GAME_STATS: (id) => `/games/stats/${id}`,
+    GAME_STAT_USERS: (id, stat) => `/games/stats/${id}/${stat}/users`,
   },
   SETTINGS: {
     CHANGE_PASSWORD: '/settings/change-password',
@@ -42,6 +43,11 @@ export const ENDPOINTS = {
     GET_COMMENTS: (id) => `/reviews/${id}/comments`,
     DELETE_COMMENT: (reviewId, commentId) => `/reviews/${reviewId}/comments/${commentId}`,
     REPORT: (id) => `/reviews/${id}/report`,
+    GET_REVIEW: (id) => `/reviews/${id}`,
+    GET_USER_REVIEWS: (username) => `/reviews/user/${username}`,
+  },
+  COLLECTIONS: {
+    GAME_COLLECTIONS: (id) => `/collections/game/${id}`,
   }
 };
 

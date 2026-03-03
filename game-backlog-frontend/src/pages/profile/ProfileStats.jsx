@@ -127,10 +127,13 @@ const ProfileStats = () => {
                     <span className="text-4xl font-black text-white">{likesCount}</span>
                 </Link>
 
-                <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200">
-                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5">Reviews</span>
+                <Link
+                    to={`/profile/${username}/reviews`}
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                >
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Reviews</span>
                     <span className="text-4xl font-black text-white">{reviewsCount}</span>
-                </div>
+                </Link>
 
                 {/* ── ROW 2: Library Progress (span 2) ── */}
                 <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6 flex flex-col justify-between">
@@ -140,14 +143,14 @@ const ProfileStats = () => {
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <Link
                             to={`/profile/${username}/games?status=completed`}
-                            className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                            className="bg-primary-navy border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-green-400 leading-none">{completed}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=backlog`}
-                            className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                            className="bg-primary-navy border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-indigo-400 leading-none">{backlog}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
@@ -155,7 +158,7 @@ const ProfileStats = () => {
                     </div>
 
                     {/* Secondary stats row */}
-                    <div className="flex justify-between items-center bg-black/20 rounded-xl px-4 py-3">
+                    <div className="flex justify-between items-center bg-primary-navy rounded-xl px-4 py-3">
                         <Link
                             to={`/profile/${username}/games?status=playing`}
                             className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-blue-400 transition-colors group"

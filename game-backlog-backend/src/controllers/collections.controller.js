@@ -475,6 +475,61 @@ const getExploreCollections = async (req, res) => {
     }
 };
 
+const getGameCollections = async (req, res) => {
+    try {
+        const { igdb_game_id } = req.params;
+        const limit = 50; // Arbitrary limit
+
+        const collections = await Collection.getCollectionsByGame(igdb_game_id, limit);
+
+        if (collections.length === 0) {
+            return res.json({ collections: [] });
+        }
+
+        const collectionsGamesMap = {};
+        const allTopGameIdsSet = new Set();
+        const collectionIds = collections.map(c => c.id);
+
+        const allDbGames = await Collection.getGamesForMultipleCollections(collectionIds);
+        const gamesByCollection = {};
+        allDbGames.forEach(g => {
+            if (!gamesByCollection[g.collection_id]) gamesByCollection[g.collection_id] = [];
+            gamesByCollection[g.collection_id].push(g);
+        });
+
+        for (const collection of collections) {
+            const dbGames = gamesByCollection[collection.id] || [];
+            const top3Ids = dbGames.slice(0, 3).map(g => g.igdb_game_id);
+            collectionsGamesMap[collection.id] = top3Ids;
+            top3Ids.forEach(id => allTopGameIdsSet.add(id));
+        }
+
+        const allTopGameIds = Array.from(allTopGameIdsSet);
+
+        if (allTopGameIds.length > 0) {
+            const gamesDetails = await igdbService.getGamesByIds(allTopGameIds);
+            const gamesMap = new Map(gamesDetails.map(g => [g.id, g]));
+
+            for (const collection of collections) {
+                const top3Ids = collectionsGamesMap[collection.id];
+                collection.preview_games = top3Ids.map(id => {
+                    const det = gamesMap.get(id);
+                    return det ? { id: det.id, cover: det.cover } : null;
+                }).filter(g => g !== null);
+            }
+        } else {
+            for (const collection of collections) {
+                collection.preview_games = [];
+            }
+        }
+
+        res.json({ collections });
+    } catch (error) {
+        console.error('Error en getGameCollections:', error);
+        res.status(500).json({ error: 'Error al obtener las colecciones para el juego' });
+    }
+};
+
 // GET /collections/liked/user/:username — Get collections liked by a user
 const getUserLikedCollections = async (req, res) => {
     try {
@@ -586,6 +641,7 @@ module.exports = {
     addGameToCollection,
     checkGameInCollections,
     getExploreCollections,
+    getGameCollections,
     getUserLikedCollections,
     reportCollection,
     reportCommentAction

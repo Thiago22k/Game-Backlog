@@ -188,7 +188,7 @@ const ActivityItem = ({ activity, username }) => {
 };
 
 // Main Feed Component
-const ActivityFeed = ({ activities, username, loading }) => {
+const ActivityFeed = ({ activities, username, loading, isOwner }) => {
     if (loading) {
         return (
             <div className="bg-primary-navy-dark rounded-xl border border-gray-800 p-6 shadow-xl animate-pulse">
@@ -208,14 +208,24 @@ const ActivityFeed = ({ activities, username, loading }) => {
 
     if (!activities || activities.length === 0) {
         return (
-            <div className="bg-primary-navy-dark rounded-xl border border-gray-800 p-8 shadow-xl text-center">
+            <div className="bg-primary-navy-dark rounded-xl p-8 text-center">
                 <div className="w-16 h-16 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Gamepad2 className="text-gray-500" size={32} />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">No Recent Activity</h3>
                 <p className="text-gray-400 text-sm">
-                    {username} hasn't added any games or created collections recently.
+                    {isOwner
+                        ? "You haven't added any games or created collections recently."
+                        : `${username} hasn't added any games or created collections recently.`}
                 </p>
+                {isOwner && (
+                    <Link
+                        to="/explore"
+                        className="mt-6 px-6 py-2 bg-primary-yellow text-primary-navy-dark rounded-lg font-semibold hover:opacity-90 transition-all inline-flex items-center gap-2"
+                    >
+                        Explore Games
+                    </Link>
+                )}
             </div>
         );
     }

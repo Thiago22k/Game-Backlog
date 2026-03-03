@@ -302,6 +302,29 @@ const Collection = {
         return result.rows;
     },
 
+    // Obtener colecciones (públicas) que contengan un juego específico
+    async getCollectionsByGame(igdbGameId, limit = 50) {
+        const query = `
+            SELECT c.*, 
+                   u.username as creator_username, 
+                   u.avatar_url as creator_avatar_url,
+                   u.avatar_static_url as creator_avatar_static_url,
+                   COUNT(DISTINCT cg_all.id) as game_count,
+                   (SELECT COUNT(*) FROM collection_likes cl WHERE cl.collection_id = c.id) as likes_count,
+                   (SELECT COUNT(*) FROM collection_comments cc WHERE cc.collection_id = c.id) as comments_count
+            FROM collection_games cg_match
+            JOIN collections c ON cg_match.collection_id = c.id
+            JOIN users u ON c.user_id = u.id
+            LEFT JOIN collection_games cg_all ON c.id = cg_all.collection_id
+            WHERE c.is_public = true AND cg_match.igdb_game_id = $1
+            GROUP BY c.id, u.username, u.avatar_url, u.avatar_static_url, cg_match.created_at
+            ORDER BY cg_match.created_at DESC
+            LIMIT $2
+        `;
+        const result = await pool.query(query, [igdbGameId, limit]);
+        return result.rows;
+    },
+
     // Reportar una colección
     async reportCollection(collectionId, userId, reason, details) {
         // Verificar si ya existe un reporte pendiente de este usuario para esta colección

@@ -461,6 +461,24 @@ const getRecommendations = async (req, res) => {
   }
 };
 
+// Obtener usuarios relacionados a una estadística comunitaria
+const getGameStatUsers = async (req, res) => {
+  try {
+    const { igdb_game_id, stat } = req.params;
+
+    const validStats = ['likes', 'collections', 'reviews', 'playing', 'completed', 'backlog', 'wishlist', 'dropped'];
+    if (!validStats.includes(stat)) {
+      return res.status(400).json({ error: 'Estadística no válida' });
+    }
+
+    const users = await Game.getUsersByGameStat(igdb_game_id, stat);
+    res.json({ users });
+  } catch (error) {
+    console.error('Error en getGameStatUsers:', error);
+    res.status(500).json({ error: 'Error al obtener usuarios para esta estadística' });
+  }
+};
+
 module.exports = {
   searchGames,
   getGameDetails,
@@ -475,5 +493,6 @@ module.exports = {
   getGenres,
   getPlatforms,
   getGameStats,
+  getGameStatUsers,
   getRecommendations, // ← Nuevo
 };

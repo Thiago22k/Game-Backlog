@@ -292,6 +292,7 @@ const ProfileLayout = () => {
         { name: 'Stats', path: `/profile/${username}`, icon: LayoutDashboard },
         { name: 'Games', path: `/profile/${username}/games`, icon: Gamepad2 },
         { name: 'Collections', path: `/profile/${username}/collections`, icon: Library },
+        { name: 'Reviews', path: `/profile/${username}/reviews`, icon: Star },
         { name: 'Activity', path: `/profile/${username}/activity`, icon: LayoutList },
         { name: 'Likes', path: `/profile/${username}/likes`, icon: Heart },
         { name: 'Social', path: `/profile/${username}/social`, icon: Users },

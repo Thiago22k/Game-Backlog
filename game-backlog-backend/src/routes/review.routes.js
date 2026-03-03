@@ -13,13 +13,17 @@ router.get('/recent', optionalAuth, reviewController.getRecentReviews);
 // Obtener reseñas de un juego específico
 router.get('/game/:gameId', optionalAuth, reviewController.getReviewsByGame);
 
+// Obtener reseña completa por ID
+router.get('/:reviewId', optionalAuth, reviewController.getReview);
+
 // Obtener los comentarios de una reseña
 router.get('/:reviewId/comments', reviewController.getComments);
 
 // Obtener conteo de reseñas por nombre de usuario
 router.get('/user/:username/count', reviewController.getReviewCountByUsername);
 
-
+// Obtener todas las reseñas de un usuario
+router.get('/user/:username', optionalAuth, reviewController.getReviewsByUsername);
 // ----- RUTAS PROTEGIDAS -----
 
 // Obtener la reseña propia de un juego

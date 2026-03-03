@@ -79,6 +79,12 @@ const reviewService = {
     reportComment: async (commentId, reason, details) => {
         const response = await axios.post(`/reviews/comments/${commentId}/report`, { reason, details });
         return response.data;
+    },
+
+    // Obtener todas las reseñas de un usuario
+    getUserReviews: async (username, params = { limit: 10, offset: 0 }) => {
+        const response = await axios.get(ENDPOINTS.REVIEWS.GET_USER_REVIEWS(username), { params });
+        return response.data;
     }
 };
 

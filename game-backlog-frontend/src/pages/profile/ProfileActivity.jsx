@@ -5,6 +5,7 @@ import ActivityFeed from '../../components/profile/ActivityFeed';
 
 const ProfileActivity = () => {
     const { username } = useParams();
+    const { isOwner } = useOutletContext();
     const { activities, loading, getUserActivity } = useActivity();
 
     useEffect(() => {
@@ -23,6 +24,7 @@ const ProfileActivity = () => {
                 activities={activities}
                 username={username}
                 loading={loading}
+                isOwner={isOwner}
             />
         </div>
     );

@@ -7,6 +7,7 @@ const { authenticateToken, optionalAuth } = require('../middlewares/auth'); // M
 // Si no tienes uno, podemos saltarlo y depender de la validación en el controlador, pero usaremos authenticateToken donde sea obligatorio.
 
 router.get('/explore', optionalAuth, collectionsController.getExploreCollections);
+router.get('/game/:igdb_game_id', optionalAuth, collectionsController.getGameCollections);
 router.get('/user/:username', optionalAuth, collectionsController.getUserCollections); // Opcionalmente publico
 router.get('/liked/user/:username', optionalAuth, collectionsController.getUserLikedCollections); // Liked collections by username
 router.get('/:id', optionalAuth, collectionsController.getCollectionDetails);       // Opcionalmente publico

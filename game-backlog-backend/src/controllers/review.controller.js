@@ -277,6 +277,24 @@ const reviewController = {
         }
     },
 
+    // 8.7 Obtener reseña por ID
+    async getReview(req, res) {
+        try {
+            const { reviewId } = req.params;
+            const currentUserId = req.user ? req.user.userId : null;
+
+            const review = await Review.getFullReviewById(reviewId, currentUserId);
+            if (!review) {
+                return res.status(404).json({ error: 'Review not found' });
+            }
+
+            res.json(review);
+        } catch (error) {
+            console.error('Error fetching review by ID:', error);
+            res.status(500).json({ error: 'Failed to fetch review' });
+        }
+    },
+
     // 9. Reseñas populares
     async getPopularReviews(req, res) {
         try {
@@ -312,6 +330,29 @@ const reviewController = {
         } catch (error) {
             console.error('Error fetching user review count:', error);
             res.status(500).json({ error: 'Failed to fetch review count' });
+        }
+    },
+
+    // 12. Obtener reseñas por nombre de usuario
+    async getReviewsByUsername(req, res) {
+        try {
+            const { username } = req.params;
+            const limit = parseInt(req.query.limit) || 10;
+            const offset = parseInt(req.query.offset) || 0;
+            const currentUserId = req.user ? req.user.userId : null;
+
+            const reviews = await Review.getReviewsByUsername(username, limit, offset, currentUserId);
+            const total = await Review.getReviewCountByUsername(username);
+            const hasMore = offset + reviews.length < total;
+
+            res.json({
+                reviews,
+                hasMore,
+                total
+            });
+        } catch (error) {
+            console.error('Error fetching user reviews:', error);
+            res.status(500).json({ error: 'Failed to fetch user reviews' });
         }
     }
 };

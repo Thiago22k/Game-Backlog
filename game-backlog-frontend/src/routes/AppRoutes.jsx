@@ -12,9 +12,10 @@ const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
 const Landing = lazy(() => import('../pages/Landing'));
 const ProfileLayout = lazy(() => import('../pages/profile/ProfileLayout'));
-const ProfileGames = lazy(() => import('../pages/profile/ProfileGames'));
 const ProfileStats = lazy(() => import('../pages/profile/ProfileStats'));
+const ProfileGames = lazy(() => import('../pages/profile/ProfileGames'));
 const ProfileCollections = lazy(() => import('../pages/profile/ProfileCollections'));
+const ProfileReviews = lazy(() => import('../pages/profile/ProfileReviews'));
 const ProfileActivity = lazy(() => import('../pages/profile/ProfileActivity'));
 const ProfileLikes = lazy(() => import('../pages/profile/ProfileLikes'));
 const ProfileSocial = lazy(() => import('../pages/profile/ProfileSocial'));
@@ -26,6 +27,8 @@ const Settings = lazy(() => import('../pages/Settings'));
 const Explore = lazy(() => import('../pages/Explore'));
 const ExploreCollections = lazy(() => import('../pages/collections/ExploreCollections'));
 const GameDetails = lazy(() => import('../pages/GameDetails'));
+const GameStatDetails = lazy(() => import('../pages/GameStatDetails'));
+const ReviewDetails = lazy(() => import('../pages/reviews/ReviewDetails'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 const Notifications = lazy(() => import('../pages/Notifications'));
 const TermsOfService = lazy(() => import('../pages/TermsOfService'));
@@ -111,6 +114,8 @@ const AppRoutes = () => {
 
           {/* Game details público */}
           <Route path="/game/:slug" element={<GameDetails />} />
+          <Route path="/game/:slug/:stat" element={<GameStatDetails />} />
+          <Route path="/profile/:username/reviews/:reviewId" element={<ReviewDetails />} />
 
           {/* Collection details público (la vista decide si permite o no basado en privacidad) */}
           <Route path="/collections/:id" element={<CollectionDetails />} />
@@ -123,6 +128,7 @@ const AppRoutes = () => {
             <Route index element={<ProfileStats />} />
             <Route path="games" element={<ProfileGames />} />
             <Route path="collections" element={<ProfileCollections />} />
+            <Route path="reviews" element={<ProfileReviews />} />
             <Route path="activity" element={<ProfileActivity />} />
             <Route path="likes" element={<ProfileLikes />} />
             <Route path="likes/games" element={<ProfileLikedGames />} />

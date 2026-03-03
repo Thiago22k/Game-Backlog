@@ -47,7 +47,7 @@ const ReviewPreviewCard = ({ review }) => {
             {/* Game Title */}
             <div className="mb-2">
                 <span className="text-xs text-gray-400 mr-1">Review for</span>
-                <Link to={`/game/${review.game_slug || review.igdb_game_id}#review-${review.id}`} className="font-bold text-primary-yellow hover:text-white transition-colors hover:underline decoration-primary-yellow/30 underline-offset-4 text-sm">
+                <Link to={`/game/${review.game_slug || review.igdb_game_id}`} className="font-bold text-primary-yellow hover:text-white transition-colors hover:underline decoration-primary-yellow/30 underline-offset-4 text-sm">
                     {review.game_name || 'Unknown Game'}
                 </Link>
             </div>
@@ -88,7 +88,7 @@ const ReviewPreviewCard = ({ review }) => {
                     </div>
                 </div>
                 <Link
-                    to={`/game/${review.game_slug || review.igdb_game_id}#review-${review.id}`}
+                    to={`/profile/${review.username}/reviews/${review.id}`}
                     className="text-xs font-bold text-primary-yellow hover:text-white transition-colors"
                 >
                     Read Full Review →

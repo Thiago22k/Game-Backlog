@@ -17,6 +17,7 @@ import AddToCollectionModal from '../components/collections/AddToCollectionModal
 import ReviewsPanel from '../components/reviews/ReviewsPanel';
 import ReviewModal from '../components/reviews/ReviewModal';
 import reviewService from '../api/review.service';
+import ScreenshotLightbox from '../components/games/ScreenshotLightbox';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const STATUSES = [
@@ -84,6 +85,7 @@ const GameDetails = () => {
 
   const [banner, setBanner] = useState(null);
   const [activeTab, setActiveTab] = useState('stats');
+  const [lightboxState, setLightboxState] = useState({ isOpen: false, index: 0 });
 
 
   // ── SEO ──────────────────────────────────────────────────────────────────
@@ -536,12 +538,13 @@ const GameDetails = () => {
                 <div className="animate-in fade-in duration-300">
                   {screenshots.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {screenshots.map((s) => (
+                      {screenshots.map((s, index) => (
                         <div key={s.id} className="aspect-video overflow-hidden rounded-xl bg-primary-navy-dark border border-white/5">
                           <img
                             src={formatIGDBImage(s.url, 't_screenshot_med')}
                             alt="Screenshot"
                             className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+                            onClick={() => setLightboxState({ isOpen: true, index })}
                             onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         </div>
@@ -811,6 +814,13 @@ const GameDetails = () => {
         />
       )}
 
+      <ScreenshotLightbox
+        screenshots={screenshots}
+        initialIndex={lightboxState.index}
+        isOpen={lightboxState.isOpen}
+        onClose={() => setLightboxState(prev => ({ ...prev, isOpen: false }))}
+      />
+
       <Footer />
     </div>
   );
@@ -842,6 +852,7 @@ const InlineSummary = ({ summary }) => {
 const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onStatsUpdate, onWriteReview }) => {
   const { isAuthenticated } = useAuth();
   const { liked, toggleLike, toggling } = useGameLikes(game?.id);
+  const navigate = useNavigate();
 
   const handleLikeClick = useCallback(async (e) => {
     e.preventDefault();
@@ -872,12 +883,15 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
       {/* ── ROW 1: MINI STAT CARDS (Engagement) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5">
         {/* Likes Panel */}
-        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+        <div
+          onClick={() => navigate(`/game/${game.slug}/likes`)}
+          className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-yellow/50 transition-all group"
+        >
           <span className="text-4xl font-black text-white">{formatNumber(stats.likes || 0)}</span>
           <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">Likes</span>
 
           <button
-            onClick={handleLikeClick}
+            onClick={(e) => { e.stopPropagation(); handleLikeClick(e); }}
             disabled={toggling}
             className={`mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border ${liked
               ? 'bg-pink-500/10 border-pink-500/50 text-pink-500'
@@ -890,13 +904,16 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
         </div>
 
         {/* Collections Panel */}
-        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+        <div
+          onClick={() => navigate(`/game/${game.slug}/collections`)}
+          className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-yellow/50 transition-all group relative"
+        >
           <span className="text-4xl font-black text-white">{formatNumber(stats.collectionsCount || 0)}</span>
           <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">In Collections</span>
 
           <button
-            onClick={onAddCollection}
-            className="mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+            onClick={(e) => { e.stopPropagation(); onAddCollection(e); }}
+            className={`w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 ${(stats.collectionsPrivate > 0 || stats.collectionsPublic > 0) ? 'mt-2' : 'mt-4'}`}
           >
             <FolderPlus size={14} />
             Add to Collection
@@ -904,12 +921,15 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
         </div>
 
         {/* Reviews Panel */}
-        <div className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center">
+        <div
+          onClick={() => navigate(`/game/${game.slug}/reviews`)}
+          className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary-yellow/50 transition-all group"
+        >
           <span className="text-4xl font-black text-white">{formatNumber(stats.reviewsCount || 0)}</span>
           <span className="text-gray-400 text-xs font-black uppercase tracking-widest mt-1.5 group-hover:text-primary-yellow transition-colors">Reviews</span>
 
           <button
-            onClick={onWriteReview}
+            onClick={(e) => { e.stopPropagation(); onWriteReview(); }}
             className="mt-4 w-[85%] flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all border bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
           >
             {myReview ? (
@@ -1007,11 +1027,17 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
 
           {/* Completed + Backlog highlights */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group">
+            <div
+              onClick={() => navigate(`/game/${game.slug}/completed`)}
+              className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+            >
               <span className="text-3xl font-black text-green-400 leading-none">{stats.completed || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
             </div>
-            <div className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group">
+            <div
+              onClick={() => navigate(`/game/${game.slug}/backlog`)}
+              className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+            >
               <span className="text-3xl font-black text-indigo-400 leading-none">{stats.backlog || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
             </div>
@@ -1019,15 +1045,24 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
 
           {/* Secondary stats row */}
           <div className="flex justify-between items-center bg-black/20 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+            <div
+              onClick={() => navigate(`/game/${game.slug}/playing`)}
+              className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group cursor-pointer hover:text-white transition-colors"
+            >
               <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0 group-hover:scale-125 transition-transform" />
               Playing: <span className="text-white font-black">{stats.playing || 0}</span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+            <div
+              onClick={() => navigate(`/game/${game.slug}/wishlist`)}
+              className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group cursor-pointer hover:text-white transition-colors"
+            >
               <span className="w-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
               Wishlist: <span className="text-white font-black">{stats.wishlist || 0}</span>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group">
+            <div
+              onClick={() => navigate(`/game/${game.slug}/dropped`)}
+              className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group cursor-pointer hover:text-white transition-colors"
+            >
               <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
               Dropped: <span className="text-white font-black">{stats.dropped || 0}</span>
             </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { Users } from 'lucide-react';
 import { useFollow } from '../../hooks/useFollow';
 import { useAuth } from '../../context/AuthContext';
@@ -38,6 +38,7 @@ const UserCard = ({ user, currentUser, onToggleFollow }) => (
 
 const ProfileSocial = () => {
     const { username } = useParams();
+    const { isOwner } = useOutletContext();
     const { user: currentUser } = useAuth();
     const { getProfileSocialData, followUser, unfollowUser } = useFollow();
 
@@ -129,16 +130,20 @@ const ProfileSocial = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
                 {activeTab === 'followers' ? (
                     followers.length === 0 ? (
-                        <div className="col-span-full py-16 text-center text-gray-500 bg-primary-navy-dark rounded-xl">
-                            {username} has no followers yet.
+                        <div className="col-span-full py-16 text-center text-gray-400 bg-primary-navy-dark rounded-xl">
+                            {isOwner
+                                ? "You don't have any followers yet."
+                                : `${username} has no followers yet.`}
                         </div>
                     ) : (
                         followers.map(user => <UserCard key={user.id} user={user} currentUser={currentUser} onToggleFollow={handleToggleCardFollow} />)
                     )
                 ) : (
                     following.length === 0 ? (
-                        <div className="col-span-full py-16 text-center text-gray-500 bg-primary-navy-dark rounded-xl">
-                            {username} is not following anyone yet.
+                        <div className="col-span-full py-16 text-center text-gray-400 bg-primary-navy-dark rounded-xl">
+                            {isOwner
+                                ? "You aren't following anyone yet."
+                                : `${username} is not following anyone yet.`}
                         </div>
                     ) : (
                         following.map(user => <UserCard key={user.id} user={user} currentUser={currentUser} onToggleFollow={handleToggleCardFollow} />)
