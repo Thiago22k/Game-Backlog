@@ -91,7 +91,7 @@ const ScreenshotLightbox = ({ screenshots, initialIndex = 0, isOpen, onClose }) 
             <button
                 onClick={(e) => { e.stopPropagation(); handleClose(); }}
                 className="absolute top-6 right-6 p-2 text-white/70 hover:text-white transition-all z-10"
-                title="Cerrar (Esc)"
+                title="Close (Esc)"
             >
                 <X size={28} />
             </button>
@@ -101,7 +101,7 @@ const ScreenshotLightbox = ({ screenshots, initialIndex = 0, isOpen, onClose }) 
                 <button
                     onClick={handlePrev}
                     className="hidden md:block absolute left-4 md:left-8 p-3 text-white/70 hover:text-white transition-all z-10"
-                    title="Anterior (Flecha Izquierda)"
+                    title="Previous (Left Arrow)"
                 >
                     <ChevronLeft size={40} />
                 </button>
@@ -133,7 +133,7 @@ const ScreenshotLightbox = ({ screenshots, initialIndex = 0, isOpen, onClose }) 
                 <button
                     onClick={handleNext}
                     className="hidden md:block absolute right-4 md:right-8 p-3 text-white/70 hover:text-white transition-all z-10"
-                    title="Siguiente (Flecha Derecha)"
+                    title="Next (Right Arrow)"
                 >
                     <ChevronRight size={40} />
                 </button>

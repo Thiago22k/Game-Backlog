@@ -125,7 +125,15 @@ const getGameById = async (slugOrId) => {
         (cachedGame.data.summary || cachedGame.data.storyline) &&
         (!cachedGame.data.similar_games ||
           (cachedGame.data.similar_games.length === 0) ||
-          (cachedGame.data.similar_games[0].name)); // Verificar que tengan al menos el nombre
+          (cachedGame.data.similar_games[0].name)) &&
+        // Force refresh if new detail fields are missing (added in v2)
+        ('websites' in cachedGame.data || 'game_modes' in cachedGame.data) &&
+        // Force refresh if websites lack category or type
+        (!cachedGame.data.websites?.length || (cachedGame.data.websites[0].category !== undefined || cachedGame.data.websites[0].type !== undefined)) &&
+        // Force refresh if age_ratings exist but rating_category is not an expanded object
+        (!cachedGame.data.age_ratings?.length || typeof cachedGame.data.age_ratings[0].rating_category === 'object') &&
+        // Force refresh if time_to_beat key is absent entirely (added in v3; null means game has no data, which is valid)
+        'time_to_beat' in cachedGame.data;
 
       if (hasEssentialData) {
         console.log(`📦 Cache Hit²: ${slugOrId}`);
@@ -173,7 +181,17 @@ const getGameById = async (slugOrId) => {
           parent_game.first_release_date,
           version_parent.name,
           version_parent.slug,
-          version_parent.first_release_date;
+          version_parent.first_release_date,
+          game_modes.name,
+          player_perspectives.name,
+          age_ratings.organization,
+          age_ratings.rating_category.rating,
+          language_supports.language.name,
+          language_supports.language_support_type.name,
+          websites.url,
+          websites.category,
+          websites.type,
+          websites.trusted;
         where ${whereClause};
       `,
       {
@@ -186,8 +204,10 @@ const getGameById = async (slugOrId) => {
 
     const gameData = response.data[0];
 
-    // 4. Si encontramos el juego, guardarlo/actualizarlo en el cache
+    // 4. Si encontramos el juego, enriquecer con time_to_beat (endpoint separado)
     if (gameData) {
+      const ttb = await getTimeToBeat(gameData.id, token);
+      gameData.time_to_beat = ttb; // null si no hay datos
       await IgdbCache.upsert(gameData.id, gameData.slug, gameData.name, gameData);
     }
 
@@ -196,6 +216,27 @@ const getGameById = async (slugOrId) => {
   } catch (error) {
     console.error('❌ Error obteniendo juego de IGDB:', error.message);
     throw new Error('Error al obtener detalles del juego');
+  }
+};
+
+// Obtener datos de tiempo de juego desde el endpoint separado de IGDB
+const getTimeToBeat = async (igdbGameId, token) => {
+  try {
+    const t = token || (await getAccessToken());
+    const response = await axios.post(
+      'https://api.igdb.com/v4/game_time_to_beats',
+      `fields game_id, hastily, normally, completely; where game_id = ${igdbGameId}; limit 1;`,
+      {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${t}`,
+        },
+      }
+    );
+    return response.data[0] || null;
+  } catch (err) {
+    console.warn(`⚠️ Could not fetch time_to_beat for game ${igdbGameId}:`, err.message);
+    return null;
   }
 };
 
@@ -658,9 +699,10 @@ module.exports = {
   getPopularGames,
   getRecentGames,
   getMostAnticipated,
-  exploreGames,     // ← Nuevo
-  getGenres,        // ← Nuevo
-  getPlatforms,     // ← Nuevo
-  getRecommendationsCandidates, // ← Nuevo
-  getBasicGameById,  // ← Nuevo
+  exploreGames,
+  getGenres,
+  getPlatforms,
+  getRecommendationsCandidates,
+  getBasicGameById,
+  getTimeToBeat,
 };

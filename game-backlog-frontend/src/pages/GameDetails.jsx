@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, ArrowLeft, Building2, Calendar, Check, Plus, ShoppingCart, Info, Play, Trash2, Archive, ExternalLink, Heart, Compass, MessageSquare, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil } from 'lucide-react';
+import { Clock, ArrowLeft, Building2, Calendar, Check, Plus, ShoppingCart, Info, Play, Trash2, Archive, Heart, Compass, MessageSquare, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil, Globe, Share2, Swords, Gem, Crown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
@@ -18,6 +18,14 @@ import ReviewsPanel from '../components/reviews/ReviewsPanel';
 import ReviewModal from '../components/reviews/ReviewModal';
 import reviewService from '../api/review.service';
 import ScreenshotLightbox from '../components/games/ScreenshotLightbox';
+import { getAgeRatingImage } from '../utils/ageRatings';
+import {
+  FaArrowUpRightFromSquare, FaNewspaper, FaWikipediaW, FaFacebook,
+  FaTwitch, FaInstagram, FaYoutube, FaApple, FaAndroid, FaSteam,
+  FaReddit, FaItchIo, FaDiscord, FaXTwitter, FaXbox, FaPlaystation
+} from 'react-icons/fa6';
+import { SiEpicgames, SiGogdotcom } from 'react-icons/si';
+import { BsNintendoSwitch } from 'react-icons/bs';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const STATUSES = [
@@ -53,6 +61,8 @@ const TABS = [
   { id: 'similar', label: 'Similar', icon: Compass },
 ];
 
+
+
 // ─── Pure helpers (defined once, not per render) ──────────────────────────────
 const formatNumber = (num) => {
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
@@ -63,6 +73,39 @@ const renderStars = (rating) => {
   const full = Math.floor(rating);
   const half = rating % 1 >= 0.5;
   return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
+};
+
+const getWebsiteInfo = (website) => {
+  const categoryId = website.category || website.type;
+  switch (categoryId) {
+    case 1: return { Icon: FaArrowUpRightFromSquare, label: 'Official Website', color: 'text-primary-yellow hover:underline' };
+    case 2: return { Icon: FaNewspaper, label: 'Wiki', color: 'text-gray-400 hover:text-white' };
+    case 3: return { Icon: FaWikipediaW, label: 'Wikipedia', color: 'text-gray-400 hover:text-white' };
+    case 4: return { Icon: FaFacebook, label: 'Facebook', color: 'text-gray-400 hover:text-[#1877F2]' };
+    case 5: return { Icon: FaXTwitter, label: 'X (Twitter)', color: 'text-gray-400 hover:text-white' };
+    case 6: return { Icon: FaTwitch, label: 'Twitch', color: 'text-gray-400 hover:text-[#9146FF]' };
+    case 8: return { Icon: FaInstagram, label: 'Instagram', color: 'text-gray-400 hover:text-[#E4405F]' };
+    case 9: return { Icon: FaYoutube, label: 'YouTube', color: 'text-gray-400 hover:text-[#FF0000]' };
+    case 10: return { Icon: FaApple, label: 'iPhone', color: 'text-gray-400 hover:text-white' };
+    case 11: return { Icon: FaApple, label: 'iPad', color: 'text-gray-400 hover:text-white' };
+    case 12: return { Icon: FaAndroid, label: 'Android', color: 'text-gray-400 hover:text-[#3DDC84]' };
+    case 13: return { Icon: FaSteam, label: 'Steam', color: 'text-gray-400 hover:text-[#00adee]' };
+    case 14: return { Icon: FaReddit, label: 'Reddit', color: 'text-gray-400 hover:text-[#FF4500]' };
+    case 15: return { Icon: FaItchIo, label: 'Itch.io', color: 'text-gray-400 hover:text-[#FA5C5C]' };
+    case 16: return { Icon: SiEpicgames, label: 'Epic Games', color: 'text-gray-400 hover:text-white' };
+    case 17: return { Icon: SiGogdotcom, label: 'GOG', color: 'text-gray-400 hover:text-[#8b22a8]' };
+    case 18: return { Icon: FaDiscord, label: 'Discord', color: 'text-gray-400 hover:text-[#5865F2]' };
+    default:
+      const url = website.url;
+      const hostname = new URL(url).hostname;
+
+      if (hostname.includes('xbox.com')) return { Icon: FaXbox, label: 'Xbox', color: 'text-gray-400 hover:text-[#107C10]' };
+      if (hostname.includes('playstation.com') || hostname.includes('playstation.net')) return { Icon: FaPlaystation, label: 'PlayStation', color: 'text-gray-400 hover:text-[#003791]' };
+      if (hostname.includes('nintendo.com')) return { Icon: BsNintendoSwitch, label: 'Nintendo', color: 'text-gray-400 hover:text-[#E60012]' };
+
+      let label = hostname.replace('www.', '');
+      return { Icon: FaArrowUpRightFromSquare, label, color: 'text-gray-400 hover:text-white' };
+  }
 };
 
 
@@ -320,6 +363,28 @@ const GameDetails = () => {
     setIsReviewModalOpen(true);
   }, [isAuthenticated, isUnreleased]);
 
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+
+    try {
+      // Always use clipboard for 100% reliability and clean experience
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!', {
+        icon: '🔗',
+        style: {
+          borderRadius: '12px',
+          background: '#1a1d2d',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }
+      });
+    } catch (err) {
+      if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+        console.error('Error copying to clipboard:', err);
+      }
+    }
+  }, []);
+
   // ── Loading / error states (After all React hooks have been called) ───────────
   if (loading) {
     return (
@@ -371,14 +436,25 @@ const GameDetails = () => {
           </button>
 
           <div className="flex flex-col md:flex-row gap-8 items-start">
-            {/* Cover with translucent action bar */}
-            <div className="shrink-0 relative">
-              <img
-                src={cover}
-                alt={game.name}
-                className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10"
-                onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
-              />
+            {/* Cover with Share Button */}
+            <div className="shrink-0 space-y-3">
+              <div className="relative group">
+                <img
+                  src={cover}
+                  alt={game.name}
+                  className="w-44 h-64 object-cover rounded-xl shadow-2xl ring-2 ring-white/10 group-hover:ring-primary-yellow/50 transition-all duration-300"
+                  onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
+                />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+
+              <button
+                onClick={handleShare}
+                className="w-44 py-2.5 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 rounded-xl transition-all duration-300 group shadow-lg"
+              >
+                <Share2 size={16} className="group-hover:scale-110 transition-transform" />
+                <span className="text-sm font-semibold">Share Game</span>
+              </button>
             </div>
 
             {/* Title & meta */}
@@ -561,7 +637,8 @@ const GameDetails = () => {
 
               {activeTab === 'details' && (
                 <div className="animate-in fade-in duration-300 space-y-6">
-                  <div className="bg-primary-navy-dark rounded-2xl p-8 border border-gray-700/50">
+                  {/* ── Game Info Card ── */}
+                  <div className="bg-primary-navy-dark rounded-2xl p-8">
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 bg-primary-yellow/10 rounded-lg">
                         <Info size={20} className="text-primary-yellow" />
@@ -577,7 +654,7 @@ const GameDetails = () => {
                             <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Game Modes</span>
                             <div className="flex flex-wrap gap-2">
                               {game.game_modes.map((m) => (
-                                <span key={m.id} className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-lg border border-gray-700">
+                                <span key={m.id} className="px-3 py-1 bg-primary-navy-light text-gray-200 text-sm rounded-lg">
                                   {m.name}
                                 </span>
                               ))}
@@ -590,13 +667,52 @@ const GameDetails = () => {
                             <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Player Perspectives</span>
                             <div className="flex flex-wrap gap-2">
                               {game.player_perspectives.map((p) => (
-                                <span key={p.id} className="px-3 py-1 bg-gray-800 text-gray-200 text-sm rounded-lg border border-gray-700">
+                                <span key={p.id} className="px-3 py-1 bg-primary-navy-light text-gray-200 text-sm rounded-lg">
                                   {p.name}
                                 </span>
                               ))}
                             </div>
                           </div>
                         )}
+
+                        {game.age_ratings?.length > 0 && (() => {
+                          const ORG_ORDER = ['ESRB', 'PEGI', 'CERO', 'USK', 'GRAC', 'CLASS_IND', 'ACB'];
+                          const sortedRatings = [...game.age_ratings].sort((a, b) => {
+                            const orgA = getAgeRatingImage(a).org;
+                            const orgB = getAgeRatingImage(b).org;
+                            const indexA = ORG_ORDER.indexOf(orgA);
+                            const indexB = ORG_ORDER.indexOf(orgB);
+                            return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
+                          });
+
+                          return (
+                            <div className="flex flex-col gap-2">
+                              <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">Age Ratings</span>
+                              <div className="flex flex-wrap gap-3">
+                                {sortedRatings.map((ar) => {
+                                  const { src, alt, org, label } = getAgeRatingImage(ar);
+                                  return (
+                                    <div key={ar.id} className="flex flex-col items-center justify-between bg-primary-navy rounded-xl p-2 min-w-[64px] transition-transform hover:scale-105 hover:bg-primary-navy-light shadow-sm">
+                                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-2 text-center">{org}</span>
+                                      {src ? (
+                                        <img
+                                          src={src}
+                                          alt={alt}
+                                          title={alt}
+                                          className="h-11 w-auto object-contain drop-shadow-md pb-0.5"
+                                        />
+                                      ) : (
+                                        <span className="text-sm font-bold text-gray-200 pb-1" title={alt}>
+                                          {label}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Right Column */}
@@ -604,20 +720,19 @@ const GameDetails = () => {
                         {game.websites?.length > 0 && (
                           <div className="flex flex-col gap-2">
                             <span className="text-xs text-gray-500 font-semibold uppercase tracking-widest">External Links</span>
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-wrap gap-4">
                               {game.websites.map((w) => {
-                                // Category 1 is Official, we can list others too or filter
-                                const isOfficial = w.category === 1;
+                                const { Icon, label, color } = getWebsiteInfo(w);
                                 return (
                                   <a
                                     key={w.id}
                                     href={w.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className={`flex items-center gap-2 text-sm transition-colors ${isOfficial ? 'text-primary-yellow hover:underline' : 'text-gray-400 hover:text-white'}`}
+                                    title={label}
+                                    className={`flex items-center justify-center p-2.5 rounded-xl bg-primary-navy hover:bg-primary-navy-light hover:scale-110 transition-all shadow-sm ${color}`}
                                   >
-                                    <ExternalLink size={14} />
-                                    {isOfficial ? 'Official Website' : new URL(w.url).hostname.replace('www.', '')}
+                                    <Icon size={20} />
                                   </a>
                                 );
                               })}
@@ -625,12 +740,66 @@ const GameDetails = () => {
                           </div>
                         )}
 
-                        {!game.game_modes && !game.player_perspectives && !game.websites && (
+                        {!game.game_modes?.length && !game.player_perspectives?.length && !game.age_ratings?.length && !game.websites?.length && (
                           <p className="text-sm italic text-gray-500">More detailed information coming soon...</p>
                         )}
                       </div>
                     </div>
                   </div>
+
+                  {/* ── Language Support Card ── */}
+                  {game.language_supports?.length > 0 && (() => {
+                    // Build language → support types map
+                    const langMap = {};
+                    game.language_supports.forEach((ls) => {
+                      const lang = ls.language?.name;
+                      const type = ls.language_support_type?.name;
+                      if (!lang || !type) return;
+                      if (!langMap[lang]) langMap[lang] = {};
+                      langMap[lang][type] = true;
+                    });
+                    const languages = Object.keys(langMap).sort();
+                    // Detect which support types exist across all entries
+                    const allTypes = [...new Set(game.language_supports.map(ls => ls.language_support_type?.name).filter(Boolean))].sort();
+                    if (languages.length === 0) return null;
+                    return (
+                      <div className="bg-primary-navy-dark rounded-2xl p-8">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="p-2 bg-primary-yellow/10 rounded-lg">
+                            <Globe size={20} className="text-primary-yellow" />
+                          </div>
+                          <h3 className="text-xl font-bold text-white">Language Support</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-gray-700">
+                                <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-widest py-3 pr-4">Language</th>
+                                {allTypes.map((t) => (
+                                  <th key={t} className="text-center text-xs text-gray-500 font-semibold uppercase tracking-widest py-3 px-4">{t}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {languages.map((lang) => (
+                                <tr key={lang} className="border-b border-gray-800/50 hover:bg-white/[0.02] transition-colors">
+                                  <td className="py-2.5 pr-4 text-gray-300 font-medium">{lang}</td>
+                                  {allTypes.map((t) => (
+                                    <td key={t} className="text-center py-2.5 px-4">
+                                      {langMap[lang][t]
+                                        ? <Check size={16} className="inline text-green-400" />
+                                        : <span className="text-gray-700">—</span>
+                                      }
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -670,7 +839,7 @@ const GameDetails = () => {
           </div>
 
           {/* ── RIGHT SIDEBAR ─────────────────────────────────────────── */}
-          <div className="space-y-5">
+          <div className="space-y-5 lg:mt-[86px]">
 
             {/* My Library — Status + Rating (sidebar edition, compact) */}
             <div className="bg-primary-navy-dark rounded-2xl overflow-hidden">
@@ -770,6 +939,47 @@ const GameDetails = () => {
                 )}
               </div>
             </div>
+
+            {/* ── HOW LONG TO BEAT (IGDB) ── */}
+            {(() => {
+              const ttb = game?.time_to_beat;
+              if (!ttb || (!ttb.normally && !ttb.hastily && !ttb.completely)) return null;
+              const fmt = (secs) => {
+                if (!secs) return null;
+                const h = secs / 3600;
+                return h % 1 === 0 ? `${h}` : `${h.toFixed(1)}`;
+              };
+              const rows = [
+                { label: 'Speedrun', val: fmt(ttb.hastily), Icon: Gem, color: 'text-violet-400', bg: 'bg-violet-400/10' },
+                { label: 'Main Story', val: fmt(ttb.normally), Icon: Swords, color: 'text-sky-400', bg: 'bg-sky-400/10' },
+                { label: 'Completionist', val: fmt(ttb.completely), Icon: Crown, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+              ].filter(r => r.val);
+              if (!rows.length) return null;
+              return (
+                <div className="bg-primary-navy-dark rounded-2xl overflow-hidden">
+                  <div className="px-4 pt-4 pb-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold">How Long to Beat</p>
+                      <p className="text-[10px] text-gray-600">Source: IGDB</p>
+                    </div>
+                    <div className={`grid gap-3 ${rows.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                      {rows.map(({ label, val, Icon, color, bg }) => (
+                        <div key={label} className="flex flex-col items-center gap-2">
+                          <div className={`p-2.5 rounded-full bg-primary-navy ${bg}`}>
+                            <Icon size={20} className={color} />
+                          </div>
+                          <div className="flex items-baseline gap-0.5">
+                            <span className="text-xl font-black text-white leading-none">{val}</span>
+                            <span className="text-xs font-bold text-gray-400">h</span>
+                          </div>
+                          <span className="text-[10px] text-gray-500 font-semibold text-center leading-tight">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         </div>
@@ -1029,14 +1239,14 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div
               onClick={() => navigate(`/game/${game.slug}/completed`)}
-              className="bg-green-500/10 border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+              className="bg-primary-navy border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
             >
               <span className="text-3xl font-black text-green-400 leading-none">{stats.completed || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
             </div>
             <div
               onClick={() => navigate(`/game/${game.slug}/backlog`)}
-              className="bg-indigo-500/10 border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+              className="bg-primary-navy border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
             >
               <span className="text-3xl font-black text-indigo-400 leading-none">{stats.backlog || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
@@ -1044,7 +1254,7 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
           </div>
 
           {/* Secondary stats row */}
-          <div className="flex justify-between items-center bg-black/20 rounded-xl px-4 py-3">
+          <div className="flex justify-between items-center bg-primary-navy rounded-xl px-4 py-3">
             <div
               onClick={() => navigate(`/game/${game.slug}/playing`)}
               className="flex items-center gap-2 text-[11px] font-semibold text-gray-400 group cursor-pointer hover:text-white transition-colors"
