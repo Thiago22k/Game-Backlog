@@ -41,6 +41,10 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
+    // Allow Vercel preview deployments
+    if (/^https:\/\/game-backlog.*\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
