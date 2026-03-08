@@ -4,23 +4,45 @@ const nodemailer = require('nodemailer');
 const User = require('../models/user.model');
 const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
 
-// Configurar transportador de nodemailer (Ethereal para desarrollo)
+// Configurar transportador de nodemailer
 let transporter;
-nodemailer.createTestAccount((err, account) => {
-  if (err) {
-    console.error('Failed to create a testing account. ' + err.message);
+
+const initializeTransporter = async () => {
+  // If SMTP credentials exist, use them directly (Production / Real Email)
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT || 587,
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    console.log('📧 Servidor configurado con SMTP real (Resend/Brevo/AWS)');
     return;
   }
-  transporter = nodemailer.createTransport({
-    host: account.smtp.host,
-    port: account.smtp.port,
-    secure: account.smtp.secure,
-    auth: {
-      user: account.user,
-      pass: account.pass,
-    },
+
+  // Fallback: Test account (Ethereal) for local development if no SMTP is provided
+  nodemailer.createTestAccount((err, account) => {
+    if (err) {
+      console.error('Failed to create a testing account. ' + err.message);
+      return;
+    }
+    transporter = nodemailer.createTransport({
+      host: account.smtp.host,
+      port: account.smtp.port,
+      secure: account.smtp.secure,
+      auth: {
+        user: account.user,
+        pass: account.pass,
+      },
+    });
+    console.log('🧪 Servidor de correos configurado en modo prueba (Ethereal)');
   });
-});
+};
+
+initializeTransporter();
 
 // Generar JWT
 const generateToken = (userId, username, role) => {
@@ -260,8 +282,9 @@ const forgotPassword = async (req, res) => {
 
     // Enviar email
     if (transporter) {
+      const fromAddress = process.env.SMTP_FROM || '"Game Backlog" <noreply@gamebacklog.com>';
       const message = {
-        from: '"Game Backlog" <noreply@gamebacklog.com>',
+        from: fromAddress,
         to: user.email,
         subject: 'Recuperación de Contraseña',
         text: `Para restablecer tu contraseña, haz clic en este enlace: ${resetLink}`,
@@ -270,7 +293,10 @@ const forgotPassword = async (req, res) => {
 
       const info = await transporter.sendMail(message);
       console.log('--- PASSWORD RESET EMAIL SENT ---');
-      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+      if (info.messageId && !process.env.SMTP_HOST) {
+        // Only log the ethereal URL if using ethereal email
+        console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+      }
       console.log('---------------------------------');
     }
 
