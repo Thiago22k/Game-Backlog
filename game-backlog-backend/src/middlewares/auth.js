@@ -33,8 +33,11 @@ const authenticateToken = (req, res, next) => {
         return res.status(403).json({ error: 'Tu cuenta ha sido suspendida.' });
       }
 
-      // Agregar información del usuario al request
-      req.user = decoded; // { userId: 1, iat: ..., exp: ... }
+      // Agregar información del usuario al request (sobreescribiendo el rol con el dato fresco de la BD)
+      req.user = {
+        ...decoded,
+        role: user.role
+      };
       next();
     });
 
@@ -60,7 +63,10 @@ const optionalAuth = (req, res, next) => {
         // En optional, no bloqueamos la petición pero tampoco agregamos el user si está baneado
         const user = await User.findById(decoded.userId);
         if (user && user.status !== 'banned') {
-          req.user = decoded;
+          req.user = {
+            ...decoded,
+            role: user.role
+          };
         }
       }
       next();
