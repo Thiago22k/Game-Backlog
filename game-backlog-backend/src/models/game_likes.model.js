@@ -38,6 +38,48 @@ const GameLikes = {
         return result.rows.length > 0;
     },
 
+    // Get bulk like count and user status for multiple games
+    async getBulkLikeStatus(igdbGameIds, userId) {
+        if (!igdbGameIds || igdbGameIds.length === 0) return {};
+
+        // Ensure ids are integers to prevent SQL injection issues if any string passes
+        const safeIds = igdbGameIds.map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+        if (safeIds.length === 0) return {};
+
+        const countsQuery = `
+            SELECT igdb_game_id, COUNT(*) as likes_count
+            FROM game_likes
+            WHERE igdb_game_id = ANY($1::int[])
+            GROUP BY igdb_game_id
+        `;
+
+        const userLikesQuery = userId ? `
+            SELECT igdb_game_id
+            FROM game_likes
+            WHERE igdb_game_id = ANY($1::int[]) AND user_id = $2
+        ` : null;
+
+        const [countsResult, userLikesResult] = await Promise.all([
+            pool.query(countsQuery, [safeIds]),
+            userId ? pool.query(userLikesQuery, [safeIds, userId]) : { rows: [] }
+        ]);
+
+        const userLikedSet = new Set(userLikesResult.rows.map(r => r.igdb_game_id));
+        const results = {};
+
+        safeIds.forEach(id => {
+            results[id] = { likes_count: 0, user_has_liked: userLikedSet.has(id) };
+        });
+
+        countsResult.rows.forEach(row => {
+            if (results[row.igdb_game_id]) {
+                results[row.igdb_game_id].likes_count = parseInt(row.likes_count, 10);
+            }
+        });
+
+        return results;
+    },
+
     // Get list of liked game IDs for a specific user  
     async getLikedGamesByUser(userId) {
         const query = 'SELECT igdb_game_id, created_at FROM game_likes WHERE user_id = $1 ORDER BY created_at DESC';

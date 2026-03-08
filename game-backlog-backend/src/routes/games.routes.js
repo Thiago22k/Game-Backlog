@@ -22,6 +22,7 @@ router.get('/stats/:igdb_game_id/:stat/users', gamesController.getGameStatUsers)
 // Likes routes —— /api/games/likes/...
 router.get('/likes/user/:userId', optionalAuth, likesController.getUserLikedGames);
 router.get('/likes/by-username/:username', optionalAuth, likesController.getUserLikedGamesByUsername);
+router.get('/likes/bulk', optionalAuth, likesController.getBulkGameLikeStatus);
 router.get('/likes/:igdb_game_id', optionalAuth, likesController.getGameLikeStatus);
 router.post('/likes/:igdb_game_id', authenticateToken, likesController.toggleGameLike);
 

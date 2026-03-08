@@ -50,6 +50,29 @@ const getGameLikeStatus = async (req, res) => {
     }
 };
 
+// GET /api/games/likes/bulk — Get bulk like status for multiple games
+const getBulkGameLikeStatus = async (req, res) => {
+    try {
+        const idsParam = req.query.ids;
+        if (!idsParam) {
+            return res.json({});
+        }
+
+        const ids = idsParam.split(',').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+        if (ids.length === 0) {
+            return res.json({});
+        }
+
+        const userId = req.user?.userId; // optional auth
+
+        const results = await GameLikes.getBulkLikeStatus(ids, userId);
+        res.json(results);
+    } catch (error) {
+        console.error('Error en getBulkGameLikeStatus:', error);
+        res.status(500).json({ error: 'Error al obtener likes en lote' });
+    }
+};
+
 // GET /api/games/likes/user/:userId — Get all liked games for a user
 const getUserLikedGames = async (req, res) => {
     try {
@@ -90,4 +113,4 @@ const getUserLikedGamesByUsername = async (req, res) => {
     }
 };
 
-module.exports = { toggleGameLike, getGameLikeStatus, getUserLikedGames, getUserLikedGamesByUsername };
+module.exports = { toggleGameLike, getGameLikeStatus, getBulkGameLikeStatus, getUserLikedGames, getUserLikedGamesByUsername };
