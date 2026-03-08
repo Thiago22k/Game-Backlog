@@ -280,19 +280,49 @@ const forgotPassword = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink = `${frontendUrl}/reset-password?id=${user.id}&token=${token}`;
 
-    // Enviar email
-    if (transporter) {
-      const fromAddress = process.env.SMTP_FROM || '"Game Backlog" <noreply@gamebacklog.com>';
+    const fromAddress = process.env.SMTP_FROM || 'Game Backlog <onboarding@resend.dev>';
+    const mailSubject = 'Recuperación de Contraseña';
+    const mailText = `Para restablecer tu contraseña, haz clic en este enlace: ${resetLink}`;
+    const mailHtml = `<p>Para restablecer tu contraseña, haz clic en este enlace:</p><p><a href="${resetLink}">Restablecer Contraseña</a></p>`;
+
+    // --- RAILWAY SMTP BYPASS ---
+    // Railway blocks ports 465/587. If using Resend, we must use their HTTPS REST API instead.
+    if (process.env.SMTP_HOST === 'smtp.resend.com' && process.env.SMTP_PASS) {
+      try {
+        const axios = require('axios');
+        await axios.post(
+          'https://api.resend.com/emails',
+          {
+            from: fromAddress,
+            to: [user.email],
+            subject: mailSubject,
+            html: mailHtml,
+            text: mailText
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${process.env.SMTP_PASS}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log('--- PASSWORD RESET EMAIL SENT VIA RESEND HTTP API ---');
+      } catch (httpErr) {
+        console.error('❌ Error enviando email por Resend HTTP API:', httpErr.response?.data || httpErr.message);
+        // Fallback to ethereal if it fails
+      }
+    } else if (transporter) {
+      // Enviar email por SMTP normal (Ethereal o si no están bloqueados los puertos)
       const message = {
         from: fromAddress,
         to: user.email,
-        subject: 'Recuperación de Contraseña',
-        text: `Para restablecer tu contraseña, haz clic en este enlace: ${resetLink}`,
-        html: `<p>Para restablecer tu contraseña, haz clic en este enlace:</p><p><a href="${resetLink}">Restablecer Contraseña</a></p>`
+        subject: mailSubject,
+        text: mailText,
+        html: mailHtml
       };
 
       const info = await transporter.sendMail(message);
-      console.log('--- PASSWORD RESET EMAIL SENT ---');
+      console.log('--- PASSWORD RESET EMAIL SENT BY SMTP ---');
       if (info.messageId && !process.env.SMTP_HOST) {
         // Only log the ethereal URL if using ethereal email
         console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
