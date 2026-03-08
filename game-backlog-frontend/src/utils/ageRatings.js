@@ -56,9 +56,9 @@ const DATA_MAP = {
     '5_12+': { img: 'GRAC/GRAC_12', lab: '12' },
     '5_15': { img: 'GRAC/GRAC_15', lab: '15' },
     '5_15+': { img: 'GRAC/GRAC_15', lab: '15' },
-    '5_18': { img: 'GRAC/GRAC_19', lab: '18' },
-    '5_18+': { img: 'GRAC/GRAC_19', lab: '18' },
-    '5_19+': { img: 'GRAC/GRAC_19', lab: '18' },
+    '5_18': { img: 'GRAC/GRAC_18', lab: '18' },
+    '5_18+': { img: 'GRAC/GRAC_18', lab: '18' },
+    '5_19+': { img: 'GRAC/GRAC_19', lab: '19+' },
     '5_Testing': { img: 'GRAC/GRAC_Test', lab: 'Rating Under Review' },
 
     // CLASS_IND (6)
