@@ -305,7 +305,7 @@ const ProfileLayout = () => {
         location.pathname === tab.path || location.pathname.startsWith(tab.path + '/')
     );
     const displayBanner = isOwner ? user?.banner_url : gamesHook.profileBannerUrl;
-    const bannerImage = displayBanner ? `${ASSETS_BASE_URL}${displayBanner}` : null;
+    const bannerImage = displayBanner ? (displayBanner.startsWith('http') ? displayBanner : `${ASSETS_BASE_URL}${displayBanner}`) : null;
 
     // Si el usuario no existe la API devuelve ese mensaje de error específico
     if (gamesHook.error === 'Usuario no encontrado') {
