@@ -28,6 +28,7 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:5173',
   'https://game-backlog-ivory.vercel.app',
+  'https://bstackd.vercel.app'
 ];
 // Add FRONTEND_URL from env if it's set and not already in the list
 if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
@@ -41,8 +42,8 @@ app.use(cors({
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // Allow Vercel preview deployments
-    if (/^https:\/\/game-backlog.*\.vercel\.app$/.test(origin)) {
+    // Allow any Vercel deployment for preview/production
+    if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
