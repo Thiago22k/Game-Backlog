@@ -12,7 +12,7 @@ const memoryCache = {
 const getFromMemoryCache = (key) => {
   const cached = memoryCache[key];
   if (cached && Date.now() < cached.expiresAt) {
-    console.log(`🧠 Memory Cache Hit: ${key}`);
+    console.log(`Memory Cache Hit: ${key}`);
     return cached.data;
   }
   return null;

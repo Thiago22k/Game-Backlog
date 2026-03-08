@@ -10,6 +10,9 @@ const requiredEnvVars = [
   'IGDB_CLIENT_ID',
   'IGDB_CLIENT_SECRET',
   'FRONTEND_URL',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET'
 ];
 
 const validateEnv = () => {

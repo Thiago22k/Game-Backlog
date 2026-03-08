@@ -1,15 +1,9 @@
 const multer = require('multer');
-const path = require('path');
 const User = require('../models/user.model');
-const fs = require('fs');
 const sharp = require('sharp');
 const { fromBuffer } = require('file-type');
-
-// Asegurar que exista el directorio
-const uploadDir = 'public/uploads/avatars';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const cloudinary = require('../config/cloudinary');
+const streamifier = require('streamifier');
 
 // Configuración de multer: Usar memoria para procesar con sharp después
 const storage = multer.memoryStorage();
@@ -26,10 +20,38 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // Aumentado a 10MB para soportar banners y GIFs pesados
+        fileSize: 10 * 1024 * 1024 // 10MB para soportar banners y GIFs pesados
     },
     fileFilter: fileFilter
 });
+
+// Helper para subir un buffer a Cloudinary mediante streams
+const uploadToCloudinary = (buffer, folder, options = {}) => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: `game-backlog/${folder}`, ...options },
+            (error, result) => {
+                if (result) {
+                    resolve(result);
+                } else {
+                    reject(error);
+                }
+            }
+        );
+        streamifier.createReadStream(buffer).pipe(uploadStream);
+    });
+};
+
+// Helper para extraer el public_id de una URL de Cloudinary
+const getPublicIdFromUrl = (url) => {
+    if (!url || !url.includes('cloudinary.com')) return null;
+    const parts = url.split('/');
+    const fileWithExtension = parts[parts.length - 1];
+    const folder = parts[parts.length - 2];
+    const projectFolder = parts[parts.length - 3];
+    const id = fileWithExtension.split('.')[0];
+    return `${projectFolder}/${folder}/${id}`;
+};
 
 // Controlador para subir y actualizar
 const uploadAvatar = async (req, res) => {
@@ -46,63 +68,54 @@ const uploadAvatar = async (req, res) => {
         const userId = req.user.userId;
         const isGif = detected.mime === 'image/gif';
 
-        // Generar nombre de archivo único
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const extension = isGif ? 'gif' : 'webp';
-        const fileName = `avatar-${userId}-${uniqueSuffix}.${extension}`;
-        const filePath = path.join(uploadDir, fileName);
-        let avatarUrl = `/uploads/avatars/${fileName}`;
+        let avatarUrl = null;
         let avatarStaticUrl = null;
 
         if (isGif) {
-            // Guardar GIF original (validación de tamaño se hace en multer, pero ProfileLayout enviará máx 8MB)
-            fs.writeFileSync(filePath, req.file.buffer);
+            // Subir el GIF original directamente a Cloudinary
+            const gifResult = await uploadToCloudinary(req.file.buffer, 'avatars');
+            avatarUrl = gifResult.secure_url;
 
-            // Generar thumbnail estático del primer frame
-            const thumbName = `avatar-${userId}-${uniqueSuffix}-static.webp`;
-            const thumbPath = path.join(uploadDir, thumbName);
-            await sharp(req.file.buffer, { pages: 1 }) // pages: 1 extrae solo el primer frame
-                .resize(400, 400, {
-                    fit: 'cover',
-                    position: 'center'
-                })
+            // Generar thumbnail estático del primer frame (1 frame -> sharp -> webp buffer)
+            const thumbBuffer = await sharp(req.file.buffer, { pages: 1 })
+                .resize(400, 400, { fit: 'cover', position: 'center' })
                 .webp({ quality: 80 })
-                .toFile(thumbPath);
+                .toBuffer();
 
-            avatarStaticUrl = `/uploads/avatars/${thumbName}`;
+            const staticResult = await uploadToCloudinary(thumbBuffer, 'avatars');
+            avatarStaticUrl = staticResult.secure_url;
+
         } else {
-            // Procesar imagen normal con sharp: 400x400, convert to webp
-            await sharp(req.file.buffer)
-                .resize(400, 400, {
-                    fit: 'cover',
-                    position: 'center'
-                })
+            // Procesar imagen normal con sharp: 400x400, convert to webp buffer
+            const optimizedBuffer = await sharp(req.file.buffer)
+                .resize(400, 400, { fit: 'cover', position: 'center' })
                 .webp({ quality: 80 })
-                .toFile(filePath);
+                .toBuffer();
+
+            const uploadResult = await uploadToCloudinary(optimizedBuffer, 'avatars');
+            avatarUrl = uploadResult.secure_url;
         }
 
-        // Obtener el usuario actual para borrar archivos anteriores
+        // Obtener el usuario actual para borrar archivos anteriores en Cloudinary
         const user = await User.findById(userId);
         const filesToDelete = [];
-        if (user.avatar_url && !user.avatar_url.includes('default')) {
-            filesToDelete.push(user.avatar_url);
+        if (user.avatar_url && user.avatar_url.includes('cloudinary.com')) {
+            filesToDelete.push(getPublicIdFromUrl(user.avatar_url));
         }
-        if (user.avatar_static_url) {
-            filesToDelete.push(user.avatar_static_url);
+        if (user.avatar_static_url && user.avatar_static_url.includes('cloudinary.com')) {
+            filesToDelete.push(getPublicIdFromUrl(user.avatar_static_url));
         }
 
-        filesToDelete.forEach(fileUrl => {
-            const fullPath = path.join(__dirname, '..', '..', 'public', fileUrl.replace('/uploads/', 'uploads/'));
-            if (fs.existsSync(fullPath)) {
-                fs.unlinkSync(fullPath);
-            }
+        // Eliminar imágenes antiguas de Cloudinary (fire and forget)
+        filesToDelete.forEach(publicId => {
+            if (publicId) cloudinary.uploader.destroy(publicId).catch(err => console.error('Error deleting from Cloudinary:', err));
         });
 
         // Actualizar base de datos
         const updatedUser = await User.updateAvatar(userId, avatarUrl, avatarStaticUrl);
 
         res.json({
-            message: 'Avatar actualizado y optimizado exitosamente',
+            message: 'Avatar actualizado y optimizado exitosamente en Cloudinary',
             user: updatedUser
         });
 
@@ -122,21 +135,15 @@ const deleteAvatar = async (req, res) => {
             return res.status(400).json({ error: 'No tienes un avatar personalizado para eliminar' });
         }
 
-        // Borrar archivos físicos si existen
-        const filesToDelete = [];
-        if (user.avatar_url && !user.avatar_url.includes('default')) {
-            filesToDelete.push(user.avatar_url);
+        // Borrar archivos de Cloudinary
+        if (user.avatar_url && user.avatar_url.includes('cloudinary.com')) {
+            const publicId = getPublicIdFromUrl(user.avatar_url);
+            if (publicId) await cloudinary.uploader.destroy(publicId);
         }
-        if (user.avatar_static_url) {
-            filesToDelete.push(user.avatar_static_url);
+        if (user.avatar_static_url && user.avatar_static_url.includes('cloudinary.com')) {
+            const publicId = getPublicIdFromUrl(user.avatar_static_url);
+            if (publicId) await cloudinary.uploader.destroy(publicId);
         }
-
-        filesToDelete.forEach(fileUrl => {
-            const fullPath = path.join(__dirname, '..', '..', 'public', fileUrl.replace('/uploads/', 'uploads/'));
-            if (fs.existsSync(fullPath)) {
-                fs.unlinkSync(fullPath);
-            }
-        });
 
         // Actualizar base de datos a null
         const updatedUser = await User.updateAvatar(userId, null);
@@ -152,12 +159,6 @@ const deleteAvatar = async (req, res) => {
     }
 };
 
-// Asegurar que exista el directorio para banners
-const bannerUploadDir = 'public/uploads/banners';
-if (!fs.existsSync(bannerUploadDir)) {
-    fs.mkdirSync(bannerUploadDir, { recursive: true });
-}
-
 // Controlador para subir y actualizar banner
 const uploadBanner = async (req, res) => {
     try {
@@ -172,27 +173,25 @@ const uploadBanner = async (req, res) => {
 
         const userId = req.user.userId;
 
-        // Generar nombre de archivo único (.webp)
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const fileName = `banner-${userId}-${uniqueSuffix}.webp`;
-        const filePath = path.join(bannerUploadDir, fileName);
-        const bannerUrl = `/uploads/banners/${fileName}`;
-
         // Procesar imagen con sharp: 1920x400 (aspect ratio super panorámico), crop center, convert to webp
-        await sharp(req.file.buffer)
+        const optimizedBuffer = await sharp(req.file.buffer)
             .resize(1920, 480, {
                 fit: 'cover',
                 position: 'center'
             })
             .webp({ quality: 80 })
-            .toFile(filePath);
+            .toBuffer();
 
-        // Obtener el usuario actual para borrar su banner anterior si existe
+        // Subir a Cloudinary
+        const uploadResult = await uploadToCloudinary(optimizedBuffer, 'banners');
+        const bannerUrl = uploadResult.secure_url;
+
+        // Obtener el usuario actual para borrar su banner anterior si existe en Cloudinary
         const user = await User.findById(userId);
-        if (user.banner_url) {
-            const oldBannerPath = path.join(__dirname, '..', '..', 'public', user.banner_url.replace('/uploads/', 'uploads/'));
-            if (fs.existsSync(oldBannerPath)) {
-                fs.unlinkSync(oldBannerPath);
+        if (user.banner_url && user.banner_url.includes('cloudinary.com')) {
+            const publicId = getPublicIdFromUrl(user.banner_url);
+            if (publicId) {
+                cloudinary.uploader.destroy(publicId).catch(err => console.error('Error deleting banner from Cloudinary:', err));
             }
         }
 
@@ -200,7 +199,7 @@ const uploadBanner = async (req, res) => {
         const updatedUser = await User.updateBanner(userId, bannerUrl);
 
         res.json({
-            message: 'Banner actualizado y optimizado exitosamente',
+            message: 'Banner actualizado y optimizado exitosamente en Cloudinary',
             user: updatedUser
         });
 
@@ -220,10 +219,10 @@ const deleteBanner = async (req, res) => {
             return res.status(400).json({ error: 'No tienes un banner personalizado para eliminar' });
         }
 
-        // Borrar archivo físico si existe
-        const bannerPath = path.join(__dirname, '..', '..', 'public', user.banner_url.replace('/uploads/', 'uploads/'));
-        if (fs.existsSync(bannerPath)) {
-            fs.unlinkSync(bannerPath);
+        // Borrar archivo de Cloudinary
+        if (user.banner_url && user.banner_url.includes('cloudinary.com')) {
+            const publicId = getPublicIdFromUrl(user.banner_url);
+            if (publicId) await cloudinary.uploader.destroy(publicId);
         }
 
         // Actualizar base de datos a null
