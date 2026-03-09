@@ -105,38 +105,38 @@ const ProfileStats = () => {
                 {/* ── ROW 1: Mini stat cards ── */}
                 <Link
                     to={`/profile/${username}/games`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group min-w-0"
                 >
-                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Total Games</span>
-                    <span className="text-4xl font-black text-white">{games.length}</span>
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors truncate">Total Games</span>
+                    <span className="text-4xl font-black text-white truncate">{games.length}</span>
                 </Link>
 
                 <Link
                     to={`/profile/${username}/collections`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group min-w-0"
                 >
-                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Collections</span>
-                    <span className="text-4xl font-black text-white">{collections?.length || 0}</span>
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors truncate">Collections</span>
+                    <span className="text-4xl font-black text-white truncate">{collections?.length || 0}</span>
                 </Link>
 
                 <Link
                     to={`/profile/${username}/likes/games`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group min-w-0"
                 >
-                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Liked Games</span>
-                    <span className="text-4xl font-black text-white">{likesCount}</span>
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors truncate">Liked Games</span>
+                    <span className="text-4xl font-black text-white truncate">{likesCount}</span>
                 </Link>
 
                 <Link
                     to={`/profile/${username}/reviews`}
-                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                    className="bg-primary-navy-dark rounded-2xl p-5 flex flex-col justify-center hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group min-w-0"
                 >
-                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors">Reviews</span>
-                    <span className="text-4xl font-black text-white">{reviewsCount}</span>
+                    <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1.5 group-hover:text-primary-yellow transition-colors truncate">Reviews</span>
+                    <span className="text-4xl font-black text-white truncate">{reviewsCount}</span>
                 </Link>
 
                 {/* ── ROW 2: Library Progress (span 2) ── */}
-                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6 flex flex-col justify-between">
+                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6 flex flex-col justify-between min-w-0">
                     <h4 className="text-base font-bold text-white mb-5">Library Progress</h4>
 
                     {/* Completed + Backlog highlights */}
@@ -158,24 +158,24 @@ const ProfileStats = () => {
                     </div>
 
                     {/* Secondary stats row */}
-                    <div className="flex justify-between items-center bg-primary-navy rounded-xl px-4 py-3">
+                    <div className="flex flex-wrap justify-between items-center bg-primary-navy rounded-xl px-4 py-3 gap-2">
                         <Link
                             to={`/profile/${username}/games?status=playing`}
-                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-blue-400 transition-colors group"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 hover:text-blue-400 transition-colors group"
                         >
                             <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0 group-hover:scale-125 transition-transform" />
                             Playing: <span className="text-white font-black">{playing}</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=wishlist`}
-                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-pink-400 transition-colors group"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 hover:text-pink-400 transition-colors group"
                         >
                             <span className="w-2 h-2 rounded-full bg-pink-400 shrink-0 group-hover:scale-125 transition-transform" />
                             Wishlist: <span className="text-white font-black">{wishlist}</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=dropped`}
-                            className="flex items-center gap-2 text-sm font-semibold text-gray-400 hover:text-red-400 transition-colors group"
+                            className="flex items-center gap-1.5 text-sm font-semibold text-gray-400 hover:text-red-400 transition-colors group"
                         >
                             <span className="w-2 h-2 rounded-full bg-red-400 shrink-0 group-hover:scale-125 transition-transform" />
                             Dropped: <span className="text-white font-black">{dropped}</span>
@@ -184,11 +184,11 @@ const ProfileStats = () => {
                 </div>
 
                 {/* ── ROW 2: Rating Distribution (span 2) ── */}
-                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-6">
+                <div className="col-span-2 bg-primary-navy-dark rounded-2xl p-4 sm:p-6 min-w-0 w-full">
                     <h4 className="text-base font-bold text-white mb-5">Rating Distribution</h4>
 
                     {ratedGames.length > 0 ? (
-                        <div className="flex gap-6 items-center">
+                        <div className="flex gap-4 sm:gap-6 items-center">
                             {/* Score summary */}
                             <div className="flex flex-col items-center shrink-0">
                                 <span className="text-5xl font-black text-white leading-none">{avgRating}</span>
@@ -197,7 +197,7 @@ const ProfileStats = () => {
                             </div>
 
                             {/* Vertical bars */}
-                            <div className="flex-1 flex items-end gap-1.5 h-32 pt-2">
+                            <div className="flex-1 w-full flex items-end gap-1 sm:gap-1.5 h-32 pt-2 min-w-0">
                                 {[...ratingDistribution].reverse().map(({ value, count }) => {
                                     const percentage = ratedGames.length > 0 ? ((count / ratedGames.length) * 100).toFixed(1) : 0;
                                     return (
@@ -240,7 +240,7 @@ const ProfileStats = () => {
                 </div>
 
                 {/* ── ROW 3: Featured Games Row ── */}
-                <div className="col-span-2 lg:col-span-4 grid grid-cols-1 lg:grid-cols-10 gap-4 lg:gap-5">
+                <div className="col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-10 gap-4 lg:gap-5 min-w-0">
 
                     {/* Last Completed Game (span 4/10 = 40%) */}
                     <Link

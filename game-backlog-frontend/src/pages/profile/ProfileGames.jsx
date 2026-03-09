@@ -420,28 +420,32 @@ const ProfileGames = () => {
 
                                 {/* Rating & Sort */}
                                 <div className="flex flex-wrap gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-gray-400 text-sm">Rating:</span>
-                                        <CustomSelect
-                                            options={RATING_OPTIONS}
-                                            value={ratingFilter}
-                                            onChange={setRatingFilter}
-                                        />
+                                    <div className="flex items-center gap-2 min-w-[120px] flex-1">
+                                        <span className="text-gray-400 text-sm whitespace-nowrap">Rating:</span>
+                                        <div className="flex-1">
+                                            <CustomSelect
+                                                options={RATING_OPTIONS}
+                                                value={ratingFilter}
+                                                onChange={setRatingFilter}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-gray-400 text-sm">Sort by:</span>
-                                        <CustomSelect
-                                            options={[
-                                                { value: 'recent', label: 'Recently Added' },
-                                                { value: 'name', label: 'Name (A-Z)' },
-                                                { value: 'rating-high', label: 'Rating (High-Low)' },
-                                                { value: 'rating-low', label: 'Rating (Low-High)' },
-                                                { value: 'release-new', label: 'Release Date (Newest)' },
-                                                { value: 'release-old', label: 'Release Date (Oldest)' },
-                                            ]}
-                                            value={sortBy}
-                                            onChange={setSortBy}
-                                        />
+                                    <div className="flex items-center gap-2 min-w-[150px] flex-1">
+                                        <span className="text-gray-400 text-sm whitespace-nowrap">Sort by:</span>
+                                        <div className="flex-1">
+                                            <CustomSelect
+                                                options={[
+                                                    { value: 'recent', label: 'Recently Added' },
+                                                    { value: 'name', label: 'Name (A-Z)' },
+                                                    { value: 'rating-high', label: 'Rating (High-Low)' },
+                                                    { value: 'rating-low', label: 'Rating (Low-High)' },
+                                                    { value: 'release-new', label: 'Release Date (Newest)' },
+                                                    { value: 'release-old', label: 'Release Date (Oldest)' },
+                                                ]}
+                                                value={sortBy}
+                                                onChange={setSortBy}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

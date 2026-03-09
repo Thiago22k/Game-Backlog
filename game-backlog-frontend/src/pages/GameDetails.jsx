@@ -402,7 +402,7 @@ const GameDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-primary-navy">
+    <div className="min-h-screen bg-primary-navy overflow-x-hidden w-full relative">
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
@@ -426,7 +426,7 @@ const GameDetails = () => {
         )}
         {!banner && <div className="absolute inset-0 bg-primary-navy-dark" />}
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-12 w-full min-w-0">
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition mb-8 text-sm"
@@ -435,7 +435,7 @@ const GameDetails = () => {
             Back
           </button>
 
-          <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex flex-col md:flex-row gap-8 items-start w-full min-w-0">
             {/* Cover with Share Button */}
             <div className="shrink-0 space-y-3">
               <div className="relative group">
@@ -460,7 +460,7 @@ const GameDetails = () => {
             {/* Title & meta */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center flex-wrap gap-3 mb-3">
-                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
+                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight break-words max-w-full min-w-0">
                   {game.name}
                 </h1>
                 {(categoryName && (categoryName !== 'Main Game' || parentGame)) && (
@@ -567,8 +567,8 @@ const GameDetails = () => {
           <div className="lg:col-span-2 space-y-8">
 
             {/* Tab Navigation */}
-            <div className="border-b border-gray-700">
-              <nav className="-mb-px flex space-x-6">
+            <div className="border-b border-gray-700 overflow-x-auto lg:overflow-x-visible custom-scrollbar mb-6">
+              <nav className="-mb-px flex space-x-6 sm:space-x-8 px-1 pb-1">
                 {TABS.map((tab) => {
                   const isActive = activeTab === tab.id;
                   const Icon = tab.icon;

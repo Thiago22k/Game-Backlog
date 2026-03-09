@@ -25,7 +25,7 @@ const UserCard = ({ user, currentUser, onToggleFollow }) => (
         {currentUser && currentUser.username !== user.username && (
             <button
                 onClick={() => onToggleFollow(user)}
-                className={`ml-4 px-4 py-1.5 rounded-full text-xs font-bold transition-all border shrink-0 ${user.is_following_by_me
+                className={`ml-2 sm:ml-4 px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold transition-all border shrink-0 ${user.is_following_by_me
                     ? 'bg-black/40 hover:bg-black/60 text-white border-gray-600'
                     : 'bg-primary-yellow hover:bg-white text-primary-navy-dark border-primary-yellow/50'
                     }`}

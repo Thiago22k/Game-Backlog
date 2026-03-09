@@ -28,6 +28,14 @@ export default {
       },
       backgroundImage: {
         'gradient-get-started': 'linear-gradient(90deg, #0cc0df 0%, #ffde59 100%)',
+      },
+      keyframes: {
+        shine: {
+          '100%': { transform: 'translateX(200%)' },
+        }
+      },
+      animation: {
+        shine: 'shine 2s ease-in-out infinite',
       }
     },
   },

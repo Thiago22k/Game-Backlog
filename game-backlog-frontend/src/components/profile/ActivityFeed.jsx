@@ -26,7 +26,7 @@ const ActivityItem = ({ activity, username }) => {
                     <Icon className={config.color} size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> {config.label}{" "}
                         <Link to={`/game/${metadata.game_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.game_name}
@@ -45,7 +45,7 @@ const ActivityItem = ({ activity, username }) => {
                     <Star className="text-orange-500 fill-orange-500" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> rated{" "}
                         <Link to={`/game/${metadata.game_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.game_name}
@@ -66,7 +66,7 @@ const ActivityItem = ({ activity, username }) => {
                     <Library className="text-indigo-400" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> created a new {isPublic ? 'public' : 'private'} collection:{" "}
                         <Link to={`/collections/${activity.entity_id}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.collection_name}
@@ -85,7 +85,7 @@ const ActivityItem = ({ activity, username }) => {
                     <Heart className="text-pink-500 fill-pink-500" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> liked{" "}
                         <Link to={`/game/${metadata.game_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.game_name}
@@ -104,7 +104,7 @@ const ActivityItem = ({ activity, username }) => {
                     <Heart className="text-pink-500 fill-pink-500" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> liked the collection:{" "}
                         <Link to={`/collections/${activity.entity_id}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.collection_name}
@@ -123,7 +123,7 @@ const ActivityItem = ({ activity, username }) => {
                     <MessageSquare className="text-cyan-400" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> commented on:{" "}
                         <Link to={`/collections/${activity.entity_id}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.collection_name}
@@ -147,7 +147,7 @@ const ActivityItem = ({ activity, username }) => {
                     <MessageSquare className="text-primary-yellow" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> {action_type === 'CREATE_REVIEW' ? 'wrote' : 'updated'} a review for{" "}
                         <Link to={`/game/${metadata.game_name?.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.game_name}
@@ -172,7 +172,7 @@ const ActivityItem = ({ activity, username }) => {
                     <UserPlus className="text-teal-400" size={20} />
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-300">
+                    <p className="text-sm text-gray-300 break-words whitespace-normal">
                         <span className="font-semibold text-white">{username}</span> started following{" "}
                         <Link to={`/profile/${metadata.target_username}`} className="font-bold text-primary-yellow hover:underline">
                             {metadata.target_username}
