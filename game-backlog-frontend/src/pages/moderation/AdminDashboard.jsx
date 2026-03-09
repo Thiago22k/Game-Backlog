@@ -120,10 +120,10 @@ const AdminDashboard = () => {
                     <p className="text-gray-400 mt-2">Manage user reports and community guidelines</p>
                 </div>
 
-                <div className="flex border-b border-gray-700/50 mb-8">
+                <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-700/50 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
                     <button
                         onClick={() => setActiveTab('reports')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === 'reports'
+                        className={`whitespace-nowrap flex-shrink-0 px-6 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === 'reports'
                             ? 'border-primary-yellow text-primary-yellow'
                             : 'border-transparent text-gray-400 hover:text-white hover:border-gray-600'
                             }`}
@@ -132,7 +132,7 @@ const AdminDashboard = () => {
                     </button>
                     <button
                         onClick={() => setActiveTab('users')}
-                        className={`px-6 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === 'users'
+                        className={`whitespace-nowrap flex-shrink-0 px-6 py-3 font-medium text-sm transition-colors border-b-2 ${activeTab === 'users'
                             ? 'border-primary-yellow text-primary-yellow'
                             : 'border-transparent text-gray-400 hover:text-white hover:border-gray-600'
                             }`}
@@ -144,12 +144,12 @@ const AdminDashboard = () => {
                 {activeTab === 'reports' && (
                     <>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                            <div className="flex bg-primary-navy-dark p-1 rounded-lg border border-gray-700/50">
+                            <div className="flex overflow-x-auto scrollbar-hide bg-primary-navy-dark p-1 rounded-lg border border-gray-700/50 w-full -mx-4 px-4 sm:mx-0 sm:px-0 sm:w-auto">
                                 {['all', 'review', 'comment', 'profile', 'collection', 'collection_comment'].map(f => (
                                     <button
                                         key={f}
                                         onClick={() => setFilter(f)}
-                                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filter === f
+                                        className={`whitespace-nowrap flex-shrink-0 px-4 py-2 text-sm font-medium rounded-md transition-colors ${filter === f
                                             ? 'bg-gray-800 text-white shadow'
                                             : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                                             }`}
