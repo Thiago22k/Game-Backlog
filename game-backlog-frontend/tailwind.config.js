@@ -20,6 +20,7 @@ export default {
           cyan: '#4dd4ac',
           blue: '#4a7cff',
           yellow: '#ffde59',
+          violet: '#8b7cf6',
         },
         text: {
           primary: '#ffffff',

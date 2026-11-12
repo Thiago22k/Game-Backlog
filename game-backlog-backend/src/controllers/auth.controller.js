@@ -126,6 +126,7 @@ const register = async (req, res) => {
     // Responder
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
+      token,
       user: {
         id: newUser.id,
         username: newUser.username,
@@ -206,6 +207,7 @@ const login = async (req, res) => {
     // Responder (sin enviar el password)
     res.json({
       message: 'Login exitoso',
+      token,
       user: {
         id: user.id,
         username: user.username,

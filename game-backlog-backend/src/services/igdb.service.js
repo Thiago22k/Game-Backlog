@@ -148,7 +148,14 @@ const getGameById = async (slugOrId) => {
     const token = await getAccessToken();
     const whereClause = isNumeric ? `id = ${slugOrId}` : `slug = "${slugOrId}"`;
 
-    const response = await axios.post(
+    // Optimización: si conocemos el IGDB ID antes de consultar (por ser numérico
+    // o por tener una entrada de caché previa aunque expirada), lanzamos
+    // getTimeToBeat en paralelo con la query principal para ahorrar 200–400 ms.
+    const knownId = isNumeric
+      ? parseInt(slugOrId)
+      : (cachedGame?.igdb_id ?? null);
+
+    const igdbQueryPromise = axios.post(
       'https://api.igdb.com/v4/games',
       `
         fields 
@@ -202,13 +209,22 @@ const getGameById = async (slugOrId) => {
       }
     );
 
+    // Si ya conocemos el ID, getTimeToBeat corre en paralelo con la query principal
+    const [response, earlyTtb] = await Promise.all([
+      igdbQueryPromise,
+      knownId ? getTimeToBeat(knownId, token) : Promise.resolve(null),
+    ]);
+
     const gameData = response.data[0];
 
-    // 4. Si encontramos el juego, enriquecer con time_to_beat (endpoint separado)
+    // 4. Enriquecer con time_to_beat
     if (gameData) {
-      const ttb = await getTimeToBeat(gameData.id, token);
-      gameData.time_to_beat = ttb; // null si no hay datos
-      await IgdbCache.upsert(gameData.id, gameData.slug, gameData.name, gameData);
+      // Si el ID era desconocido (slug sin ningún caché previo), lo pedimos ahora
+      const ttb = knownId !== null ? earlyTtb : await getTimeToBeat(gameData.id, token);
+      gameData.time_to_beat = ttb;
+      // Guardar en caché de forma no bloqueante — no retrasa la respuesta HTTP
+      IgdbCache.upsert(gameData.id, gameData.slug, gameData.name, gameData)
+        .catch(err => console.error('❌ Error actualizando caché:', err));
     }
 
     return gameData;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Github, Twitter } from 'lucide-react';
-import Logo from '../../assets/logo.svg?react';
+import Logo from '../../assets/isotipo.svg?react';
 
 const Footer = () => {
     return (

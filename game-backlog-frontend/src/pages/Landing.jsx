@@ -310,7 +310,6 @@ const Landing = () => {
             <div className="py-12">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-white">
-                  <Flame className="text-primary-yellow inline-block mr-2" size={24} />
                   Popular Now
                 </h2>
                 <button
@@ -339,7 +338,6 @@ const Landing = () => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold flex items-center text-white">
-                    <Star className="text-primary-yellow inline-block mr-2" size={24} />
                     {isAuthenticated ? 'Recommended for You' : 'Recommended Games'}
                   </h2>
                 </div>
@@ -366,7 +364,6 @@ const Landing = () => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold flex items-center text-white">
-                    <ClipboardList className="text-primary-yellow inline-block mr-2" size={24} />
                     Community Reviews
                   </h2>
                 </div>
@@ -388,7 +385,6 @@ const Landing = () => {
             <section className="mb-16">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-bold flex items-center text-white">
-                  <Clock className="text-primary-yellow inline-block mr-2" size={24} />
                   Most Anticipated
                 </h2>
                 <button
@@ -414,7 +410,6 @@ const Landing = () => {
             <section className="mb-16">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-3xl font-bold flex items-center text-white">
-                  <Trophy className="text-primary-yellow inline-block mr-2" size={24} />
                   Best of Last Year
                 </h2>
                 <Link
@@ -533,40 +528,6 @@ const Landing = () => {
           </div>
         </div>
 
-        {/* Cinematic CTA Section */}
-        {!isAuthenticated && (
-          <div className="py-24 relative overflow-hidden mt-12 mb-12 rounded-3xl mx-4 sm:mx-6 lg:mx-8 bg-primary-navy-dark border border-gray-800/50 shadow-2xl">
-            {/* Background Image with blur */}
-            <div className="absolute inset-0 z-0">
-              <img src={ssCtaImage} alt="Dashboard Preview" className="w-full h-full object-cover opacity-20 blur-sm" />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary-navy-dark via-primary-navy-dark/80 to-transparent"></div>
-            </div>
-
-            {/* Ambient Background Blur */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-yellow/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
-
-            <div className="relative z-10 max-w-4xl mx-auto text-center px-4">
-              <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">
-                Your Gaming Legacy, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-yellow to-yellow-600">Documented.</span>
-              </h2>
-              <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-                Join fellow players tracking their completions, sharing reviews, and building the ultimate game library. No algorithms, just your games.
-              </p>
-
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center gap-3 bg-primary-yellow text-primary-navy-dark px-10 py-5 rounded-xl text-lg font-bold hover:bg-yellow-400 transition-all hover:-translate-y-1"
-              >
-                <Gamepad2 size={24} className="animate-pulse" />
-                Start Building Your Library
-              </Link>
-
-              <p className="mt-8 text-sm text-gray-500 font-medium">
-                Ad-free experience.
-              </p>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer */}

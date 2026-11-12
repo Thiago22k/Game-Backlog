@@ -27,6 +27,11 @@ app.use(helmet({
 // Middlewares globales
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:1420',
+  'http://127.0.0.1:1420',
+  'http://tauri.localhost',
+  'https://tauri.localhost',
+  'tauri://localhost',
   'https://game-backlog-ivory.vercel.app',
   'https://bstackd.vercel.app'
 ];
@@ -39,7 +44,7 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || origin.startsWith('tauri://') || origin.includes('tauri.localhost')) {
       return callback(null, true);
     }
     // Allow any Vercel deployment for preview/production

@@ -11,6 +11,7 @@ import { ENDPOINTS } from '../utils/constants';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import NotFound from '../pages/NotFound';
+import GameDetailsSkeleton from '../components/games/GameDetailsSkeleton';
 import StarRating from '../components/games/StarRating';
 import { getGameBanner, getGameCover, formatIGDBImage, formatReleaseDate } from '../utils/formatters';
 import AddToCollectionModal from '../components/collections/AddToCollectionModal';
@@ -170,6 +171,11 @@ const GameDetails = () => {
     document.head.appendChild(script);
     return () => { document.head.removeChild(script); };
   }, [game, seoImage]);
+
+  // ── Scroll to top on page load / slug change ─────────────────────────────
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [slug]);
 
   // ── Fetch Game Data ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -387,14 +393,7 @@ const GameDetails = () => {
 
   // ── Loading / error states (After all React hooks have been called) ───────────
   if (loading) {
-    return (
-      <div className="min-h-screen bg-primary-navy">
-        <Navbar />
-        <div className="flex items-center justify-center h-[80vh]">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-b-2 border-primary-yellow" />
-        </div>
-      </div>
-    );
+    return <GameDetailsSkeleton />;
   }
 
   if (error || notFound || !game || !game.name) {

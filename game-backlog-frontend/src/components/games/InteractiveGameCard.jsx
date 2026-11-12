@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Play, ShoppingCart, Trash2, HelpCircle, FolderPlus, MoreHorizontal, Archive, Heart } from 'lucide-react';
+import { Check, Play, ShoppingCart, Trash2, Plus, FolderPlus, MoreHorizontal, Archive, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
@@ -109,11 +109,12 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
       case 'dropped':
         return { Icon: Trash2, color: 'bg-red-600' };
       default:
-        return { Icon: HelpCircle, color: 'bg-gray-600' };
+        return { Icon: Plus, color: 'bg-primary-violet' };
     }
   };
 
   const { Icon: StatusIcon, color: statusColor } = getStatusIcon();
+  const statusTooltip = currentStatus ? 'Change status' : 'Add to library';
 
   return (
     <div className="relative h-full">
@@ -123,17 +124,21 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer group h-full flex flex-col"
       >
         {/* Header con Status y Rating */}
-        <div className="h-12 px-4 relative flex items-center justify-center w-full">
+        <div className="h-16 px-4 relative flex items-center justify-center w-full">
           {/* Status Button (izquierda) */}
           {showStatus && (
-            <div className="absolute left-4">
+            <div className="absolute left-4 top-4 group/badge">
               <button
                 type="button"
                 onClick={handleStatusClick}
-                className={`p-2 rounded-full ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''}`}
+                className={`p-2 rounded-md ${statusColor} transition-transform ${interactive ? 'hover:scale-110' : ''}`}
               >
                 <StatusIcon size={16} className="text-white" />
               </button>
+              {/* Tooltip */}
+              <div className="pointer-events-none absolute left-0 top-full mt-1.5 whitespace-nowrap rounded-md bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/badge:opacity-100 transition-opacity duration-150 shadow-lg z-50">
+                {statusTooltip}
+              </div>
             </div>
           )}
 
@@ -151,7 +156,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             </div>
           )}
 
-          <div className="absolute right-2 z-30" data-card-menu={cardId}>
+          <div className="absolute right-4 top-4 z-30" data-card-menu={cardId}>
             <button
               type="button"
               onClick={(e) => {
@@ -159,7 +164,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
                 e.stopPropagation();
                 toggleOptionsMenu();
               }}
-              className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             >
               <MoreHorizontal size={20} />
             </button>

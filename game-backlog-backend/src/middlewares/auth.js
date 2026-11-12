@@ -1,10 +1,22 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
+// Cookie (web) o Authorization: Bearer (app de escritorio).
+const extractToken = (req) => {
+  if (req.cookies?.token) return req.cookies.token;
+
+  const header = req.headers.authorization;
+  if (typeof header === 'string' && header.startsWith('Bearer ')) {
+    const token = header.slice(7).trim();
+    if (token) return token;
+  }
+
+  return null;
+};
+
 const authenticateToken = (req, res, next) => {
   try {
-    // Obtener el token de las cookies
-    const token = req.cookies?.token;
+    const token = extractToken(req);
 
     if (!token) {
       if (req.originalUrl === '/api/auth/me') {
@@ -51,8 +63,7 @@ const authenticateToken = (req, res, next) => {
 
 const optionalAuth = (req, res, next) => {
   try {
-    // Obtener el token de las cookies
-    const token = req.cookies?.token;
+    const token = extractToken(req);
 
     if (!token) {
       return next();

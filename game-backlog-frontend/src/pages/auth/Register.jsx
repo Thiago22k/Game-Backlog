@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, User } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
+import AuthLayout from '../../components/auth/AuthLayout';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -10,41 +11,74 @@ const Register = () => {
 
   usePageTitle('Sign Up');
 
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
+    username: '',
+    agreeTerms: false,
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Imágenes de fondo aleatorias
-  const backgroundImages = [
-    'https://images.igdb.com/igdb/image/upload/t_1080p/co5vmg.jpg', // Baldur's Gate 3
-    'https://images.igdb.com/igdb/image/upload/t_1080p/co6kz7.jpg', // Elden Ring
-    'https://images.igdb.com/igdb/image/upload/t_1080p/co5w4u.jpg', // The Witcher 3
-    'https://images.igdb.com/igdb/image/upload/t_1080p/co1r7f.jpg', // God of War
-  ];
-
-  const [randomBg] = useState(() =>
-    backgroundImages[Math.floor(Math.random() * backgroundImages.length)]
-  );
-
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
     if (error) setError('');
   };
 
-  const handleSubmit = async (e) => {
+  const handleStep1Submit = (e) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setStep(2);
+  };
+
+  const handleStep2Submit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!formData.username.trim()) {
+      setError('Please choose a username');
+      return;
+    }
+
+    if (formData.username.trim().length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+
+    if (formData.username.trim().length > 15) {
+      setError('Username cannot exceed 15 characters');
+      return;
+    }
+
+    if (!formData.agreeTerms) {
+      setError('You must agree to the Terms and Privacy Policy');
+      return;
+    }
+
     setIsLoading(true);
 
-    const result = await register(formData.username, formData.email, formData.password);
+    const result = await register(
+      formData.username.trim(),
+      formData.email.trim(),
+      formData.password
+    );
 
     if (result.success) {
       const redirect = sessionStorage.getItem('redirectAfterLogin');
@@ -65,181 +99,202 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-navy relative overflow-hidden">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url('${randomBg}')`,
-          filter: 'blur(8px) brightness(0.4)',
-        }}
-      />
+    <AuthLayout>
+      <div className="w-full">
+        {/* Step indicator */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-1 w-8 rounded-full transition-colors ${
+                step >= 1 ? 'bg-primary-yellow' : 'bg-gray-700'
+              }`}
+            />
+            <span
+              className={`h-1 w-8 rounded-full transition-colors ${
+                step >= 2 ? 'bg-primary-yellow' : 'bg-gray-700'
+              }`}
+            />
+          </div>
+          <span className="text-xs text-gray-400 font-medium">
+            Step {step} of 2
+          </span>
+        </div>
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-primary-navy/60" />
+        {step === 1 ? (
+          <>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
+              Create your account
+            </h1>
+            <p className="text-gray-400 text-sm mb-8">
+              Start with your email and password.
+            </p>
 
-      {/* Content */}
-      <div className="relative z-10">
+            <form onSubmit={handleStep1Submit} className="space-y-5">
+              {/* Email Input */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full h-12 bg-white/[0.07] border border-white/15 focus:border-[#8b7cf6] text-white px-4 rounded-md focus:outline-none transition-colors placeholder-gray-500 text-sm"
+                  placeholder="you@email.com"
+                />
+              </div>
 
-        <div className="flex items-center justify-center px-4 pt-32 pb-12 min-h-screen">
-
-          {/* CONTENEDOR FLEX: Tres tarjetas */}
-          <div className="flex flex-col md:flex-row items-center justify-center w-full max-w-6xl relative">
-
-            {/* 1. TARJETA IZQUIERDA */}
-            <div className="hidden md:flex flex-col justify-center items-center w-80 bg-primary-navy-dark text-white p-8 rounded-l-2xl shadow-xl h-[500px] -mr-4 z-0">
-              <h3 className="text-primary-yellow font-bold text-2xl mb-4 uppercase tracking-wide text-center">
-                Already have an account?
-              </h3>
-              <p className="text-white text-base leading-relaxed mb-6 text-center">
-                Log in to access your gaming backlog and continue tracking your progress
-              </p>
-              <Link
-                to="/login"
-                className="bg-primary-blue hover:bg-opacity-90 text-white font-bold py-3 px-8 rounded-lg uppercase tracking-wide transition-all text-sm"
-              >
-                Log In
-              </Link>
-            </div>
-
-            {/* 2. TARJETA PRINCIPAL (REGISTER) */}
-            <div className="w-full max-w-md z-10">
-
-              {/* Register Card */}
-              <div className="bg-primary-navy-ultra-dark rounded-2xl p-10 shadow-2xl h-full">
-                <h2 className="text-primary-yellow font-bold text-3xl mb-8 text-center uppercase tracking-wide">
-                  Sign Up
-                </h2>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Username Input */}
-                  <div>
-                    <label className="block text-white text-sm mb-2">
-                      Username
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="username"
-                        value={formData.username}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        maxLength={15}
-                        className="w-full bg-white bg-opacity-10 text-white px-4 py-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-yellow placeholder-gray-500 disabled:opacity-50"
-                        placeholder="Choose a username"
-                      />
-                      <User className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                    </div>
-                  </div>
-
-                  {/* Email Input */}
-                  <div>
-                    <label className="block text-white text-sm mb-2">
-                      Email
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        className="w-full bg-white bg-opacity-10 text-white px-4 py-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-yellow placeholder-gray-500 disabled:opacity-50"
-                        placeholder="Enter your email"
-                      />
-                      <Mail className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                    </div>
-                  </div>
-
-                  {/* Password Input */}
-                  <div>
-                    <label className="block text-white text-sm mb-2">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        disabled={isLoading}
-                        className="w-full bg-white bg-opacity-10 text-white px-4 py-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-yellow placeholder-gray-500 disabled:opacity-50"
-                        placeholder="Create a password"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                      >
-                        {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Error Message */}
-                  {error && (
-                    <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-300 px-4 py-3 rounded-lg text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  {/* Submit Button */}
+              {/* Password Input */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    minLength={8}
+                    className="w-full h-12 bg-white/[0.07] border border-white/15 focus:border-[#8b7cf6] text-white px-4 pr-11 rounded-md focus:outline-none transition-colors placeholder-gray-500 text-sm"
+                    placeholder="At least 8 characters"
+                  />
                   <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full bg-primary-yellow hover:bg-opacity-90 text-primary-navy font-bold py-3 px-8 rounded-lg uppercase tracking-wide transition-all disabled:opacity-50"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
                   >
-                    {isLoading ? 'Creating account...' : 'Sign Up'}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
-                </form>
+                </div>
+              </div>
 
-                {/* Footer Links */}
-                <div className="mt-8 space-y-3 text-center">
-                  <div className="md:hidden">
-                    <span className="text-gray-400 text-sm">Already have an account? </span>
-                    <Link to="/login" className="text-primary-yellow hover:text-white text-sm transition-all font-semibold">
-                      Log In
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-500/15 border border-red-500/40 text-red-300 px-4 py-2.5 rounded-md text-xs">
+                  {error}
+                </div>
+              )}
+
+              {/* Continue button */}
+              <button
+                type="submit"
+                className="w-full h-12 bg-primary-yellow hover:bg-yellow-400 text-primary-navy font-bold rounded-md transition-all shadow-md shadow-primary-yellow/10 text-sm mt-2"
+              >
+                Continue
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
+              Pick a username
+            </h1>
+            <p className="text-gray-400 text-sm mb-8">
+              This is how you'll appear in Stackd.
+            </p>
+
+            <form onSubmit={handleStep2Submit} className="space-y-5">
+              {/* Username Input */}
+              <div>
+                <label className="block text-white text-sm font-medium mb-2">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  required
+                  maxLength={15}
+                  disabled={isLoading}
+                  className="w-full h-12 bg-white/[0.07] border border-white/15 focus:border-[#8b7cf6] text-white px-4 rounded-md focus:outline-none transition-colors placeholder-gray-500 text-sm disabled:opacity-50"
+                  placeholder="Choose a username"
+                />
+                <p className="text-xs text-gray-400 mt-2">
+                  3 to 15 characters. Letters, numbers and underscores.
+                </p>
+              </div>
+
+              {/* TOS Checkbox */}
+              <div className="pt-1">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="agreeTerms"
+                    checked={formData.agreeTerms}
+                    onChange={handleChange}
+                    className="w-4 h-4 rounded-sm bg-white/10 border-white/20 text-primary-yellow focus:ring-0 accent-primary-yellow"
+                  />
+                  <span className="text-xs text-gray-300">
+                    I agree to the{' '}
+                    <Link to="/terms" target="_blank" className="text-purple-400 hover:underline">
+                      Terms
+                    </Link>{' '}
+                    and{' '}
+                    <Link to="/privacy" target="_blank" className="text-purple-400 hover:underline">
+                      Privacy Policy
                     </Link>
-                  </div>
-                  <Link to="/" className="block text-gray-400 hover:text-white text-sm transition-all mt-4">
-                    ← Back to home
-                  </Link>
-                </div>
+                  </span>
+                </label>
               </div>
 
-            </div>
-
-            {/* 3. TARJETA DERECHA */}
-            <div className="hidden md:flex flex-col justify-center items-center w-80 bg-primary-navy-dark text-white p-8 rounded-r-2xl shadow-xl h-[500px] -ml-4 z-0">
-              <h3 className="text-primary-yellow font-bold text-xl mb-6 uppercase tracking-wide text-center">
-                Join the Community
-              </h3>
-
-              <div className="space-y-6 w-full">
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary-yellow mb-1">10K+</p>
-                  <p className="text-sm text-gray-300">Active Users</p>
+              {/* Error Message */}
+              {error && (
+                <div className="bg-red-500/15 border border-red-500/40 text-red-300 px-4 py-2.5 rounded-md text-xs">
+                  {error}
                 </div>
+              )}
 
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary-yellow mb-1">50K+</p>
-                  <p className="text-sm text-gray-300">Games Tracked</p>
-                </div>
+              {/* Create account button */}
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full h-12 bg-primary-yellow hover:bg-yellow-400 text-primary-navy font-bold rounded-md transition-all shadow-md shadow-primary-yellow/10 disabled:opacity-50 text-sm mt-2"
+              >
+                {isLoading ? 'Creating account...' : 'Create account'}
+              </button>
 
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary-yellow mb-1">100K+</p>
-                  <p className="text-sm text-gray-300">Reviews Written</p>
-                </div>
+              {/* Back to Step 1 */}
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setStep(1);
+                  }}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  Back
+                </button>
               </div>
-            </div>
+            </form>
+          </>
+        )}
 
+        {/* Footer navigation */}
+        <div className="mt-8 text-center space-y-4">
+          <p className="text-sm text-gray-400">
+            Already have an account?{' '}
+            <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium transition-colors">
+              Log in
+            </Link>
+          </p>
+
+          <div>
+            <Link
+              to="/explore"
+              className="inline-block text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Continue as guest
+            </Link>
           </div>
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 };
 

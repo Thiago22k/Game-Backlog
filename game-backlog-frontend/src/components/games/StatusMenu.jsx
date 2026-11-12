@@ -4,7 +4,7 @@ const StatusMenu = ({ currentStatus, onSelect, onClose }) => {
   const statuses = [
     {
       id: null,
-      label: 'Not Played',
+      label: 'Not in Library',
       icon: HelpCircle,
       color: 'bg-gray-600 hover:bg-gray-500'
     },

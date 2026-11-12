@@ -3,7 +3,7 @@ import { Search, Menu, X, User, LogOut, Bell } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
-import Logo from '../../assets/logo.svg?react';
+import Logo from '../../assets/isotipo.svg?react';
 import SearchModal from './SearchModal';
 import { getAvatarUrl } from '../../utils/avatar';
 
