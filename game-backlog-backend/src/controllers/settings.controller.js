@@ -2,52 +2,55 @@ const bcrypt = require('bcrypt');
 const User = require('../models/user.model');
 const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase, isValidSocialHandle } = require('../utils/validation');
 
-// Cambiar contraseña
+// Cambiar o establecer contraseña (soporta cuentas Steam-only sin contraseña previa)
 const changePassword = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { currentPassword, newPassword } = req.body;
 
-    // Validar que vengan los campos
-    if (!currentPassword || !newPassword) {
+    if (!newPassword) {
       return res.status(400).json({
-        error: 'Todos los campos son obligatorios'
+        error: 'La nueva contraseña es obligatoria'
       });
     }
 
-    // Validar nueva contraseña
     if (!isValidPassword(newPassword)) {
       return res.status(400).json({
         error: 'La nueva contraseña debe tener al menos 6 caracteres'
       });
     }
 
-    // Obtener usuario actual (con password)
     const currentUser = await User.findByIdWithPassword(userId);
-
     if (!currentUser) {
       return res.status(404).json({
         error: 'Usuario no encontrado'
       });
     }
 
-    // Verificar contraseña actual
-    const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Contraseña actual incorrecta'
-      });
+    // Si ya tiene contraseña, exigir la actual; si es cuenta Steam-only, permitir crearla directamente
+    if (currentUser.password) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          error: 'Todos los campos son obligatorios'
+        });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          error: 'Contraseña actual incorrecta'
+        });
+      }
     }
 
-    // Encriptar nueva contraseña
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    // Actualizar contraseña
     await User.changePassword(userId, hashedPassword);
 
     res.json({
-      message: 'Contraseña actualizada exitosamente'
+      message: currentUser.password ? 'Contraseña actualizada exitosamente' : 'Contraseña creada exitosamente',
+      has_password: true,
     });
 
   } catch (error) {
@@ -63,48 +66,44 @@ const updateEmail = async (req, res) => {
   try {
     const userId = req.user.userId;
     let { newEmail, password } = req.body;
-    newEmail = sanitizeString(newEmail);
+    newEmail = sanitizeString(newEmail).toLowerCase();
 
-    // Validar que vengan los campos
-    if (!newEmail || !password) {
+    if (!newEmail) {
       return res.status(400).json({
-        error: 'Todos los campos son obligatorios'
+        error: 'El nuevo email es obligatorio'
       });
     }
 
-    // Validar formato de email
     if (!isValidEmail(newEmail)) {
       return res.status(400).json({
         error: 'Formato de email inválido'
       });
     }
 
-    // Verificar que el email no esté en uso
     const existingEmail = await User.findByEmail(newEmail);
-    if (existingEmail) {
+    if (existingEmail && existingEmail.id !== userId) {
       return res.status(409).json({
         error: 'Este email ya está en uso'
       });
     }
 
-    // Obtener usuario actual (con password)
     const currentUser = await User.findByIdWithPassword(userId);
-
     if (!currentUser) {
       return res.status(404).json({
         error: 'Usuario no encontrado'
       });
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, currentUser.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Contraseña incorrecta'
-      });
+    if (currentUser.password) {
+      if (!password) {
+        return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+      }
+      const isPasswordValid = await bcrypt.compare(password, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Contraseña incorrecta' });
+      }
     }
 
-    // Actualizar email
     const updatedUser = await User.updateEmail(userId, newEmail);
 
     res.json({
@@ -127,21 +126,18 @@ const updateUsername = async (req, res) => {
     let { newUsername, password } = req.body;
     newUsername = sanitizeUsernameAndPreserveCase(newUsername);
 
-    // Validar que vengan los campos
-    if (!newUsername || !password) {
+    if (!newUsername) {
       return res.status(400).json({
-        error: 'Todos los campos son obligatorios'
+        error: 'El nuevo username es obligatorio'
       });
     }
 
-    // Validar username
     if (!isValidUsername(newUsername)) {
       return res.status(400).json({
-        error: 'Username debe tener entre 3-50 caracteres y solo letras, números y guiones bajos'
+        error: 'Username debe tener entre 3-15 caracteres y solo letras, números y guiones bajos'
       });
     }
 
-    // Verificar que el username no esté en uso (excluyendo al propio usuario)
     const existingUsername = await User.findByUsername(newUsername);
     if (existingUsername && existingUsername.id !== userId) {
       return res.status(409).json({
@@ -149,7 +145,6 @@ const updateUsername = async (req, res) => {
       });
     }
 
-    // Verificar restricción de 30 días
     const lastChange = await User.getLastUsernameChange(userId);
     if (lastChange) {
       const daysSinceLastChange = Math.floor((Date.now() - new Date(lastChange).getTime()) / (1000 * 60 * 60 * 24));
@@ -161,24 +156,23 @@ const updateUsername = async (req, res) => {
       }
     }
 
-    // Obtener usuario actual (con password)
     const currentUser = await User.findByIdWithPassword(userId);
-
     if (!currentUser) {
       return res.status(404).json({
         error: 'Usuario no encontrado'
       });
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, currentUser.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Contraseña incorrecta'
-      });
+    if (currentUser.password) {
+      if (!password) {
+        return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+      }
+      const isPasswordValid = await bcrypt.compare(password, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Contraseña incorrecta' });
+      }
     }
 
-    // Actualizar username
     const updatedUser = await User.updateUsername(userId, newUsername);
 
     res.json({
@@ -200,31 +194,23 @@ const deleteAccount = async (req, res) => {
     const userId = req.user.userId;
     const { password } = req.body;
 
-    // Validar que venga la contraseña
-    if (!password) {
-      return res.status(400).json({
-        error: 'La contraseña es obligatoria'
-      });
-    }
-
-    // Obtener usuario actual (con password)
     const currentUser = await User.findByIdWithPassword(userId);
-
     if (!currentUser) {
       return res.status(404).json({
         error: 'Usuario no encontrado'
       });
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, currentUser.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        error: 'Contraseña incorrecta'
-      });
+    if (currentUser.password) {
+      if (!password) {
+        return res.status(400).json({ error: 'La contraseña es obligatoria' });
+      }
+      const isPasswordValid = await bcrypt.compare(password, currentUser.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Contraseña incorrecta' });
+      }
     }
 
-    // Eliminar usuario (CASCADE eliminará sus juegos)
     await User.deleteUser(userId);
 
     res.json({
@@ -271,18 +257,15 @@ const updateProfile = async (req, res) => {
     const userId = req.user.userId;
     let { bio, social_twitch, social_discord, social_steam } = req.body;
 
-    // Validate bio length
     if (bio && bio.length > 200) {
       return res.status(400).json({ error: 'Bio debe tener máximo 200 caracteres' });
     }
 
-    // Trim values
     bio = bio?.trim() || null;
     social_twitch = social_twitch?.trim() || null;
     social_discord = social_discord?.trim() || null;
     social_steam = social_steam?.trim() || null;
 
-    // Validate social handles format
     if (!isValidSocialHandle(social_twitch)) {
       return res.status(400).json({ error: 'Formato de handle de Twitch inválido' });
     }

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const IgdbCache = require('../models/igdb_cache.model');
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let accessToken = null;
 let tokenExpiration = null;
@@ -708,6 +709,98 @@ const getBasicGameById = async (igdbId) => {
   }
 };
 
+const postIgdbWithRetry = async (url, queryBody, token, retries = 3) => {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await axios.post(url, queryBody, {
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID,
+          'Authorization': `Bearer ${token}`,
+        },
+        timeout: 15000,
+      });
+    } catch (error) {
+      const status = error.response?.status;
+      if (status === 429 && attempt < retries) {
+        const backoff = 350 * Math.pow(2, attempt);
+        await sleep(backoff);
+        continue;
+      }
+      throw error;
+    }
+  }
+};
+
+// Resolver Steam AppIDs -> juegos de IGDB mediante /v4/external_games (lotes de hasta 500)
+const resolveSteamExternalGames = async (steamAppIds = []) => {
+  if (!steamAppIds.length) return [];
+
+  const token = await getAccessToken();
+  const uniqueIds = [...new Set(steamAppIds.map((id) => String(id)))];
+  const BATCH_SIZE = 500;
+  const results = [];
+
+  for (let i = 0; i < uniqueIds.length; i += BATCH_SIZE) {
+    if (i > 0) await sleep(280); // Respetar límite de 4 req/s de IGDB
+
+    const batch = uniqueIds.slice(i, i + BATCH_SIZE);
+    const uidList = batch.map((id) => `"${id.replace(/"/g, '')}"`).join(',');
+
+    const query = `
+      fields uid, game.id, game.name, game.slug, game.cover.image_id, game.first_release_date,
+             game.game_type, game.version_parent, game.parent_game;
+      where external_game_source = 1 & uid = (${uidList});
+      limit 500;
+    `;
+
+    const response = await postIgdbWithRetry('https://api.igdb.com/v4/external_games', query, token);
+    if (Array.isArray(response.data)) {
+      results.push(...response.data);
+    }
+  }
+
+  return results;
+};
+
+// Obtener metadatos ligeros en lotes para mostrar carátulas y nombres en la vista previa
+const getLightGamesByIds = async (gameIds = []) => {
+  const uniqueIds = [...new Set(gameIds.map(Number).filter(Boolean))];
+  if (!uniqueIds.length) return [];
+
+  const cachedRows = await IgdbCache.getManyByIds(uniqueIds);
+  const cachedMap = new Map(cachedRows.map((r) => [r.igdb_id, r.data]));
+  const missingIds = uniqueIds.filter((id) => !cachedMap.has(id));
+
+  if (missingIds.length === 0) {
+    return uniqueIds.map((id) => cachedMap.get(id)).filter(Boolean);
+  }
+
+  const token = await getAccessToken();
+  const BATCH_SIZE = 500;
+  const fetched = [];
+
+  for (let i = 0; i < missingIds.length; i += BATCH_SIZE) {
+    if (i > 0) await sleep(280);
+
+    const batch = missingIds.slice(i, i + BATCH_SIZE);
+    const query = `
+      fields id, name, slug, cover.url, cover.image_id, first_release_date, game_type, version_parent, parent_game;
+      where id = (${batch.join(',')});
+      limit 500;
+    `;
+
+    const response = await postIgdbWithRetry('https://api.igdb.com/v4/games', query, token);
+    if (Array.isArray(response.data)) {
+      fetched.push(...response.data);
+    }
+  }
+
+  return [
+    ...cachedRows.map((r) => r.data),
+    ...fetched,
+  ].filter(Boolean);
+};
+
 module.exports = {
   getGamesByIds,
   searchGames,
@@ -721,4 +814,7 @@ module.exports = {
   getRecommendationsCandidates,
   getBasicGameById,
   getTimeToBeat,
+  postIgdbWithRetry,
+  resolveSteamExternalGames,
+  getLightGamesByIds
 };

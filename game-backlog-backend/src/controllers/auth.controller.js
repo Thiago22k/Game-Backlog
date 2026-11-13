@@ -8,12 +8,11 @@ const { isValidEmail, isValidPassword, isValidUsername, sanitizeString, sanitize
 let transporter;
 
 const initializeTransporter = async () => {
-  // If SMTP credentials exist, use them directly (Production / Real Email)
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT || 587,
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      secure: process.env.SMTP_SECURE === 'true',
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
@@ -23,7 +22,6 @@ const initializeTransporter = async () => {
     return;
   }
 
-  // Fallback: Test account (Ethereal) for local development if no SMTP is provided
   nodemailer.createTestAccount((err, account) => {
     if (err) {
       console.error('Failed to create a testing account. ' + err.message);
@@ -53,7 +51,6 @@ const generateToken = (userId, username, role) => {
   );
 };
 
-// ... registro, login, getProfile ...
 // Registro de usuario
 const register = async (req, res) => {
   try {
@@ -61,35 +58,30 @@ const register = async (req, res) => {
     username = sanitizeUsernameAndPreserveCase(username);
     email = sanitizeString(email);
 
-    // Validar que vengan todos los campos
     if (!username || !email || !password) {
       return res.status(400).json({
         error: 'Todos los campos son obligatorios'
       });
     }
 
-    // Validar formato de email
     if (!isValidEmail(email)) {
       return res.status(400).json({
         error: 'Formato de email inválido'
       });
     }
 
-    // Validar username
     if (!isValidUsername(username)) {
       return res.status(400).json({
         error: 'Username debe tener entre 3-15 caracteres y solo letras, números y guiones bajos'
       });
     }
 
-    // Validar contraseña
     if (!isValidPassword(password)) {
       return res.status(400).json({
         error: 'La contraseña debe tener al menos 6 caracteres'
       });
     }
 
-    // Verificar si el email ya existe
     const existingEmail = await User.findByEmail(email);
     if (existingEmail) {
       return res.status(409).json({
@@ -97,7 +89,6 @@ const register = async (req, res) => {
       });
     }
 
-    // Verificar si el username ya existe
     const existingUsername = await User.findByUsername(username);
     if (existingUsername) {
       return res.status(409).json({
@@ -105,25 +96,19 @@ const register = async (req, res) => {
       });
     }
 
-    // Encriptar contraseña
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Crear usuario
     const newUser = await User.create(username, email, hashedPassword);
-
-    // Generar token
     const token = generateToken(newUser.id, newUser.username, newUser.role);
 
-    // Configurar cookie HttpOnly
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Responder
     res.status(201).json({
       message: 'Usuario registrado exitosamente',
       token,
@@ -136,6 +121,7 @@ const register = async (req, res) => {
         avatar_url: newUser.avatar_url,
         avatar_static_url: newUser.avatar_static_url,
         banner_url: newUser.banner_url,
+        has_password: true,
       }
     });
 
@@ -150,24 +136,20 @@ const register = async (req, res) => {
 // Login de usuario
 const login = async (req, res) => {
   try {
-    let { identifier, password } = req.body; // Acepta email o username
+    let { identifier, password } = req.body;
     identifier = sanitizeUsernameAndPreserveCase(identifier);
 
     if (identifier && identifier.includes('@')) {
       identifier = identifier.toLowerCase();
     }
 
-    // Validar que vengan los campos
     if (!identifier || !password) {
       return res.status(400).json({
         error: 'Todos los campos son obligatorios'
       });
     }
 
-    // Detectar si el identifier es un email o username
     const isEmail = identifier.includes('@');
-
-    // Buscar usuario por email o username según corresponda
     const user = isEmail
       ? await User.findByEmail(identifier)
       : await User.findByUsername(identifier);
@@ -178,7 +160,13 @@ const login = async (req, res) => {
       });
     }
 
-    // Comparar contraseña
+    // Cuentas creadas únicamente con Steam no tienen contraseña aún
+    if (!user.password) {
+      return res.status(401).json({
+        error: 'Esta cuenta usa inicio de sesión con Steam. Continúa con Steam o define una contraseña en Ajustes.'
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -186,25 +174,21 @@ const login = async (req, res) => {
       });
     }
 
-    // Generar token
     const token = generateToken(user.id, user.username, user.role);
 
-    // Verificar estado del usuario
     if (user.status === 'banned') {
       return res.status(403).json({
         error: 'Tu cuenta ha sido suspendida por violar las normas de la comunidad.'
       });
     }
 
-    // Configurar cookie HttpOnly
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+      maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
-    // Responder (sin enviar el password)
     res.json({
       message: 'Login exitoso',
       token,
@@ -221,6 +205,7 @@ const login = async (req, res) => {
         social_twitch: user.social_twitch,
         social_discord: user.social_discord,
         social_steam: user.social_steam,
+        has_password: Boolean(user.password),
       }
     });
 
@@ -235,7 +220,6 @@ const login = async (req, res) => {
 // Obtener perfil del usuario autenticado
 const getProfile = async (req, res) => {
   try {
-    // req.user viene del middleware de autenticación
     const user = await User.findById(req.user.userId);
 
     if (!user) {
@@ -266,19 +250,16 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findByEmail(email);
 
-    // Si no existe, igual respondemos success para no revelar qué emails están registrados
-    if (!user) {
+    // No revelar existencia; además si es cuenta Steam-only sin password, no se puede restablecer por aquí
+    if (!user || !user.password) {
       return res.json({ message: 'Si el correo existe, se ha enviado un enlace de recuperación.' });
     }
 
-    // Crear token con un secreto único que incluye la contraseña actual (Hash)
-    // Así, cuando cambie la contraseña, este token será inválido.
     const secret = process.env.JWT_SECRET + user.password;
     const token = jwt.sign({ email: user.email, id: user.id }, secret, {
       expiresIn: '15m'
     });
 
-    // Usar FRONTEND_URL del entorno o el predeterminado para desarrollo
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetLink = `${frontendUrl}/reset-password?id=${user.id}&token=${token}`;
 
@@ -287,8 +268,6 @@ const forgotPassword = async (req, res) => {
     const mailText = `Para restablecer tu contraseña, haz clic en este enlace: ${resetLink}`;
     const mailHtml = `<p>Para restablecer tu contraseña, haz clic en este enlace:</p><p><a href="${resetLink}">Restablecer Contraseña</a></p>`;
 
-    // --- RAILWAY SMTP BYPASS ---
-    // Railway blocks ports 465/587. If using Resend, we must use their HTTPS REST API instead.
     if (process.env.SMTP_HOST === 'smtp.resend.com' && process.env.SMTP_PASS) {
       try {
         const axios = require('axios');
@@ -311,10 +290,8 @@ const forgotPassword = async (req, res) => {
         console.log('--- PASSWORD RESET EMAIL SENT VIA RESEND HTTP API ---');
       } catch (httpErr) {
         console.error('❌ Error enviando email por Resend HTTP API:', httpErr.response?.data || httpErr.message);
-        // Fallback to ethereal if it fails
       }
     } else if (transporter) {
-      // Enviar email por SMTP normal (Ethereal o si no están bloqueados los puertos)
       const message = {
         from: fromAddress,
         to: user.email,
@@ -326,7 +303,6 @@ const forgotPassword = async (req, res) => {
       const info = await transporter.sendMail(message);
       console.log('--- PASSWORD RESET EMAIL SENT BY SMTP ---');
       if (info.messageId && !process.env.SMTP_HOST) {
-        // Only log the ethereal URL if using ethereal email
         console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
       }
       console.log('---------------------------------');
@@ -352,27 +328,22 @@ const resetPassword = async (req, res) => {
       return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
     }
 
-    // Intentamos buscar al usuario para obtener su hash actual, 
-    // necesitamos todo el objeto de usuario incluyendo el password (User.findByEmail u obtener password con query manual si findById no lo trae)
-    // Usamos el query exacto de base de datos para obtener el registro completo (findById no devuelve la pass)
     const pool = require('../config/database');
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
     const user = userResult.rows[0];
 
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(400).json({ error: 'Enlace inválido o expirado' });
     }
 
     const secret = process.env.JWT_SECRET + user.password;
 
     try {
-      // Verificar si el token es válido
       jwt.verify(token, secret);
     } catch (err) {
       return res.status(400).json({ error: 'Enlace inválido o expirado' });
     }
 
-    // Token válido, actualizamos contraseña
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
@@ -384,7 +355,7 @@ const resetPassword = async (req, res) => {
     console.error('Error en resetPassword:', error);
     res.status(500).json({ error: 'Error al restablecer la contraseña' });
   }
-}
+};
 
 // Logout de usuario
 const logout = (req, res) => {

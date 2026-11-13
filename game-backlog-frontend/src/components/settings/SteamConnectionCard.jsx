@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Download } from 'lucide-react';
 import axios from '../../api/axios';
 import { ENDPOINTS } from '../../utils/constants';
+import { useAuth } from '../../context/AuthContext';
 import SteamIcon from '../../assets/steam-icon.svg?react';
+import SteamImportModal from './SteamImportModal';
 
-// Resultado que el backend deja en /settings?steam=<resultado> al volver de Steam
 const STEAM_RESULTS = {
   linked: { type: 'success', message: 'Steam account linked successfully!' },
   cancelled: { type: 'error', message: 'Steam sign-in was cancelled.' },
@@ -18,11 +19,15 @@ const STEAM_RESULTS = {
 };
 
 const SteamConnectionCard = () => {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [status, setStatus] = useState(null); // null = cargando
+  const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const handledResult = useRef(false);
+
+  const canUnlink = user?.has_password !== false;
 
   const loadStatus = useCallback(async () => {
     try {
@@ -37,7 +42,6 @@ const SteamConnectionCard = () => {
     loadStatus();
   }, [loadStatus]);
 
-  // Mostrar el resultado del flujo OpenID una sola vez y limpiar la URL
   useEffect(() => {
     const result = searchParams.get('steam');
     if (!result || handledResult.current) return;
@@ -56,7 +60,7 @@ const SteamConnectionCard = () => {
     setBusy(true);
     try {
       const response = await axios.post(ENDPOINTS.STEAM.LINK);
-      window.location.href = response.data.url; // sale hacia Steam
+      window.location.href = response.data.url;
     } catch (error) {
       toast.error(error.response?.data?.error || 'Could not start Steam linking.');
       setBusy(false);
@@ -106,57 +110,83 @@ const SteamConnectionCard = () => {
       )}
 
       {status?.linked && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            {status.avatar_url ? (
-              <img src={status.avatar_url} alt="" className="w-12 h-12 rounded-lg shrink-0" />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-gray-700 shrink-0" />
-            )}
-            <div className="min-w-0">
-              <p className="text-white font-medium truncate">{status.persona_name || 'Steam account'}</p>
-              <p className="text-xs text-gray-400">SteamID: {status.steam_id64}</p>
-              {status.profile_url && (
-                <a
-                  href={status.profile_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-[#00adee] hover:underline"
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {status.avatar_url ? (
+                <img src={status.avatar_url} alt="" className="w-12 h-12 rounded-lg shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-gray-700 shrink-0" />
+              )}
+              <div className="min-w-0">
+                <p className="text-white font-medium truncate">{status.persona_name || 'Steam account'}</p>
+                <p className="text-xs text-gray-400">SteamID: {status.steam_id64}</p>
+                {status.profile_url && (
+                  <a
+                    href={status.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-[#00adee] hover:underline"
+                  >
+                    View Steam profile <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="inline-flex items-center gap-2 bg-[#00adee] hover:opacity-90 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all"
+              >
+                <Download size={16} />
+                Import Library
+              </button>
+
+              {!confirmUnlink ? (
+                <button
+                  onClick={() => setConfirmUnlink(true)}
+                  disabled={!canUnlink}
+                  title={!canUnlink ? 'Set a password first before unlinking Steam' : undefined}
+                  className="bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                  View Steam profile <ExternalLink size={12} />
-                </a>
+                  Unlink
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-300">Unlink Steam?</span>
+                  <button
+                    onClick={handleUnlink}
+                    disabled={busy}
+                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    {busy ? 'Unlinking...' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmUnlink(false)}
+                    disabled={busy}
+                    className="text-gray-400 hover:text-white px-2 py-2 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               )}
             </div>
           </div>
 
-          {!confirmUnlink ? (
-            <button
-              onClick={() => setConfirmUnlink(true)}
-              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Unlink
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-300">Unlink Steam?</span>
-              <button
-                onClick={handleUnlink}
-                disabled={busy}
-                className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                {busy ? 'Unlinking...' : 'Confirm'}
-              </button>
-              <button
-                onClick={() => setConfirmUnlink(false)}
-                disabled={busy}
-                className="text-gray-400 hover:text-white px-2 py-2 transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
+          {!canUnlink && (
+            <p className="text-xs text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+              Steam is your only sign-in method. Set a password above before unlinking your Steam account.
+            </p>
           )}
         </div>
       )}
+
+      <SteamImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImported={loadStatus}
+      />
     </div>
   );
 };

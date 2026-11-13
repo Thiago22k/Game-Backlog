@@ -1,10 +1,32 @@
+const jwt = require('jsonwebtoken');
 const SteamAccount = require('../models/steam.model');
 const User = require('../models/user.model');
 const steamService = require('../services/steam.service');
+const { isValidEmail, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
+const steamSyncService = require('../services/steamSync.service');
 
 const frontendUrl = () => (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const redirectToSettings = (res, result) =>
   res.redirect(`${frontendUrl()}/settings?steam=${encodeURIComponent(result)}`);
+const redirectToLogin = (res, result) =>
+  res.redirect(`${frontendUrl()}/login?steam=${encodeURIComponent(result)}`);
+
+const issueSessionCookie = (res, user) => {
+  const token = jwt.sign(
+    { userId: user.id, username: user.username, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN }
+  );
+
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+  });
+
+  return token;
+};
 
 const publicAccount = (account) => ({
   linked: true,
@@ -19,9 +41,18 @@ const publicAccount = (account) => ({
   linked_at: account.linked_at,
 });
 
+// GET /api/steam/login  (pública: inicia OpenID para login o registro)
+const startLogin = async (req, res) => {
+  try {
+    const state = steamService.signState({ action: 'login' });
+    res.redirect(steamService.buildAuthUrl(state));
+  } catch (error) {
+    console.error('Error en startLogin:', error);
+    redirectToLogin(res, 'error');
+  }
+};
+
 // POST /api/steam/link  (autenticado)
-// Devuelve la URL de Steam; el frontend navega a ella. Se hace por POST + JSON
-// para que funcione igual con cookie (web) y con Bearer (desktop).
 const startLink = async (req, res) => {
   try {
     const existing = await SteamAccount.findByUserId(req.user.userId);
@@ -38,18 +69,23 @@ const startLink = async (req, res) => {
 };
 
 // GET /api/steam/callback  (pública: llega desde Steam vía el navegador)
-// La identidad del usuario sale del `state` firmado, no de la cookie.
 const callback = async (req, res) => {
+  let action = 'link';
+
   try {
     let state;
     try {
       state = steamService.verifyState(String(req.query.state || ''));
+      action = state.action || 'link';
     } catch {
-      return redirectToSettings(res, 'invalid_state');
+      return redirectToLogin(res, 'invalid_state');
     }
 
+    const failRedirect = (code) =>
+      action === 'login' ? redirectToLogin(res, code) : redirectToSettings(res, code);
+
     if (req.query['openid.mode'] === 'cancel') {
-      return redirectToSettings(res, 'cancelled');
+      return failRedirect('cancelled');
     }
 
     let steamId;
@@ -57,10 +93,37 @@ const callback = async (req, res) => {
       steamId = await steamService.verifyAssertion(req.query);
     } catch (err) {
       console.warn('⚠️ Verificación OpenID de Steam falló:', err.message);
-      return redirectToSettings(res, 'verification_failed');
+      return failRedirect('verification_failed');
     }
 
-    if (state.action !== 'link') {
+    // --- FLUJO 1: LOGIN / REGISTRO CON STEAM ---
+    if (action === 'login') {
+      const existingAccount = await SteamAccount.findBySteamId(steamId);
+
+      // Si el SteamID ya está vinculado a una cuenta Stackd -> iniciar sesión directo
+      if (existingAccount) {
+        const user = await User.findById(existingAccount.user_id);
+        if (!user) return redirectToLogin(res, 'error');
+        if (user.status === 'banned') return redirectToLogin(res, 'banned');
+
+        issueSessionCookie(res, user);
+        return res.redirect(`${frontendUrl()}/`);
+      }
+
+      // Si es nuevo -> obtener datos públicos de Steam y mandar a /register/steam
+      const profile = (await steamService.getPlayerSummary(steamId)) || {};
+      const signupToken = steamService.signSignupToken({
+        steamId,
+        persona_name: profile.persona_name || null,
+        avatar_url: profile.avatar_url || null,
+        profile_url: profile.profile_url || null,
+      });
+
+      return res.redirect(`${frontendUrl()}/register/steam?token=${encodeURIComponent(signupToken)}`);
+    }
+
+    // --- FLUJO 2: VINCULAR A CUENTA EXISTENTE ---
+    if (action !== 'link') {
       return redirectToSettings(res, 'invalid_state');
     }
 
@@ -90,7 +153,92 @@ const callback = async (req, res) => {
     return redirectToSettings(res, 'linked');
   } catch (error) {
     console.error('Error en callback de Steam:', error);
-    return redirectToSettings(res, 'error');
+    return action === 'login' ? redirectToLogin(res, 'error') : redirectToSettings(res, 'error');
+  }
+};
+
+// POST /api/steam/complete-signup  (pública con signupToken)
+const completeSignup = async (req, res) => {
+  try {
+    const { token } = req.body;
+    let { username, email } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Token de registro de Steam requerido' });
+    }
+
+    let steamPayload;
+    try {
+      steamPayload = steamService.verifySignupToken(String(token));
+    } catch {
+      return res.status(401).json({ error: 'La sesión de registro con Steam expiró. Vuelve a intentarlo.' });
+    }
+
+    username = sanitizeUsernameAndPreserveCase(username);
+    email = email ? sanitizeString(email).toLowerCase() : null;
+
+    if (!username || !isValidUsername(username)) {
+      return res.status(400).json({
+        error: 'Username debe tener entre 3-15 caracteres y solo letras, números y guiones bajos',
+      });
+    }
+
+    if (email && !isValidEmail(email)) {
+      return res.status(400).json({ error: 'Formato de email inválido' });
+    }
+
+    // Verificar duplicados antes de crear
+    const existingUsername = await User.findByUsername(username);
+    if (existingUsername) {
+      return res.status(409).json({ error: 'El username ya está en uso' });
+    }
+
+    if (email) {
+      const existingEmail = await User.findByEmail(email);
+      if (existingEmail) {
+        return res.status(409).json({ error: 'El email ya está registrado' });
+      }
+    }
+
+    const existingSteam = await SteamAccount.findBySteamId(steamPayload.steamId);
+    if (existingSteam) {
+      return res.status(409).json({ error: 'Esta cuenta de Steam ya está vinculada a otro usuario' });
+    }
+
+    const newUser = await User.createSteamUser({
+      username,
+      email,
+      steamId64: steamPayload.steamId,
+      profile: {
+        persona_name: steamPayload.persona_name,
+        avatar_url: steamPayload.avatar_url,
+        profile_url: steamPayload.profile_url,
+      },
+    });
+
+    const sessionToken = issueSessionCookie(res, newUser);
+
+    return res.status(201).json({
+      message: 'Cuenta creada con Steam exitosamente',
+      token: sessionToken,
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+        is_profile_public: newUser.is_profile_public,
+        avatar_url: newUser.avatar_url,
+        avatar_static_url: newUser.avatar_static_url,
+        banner_url: newUser.banner_url,
+        has_password: newUser.has_password,
+      },
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'El usuario, email o cuenta de Steam ya existe' });
+    }
+    console.error('Error en completeSignup:', error);
+    return res.status(500).json({ error: 'Error al completar el registro con Steam' });
   }
 };
 
@@ -112,11 +260,9 @@ const unlink = async (req, res) => {
     const user = await User.findByIdWithPassword(req.user.userId);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    // Protección para la fase 2: una cuenta creada solo con Steam no puede
-    // quedarse sin ningún método de acceso.
     if (!user.password) {
       return res.status(400).json({
-        error: 'Define una contraseña antes de desvincular Steam, o perderías el acceso a tu cuenta'
+        error: 'Define una contraseña antes de desvincular Steam, o perderías el acceso a tu cuenta',
       });
     }
 
@@ -130,4 +276,43 @@ const unlink = async (req, res) => {
   }
 };
 
-module.exports = { startLink, callback, getStatus, unlink };
+// GET /api/steam/import/preview  (autenticado)
+const getImportPreview = async (req, res) => {
+  try {
+    const preview = await steamSyncService.buildImportPreview(req.user.userId);
+    res.json(preview);
+  } catch (error) {
+    console.error('Error en getImportPreview:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Error al generar la vista previa de importación de Steam',
+    });
+  }
+};
+
+// POST /api/steam/import/commit  (autenticado)
+const commitImport = async (req, res) => {
+  try {
+    const { items, ignoredAppIds, manualOverrides } = req.body || {};
+    if (!Array.isArray(items) && !Array.isArray(ignoredAppIds)) {
+      return res.status(400).json({ error: 'Formato de importación inválido' });
+    }
+
+    const result = await steamSyncService.commitImport(req.user.userId, {
+      items: items || [],
+      ignoredAppIds: ignoredAppIds || [],
+      manualOverrides: manualOverrides || [],
+    });
+
+    res.json({
+      message: 'Biblioteca de Steam importada exitosamente',
+      ...result,
+    });
+  } catch (error) {
+    console.error('Error en commitImport:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Error al importar juegos de Steam',
+    });
+  }
+};
+
+module.exports = { startLogin, startLink, callback, completeSignup, getStatus, unlink, getImportPreview, commitImport };

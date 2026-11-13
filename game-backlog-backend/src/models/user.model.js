@@ -1,16 +1,57 @@
 const pool = require('../config/database');
 
 const User = {
-  // Crear un nuevo usuario
+  // Crear un nuevo usuario tradicional
   async create(username, email, hashedPassword) {
     const query = `
       INSERT INTO users (username, email, password)
       VALUES ($1, $2, $3)
-      RETURNING id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, created_at
+      RETURNING id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, (password IS NOT NULL) AS has_password, created_at
     `;
     const values = [username, email, hashedPassword];
     const result = await pool.query(query, values);
     return result.rows[0];
+  },
+
+  // Crear usuario nuevo desde Steam OpenID (password = NULL, email opcional)
+  async createSteamUser({ username, email = null, steamId64, profile = {} }) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const userQuery = `
+        INSERT INTO users (username, email, password, avatar_url)
+        VALUES ($1, $2, NULL, $3)
+        RETURNING id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam, (password IS NOT NULL) AS has_password, created_at
+      `;
+      const userResult = await client.query(userQuery, [
+        username,
+        email || null,
+        profile.avatar_url || null,
+      ]);
+      const user = userResult.rows[0];
+
+      const steamQuery = `
+        INSERT INTO steam_accounts (user_id, steam_id64, persona_name, avatar_url, profile_url)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `;
+      await client.query(steamQuery, [
+        user.id,
+        steamId64,
+        profile.persona_name || null,
+        profile.avatar_url || null,
+        profile.profile_url || null,
+      ]);
+
+      await client.query('COMMIT');
+      return user;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 
   // Buscar usuario por email
@@ -29,7 +70,14 @@ const User = {
 
   // Buscar usuario por ID
   async findById(id) {
-    const query = 'SELECT id, username, email, role, is_profile_public, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam, created_at FROM users WHERE id = $1';
+    const query = `
+      SELECT id, username, email, role, status, is_profile_public,
+             avatar_url, avatar_static_url, banner_url, bio,
+             social_twitch, social_discord, social_steam,
+             (password IS NOT NULL) AS has_password, created_at
+      FROM users
+      WHERE id = $1
+    `;
     const result = await pool.query(query, [id]);
     return result.rows[0];
   },
@@ -41,14 +89,14 @@ const User = {
     return result.rows[0];
   },
 
-  // Cambiar contraseña
+  // Cambiar o establecer contraseña
   async changePassword(userId, newHashedPassword) {
     const query = `
-    UPDATE users 
-    SET password = $1, updated_at = CURRENT_TIMESTAMP 
-    WHERE id = $2
-    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
-  `;
+      UPDATE users 
+      SET password = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, (password IS NOT NULL) AS has_password
+    `;
     const result = await pool.query(query, [newHashedPassword, userId]);
     return result.rows[0];
   },
@@ -56,11 +104,11 @@ const User = {
   // Actualizar email
   async updateEmail(userId, newEmail) {
     const query = `
-    UPDATE users 
-    SET email = $1, updated_at = CURRENT_TIMESTAMP 
-    WHERE id = $2
-    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
-  `;
+      UPDATE users 
+      SET email = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url
+    `;
     const result = await pool.query(query, [newEmail, userId]);
     return result.rows[0];
   },
@@ -68,11 +116,11 @@ const User = {
   // Actualizar username
   async updateUsername(userId, newUsername) {
     const query = `
-    UPDATE users 
-    SET username = $1, last_username_change = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
-    WHERE id = $2
-    RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, last_username_change
-  `;
+      UPDATE users 
+      SET username = $1, last_username_change = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+      WHERE id = $2
+      RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, last_username_change
+    `;
     const result = await pool.query(query, [newUsername, userId]);
     return result.rows[0];
   },
@@ -153,7 +201,6 @@ const User = {
 
   // Reportar un perfil de usuario
   async reportProfile(reportedUserId, reporterId, reason, details) {
-    // Verificar si ya existe un reporte pendiente de este usuario hacia el otro
     const checkQuery = 'SELECT id FROM profile_reports WHERE reported_user_id = $1 AND reporter_id = $2 AND status = $3';
     const existing = await pool.query(checkQuery, [reportedUserId, reporterId, 'pending']);
 
@@ -170,7 +217,5 @@ const User = {
     return result.rows[0];
   }
 };
-
-
 
 module.exports = User;

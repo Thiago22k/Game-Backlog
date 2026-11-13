@@ -1,13 +1,25 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL, ENDPOINTS } from '../../utils/constants';
+import SteamIcon from '../../assets/steam-icon.svg?react';
+
+const STEAM_LOGIN_ERRORS = {
+  cancelled: 'Steam sign-in was cancelled.',
+  invalid_state: 'Your Steam login session expired. Please try again.',
+  verification_failed: 'We could not verify your Steam sign-in. Please try again.',
+  banned: 'Your account has been suspended for violating community guidelines.',
+  error: 'Something went wrong signing in with Steam.',
+};
 
 const Login = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { login } = useAuth();
+  const handledSteamError = useRef(false);
 
   usePageTitle('Sign In');
 
@@ -19,12 +31,28 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  useEffect(() => {
+    const steamResult = searchParams.get('steam');
+    if (!steamResult || handledSteamError.current) return;
+    handledSteamError.current = true;
+
+    setError(STEAM_LOGIN_ERRORS[steamResult] || STEAM_LOGIN_ERRORS.error);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('steam');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
     if (error) setError('');
+  };
+
+  const handleSteamLogin = () => {
+    window.location.href = `${API_BASE_URL}${ENDPOINTS.STEAM.LOGIN}`;
   };
 
   const handleSubmit = async (e) => {
@@ -55,13 +83,33 @@ const Login = () => {
   return (
     <AuthLayout>
       <div className="w-full">
-        {/* Title & subtitle */}
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
           Welcome back
         </h1>
         <p className="text-gray-400 text-sm mb-8">
           Log in to pick up where you left off.
         </p>
+
+        {/* Continue with Steam */}
+        <button
+          type="button"
+          onClick={handleSteamLogin}
+          disabled={isLoading}
+          className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm disabled:opacity-50"
+        >
+          <SteamIcon className="w-5 h-5 fill-[#00adee]" />
+          Continue with Steam
+        </button>
+
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-white/10" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-primary-navy-ultra-dark px-3 text-gray-500">or</span>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Identifier Input */}
@@ -87,14 +135,12 @@ const Login = () => {
               <label className="text-white text-sm font-medium">
                 Password
               </label>
-              {/* Visible link sin funcionalidad de momento */}
-              <button
-                type="button"
-                onClick={() => {}}
+              <Link
+                to="/forgot-password"
                 className="text-xs text-gray-400 hover:text-white transition-colors"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
             <div className="relative">
               <input

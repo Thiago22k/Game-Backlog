@@ -4,6 +4,7 @@ const User = require('../models/user.model');
 const Activity = require('../models/activity.model');
 const recommendationService = require('../services/recommendation.service');
 const { isValidRating } = require('../utils/validation');
+const SteamAccount = require('../models/steam.model');
 
 // Buscar juegos en IGDB
 const searchGames = async (req, res) => {
@@ -307,6 +308,10 @@ const deleteUserGame = async (req, res) => {
 
     // Eliminar
     await Game.deleteGame(userId, igdb_game_id);
+
+    if (game.steam_appid) {
+      SteamAccount.setIgnoredAppIds(userId, [game.steam_appid], true).catch(() => { });
+    }
 
     res.json({
       message: 'Juego eliminado exitosamente'

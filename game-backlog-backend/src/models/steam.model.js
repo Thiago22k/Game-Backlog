@@ -11,8 +11,6 @@ const SteamAccount = {
     return result.rows[0];
   },
 
-  // Lanza el error 23505 de Postgres si el usuario o el SteamID ya están vinculados
-  // (las restricciones UNIQUE son la defensa real contra carreras).
   async create(userId, steamId64, profile = {}) {
     const query = `
       INSERT INTO steam_accounts (user_id, steam_id64, persona_name, avatar_url, profile_url)
@@ -29,8 +27,19 @@ const SteamAccount = {
     return result.rows[0];
   },
 
-  // Desvincula. El espejo de biblioteca/logros se elimina; los juegos ya agregados
-  // a user_games se conservan (decisión por defecto, ver plan.md §15).
+  async updateSyncState(userId, { libraryVisible, syncStatus }) {
+    const query = `
+      UPDATE steam_accounts
+      SET library_visible = COALESCE($2, library_visible),
+          last_sync_at = CURRENT_TIMESTAMP,
+          last_sync_status = $3
+      WHERE user_id = $1
+      RETURNING *
+    `;
+    const result = await pool.query(query, [userId, libraryVisible, syncStatus]);
+    return result.rows[0];
+  },
+
   async unlink(userId) {
     const client = await pool.connect();
     try {
@@ -40,6 +49,94 @@ const SteamAccount = {
       const result = await client.query('DELETE FROM steam_accounts WHERE user_id = $1 RETURNING *', [userId]);
       await client.query('COMMIT');
       return result.rows[0];
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  // --- STEAM LIBRARY (espejo por usuario) ---
+  async upsertLibraryBatch(userId, games = []) {
+    if (!games.length) return;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const query = `
+        INSERT INTO steam_library (
+          user_id, steam_appid, name, playtime_minutes, playtime_2weeks_min, last_played_at, last_seen_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id, steam_appid) DO UPDATE SET
+          name = EXCLUDED.name,
+          playtime_minutes = EXCLUDED.playtime_minutes,
+          playtime_2weeks_min = EXCLUDED.playtime_2weeks_min,
+          last_played_at = COALESCE(EXCLUDED.last_played_at, steam_library.last_played_at),
+          last_seen_at = CURRENT_TIMESTAMP
+      `;
+      for (const g of games) {
+        await client.query(query, [
+          userId,
+          g.steam_appid,
+          g.name,
+          g.playtime_minutes || 0,
+          g.playtime_2weeks_min || 0,
+          g.last_played_at || null,
+        ]);
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
+
+  async getUserLibrary(userId) {
+    const result = await pool.query(
+      'SELECT * FROM steam_library WHERE user_id = $1 ORDER BY playtime_minutes DESC, name ASC',
+      [userId]
+    );
+    return result.rows;
+  },
+
+  async setIgnoredAppIds(userId, appIds = [], ignored = true) {
+    if (!appIds.length) return;
+    await pool.query(
+      'UPDATE steam_library SET ignored = $3 WHERE user_id = $1 AND steam_appid = ANY($2::int[])',
+      [userId, appIds, ignored]
+    );
+  },
+
+  // --- STEAM_IGDB_MAP (caché global compartida entre usuarios) ---
+  async getMappingsByAppIds(appIds = []) {
+    if (!appIds.length) return [];
+    const result = await pool.query(
+      'SELECT * FROM steam_igdb_map WHERE steam_appid = ANY($1::int[])',
+      [appIds]
+    );
+    return result.rows;
+  },
+
+  async upsertMappingsBatch(entries = []) {
+    if (!entries.length) return;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const query = `
+        INSERT INTO steam_igdb_map (steam_appid, igdb_game_id, match_status, resolved_at)
+        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+        ON CONFLICT (steam_appid) DO UPDATE SET
+          igdb_game_id = EXCLUDED.igdb_game_id,
+          match_status = EXCLUDED.match_status,
+          resolved_at = CURRENT_TIMESTAMP
+      `;
+      for (const e of entries) {
+        await client.query(query, [e.steam_appid, e.igdb_game_id ?? null, e.match_status]);
+      }
+      await client.query('COMMIT');
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;

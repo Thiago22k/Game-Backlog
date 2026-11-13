@@ -47,13 +47,12 @@ const Game = {
       updates.push(`status = $${valueIndex}`);
       values.push(status);
       valueIndex++;
+      updates.push(`status_set_by = 'user'`);
 
-      // Si cambia a completed, actualizar completed_at
       if (status === 'completed') {
         updates.push(`completed_at = CURRENT_TIMESTAMP`);
       } else {
-        // Si cambia a otro status, LIMPIAR completed_at
-        updates.push(`completed_at = NULL`); // ← Nuevo
+        updates.push(`completed_at = NULL`);
       }
     }
 

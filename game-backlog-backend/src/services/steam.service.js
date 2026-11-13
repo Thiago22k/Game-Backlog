@@ -6,6 +6,7 @@ const OPENID_NS = 'http://specs.openid.net/auth/2.0';
 const IDENTIFIER_SELECT = 'http://specs.openid.net/auth/2.0/identifier_select';
 const CLAIMED_ID_REGEX = /^https?:\/\/steamcommunity\.com\/openid\/id\/(\d{17})$/;
 const STATE_TTL = '10m';
+const SIGNUP_TOKEN_TTL = '15m';
 const NONCE_MAX_AGE_MS = 5 * 60 * 1000;
 
 const getBackendUrl = () =>
@@ -13,10 +14,8 @@ const getBackendUrl = () =>
 
 const getCallbackBase = () => `${getBackendUrl()}/api/steam/callback`;
 
-// IMPORTANTE: el `state` NO se firma con JWT_SECRET a secas. El middleware de auth
-// acepta cualquier JWT firmado con JWT_SECRET que traiga `userId`, así que un state
-// firmado igual (y filtrado en una URL) serviría como token de sesión.
 const stateSecret = () => `${process.env.JWT_SECRET}:steam-openid-state`;
+const signupSecret = () => `${process.env.JWT_SECRET}:steam-signup-token`;
 
 const signState = (payload) =>
   jwt.sign({ ...payload, purpose: 'steam_openid' }, stateSecret(), { expiresIn: STATE_TTL });
@@ -27,7 +26,17 @@ const verifyState = (token) => {
   return decoded;
 };
 
-// URL a la que se manda al usuario para autenticarse en Steam.
+const signSignupToken = (payload) =>
+  jwt.sign({ ...payload, purpose: 'steam_signup' }, signupSecret(), { expiresIn: SIGNUP_TOKEN_TTL });
+
+const verifySignupToken = (token) => {
+  const decoded = jwt.verify(token, signupSecret());
+  if (decoded.purpose !== 'steam_signup' || !decoded.steamId) {
+    throw new Error('Invalid signup token');
+  }
+  return decoded;
+};
+
 const buildAuthUrl = (state) => {
   const returnTo = `${getCallbackBase()}?state=${encodeURIComponent(state)}`;
   const params = new URLSearchParams({
@@ -41,15 +50,11 @@ const buildAuthUrl = (state) => {
   return `${STEAM_OPENID_URL}?${params.toString()}`;
 };
 
-// Valida la respuesta de Steam y devuelve el SteamID64.
-// Nunca confía en los parámetros de la URL por sí solos: la prueba real es que
-// Steam responda `is_valid:true` a check_authentication.
 const verifyAssertion = async (query) => {
   if (query['openid.ns'] !== OPENID_NS) throw new Error('OpenID: namespace inválido');
   if (query['openid.mode'] !== 'id_res') throw new Error('OpenID: modo inválido');
   if (query['openid.op_endpoint'] !== STEAM_OPENID_URL) throw new Error('OpenID: op_endpoint inválido');
 
-  // El return_to firmado por Steam debe ser nuestro callback y con el mismo state.
   let returnTo;
   try {
     returnTo = new URL(query['openid.return_to']);
@@ -64,13 +69,11 @@ const verifyAssertion = async (query) => {
     throw new Error('OpenID: state no coincide');
   }
 
-  // Los campos que Steam debió firmar deben incluir los críticos.
   const signed = String(query['openid.signed'] || '').split(',');
   for (const field of ['op_endpoint', 'claimed_id', 'identity', 'return_to', 'response_nonce', 'assoc_handle']) {
     if (!signed.includes(field)) throw new Error(`OpenID: el campo ${field} no está firmado`);
   }
 
-  // Frescura del nonce (evita reutilizar una aserción vieja).
   const nonceTime = Date.parse(String(query['openid.response_nonce'] || '').slice(0, 20));
   if (Number.isNaN(nonceTime) || Math.abs(Date.now() - nonceTime) > NONCE_MAX_AGE_MS) {
     throw new Error('OpenID: nonce expirado');
@@ -80,7 +83,6 @@ const verifyAssertion = async (query) => {
   if (!match) throw new Error('OpenID: claimed_id inválido');
   const steamId = match[1];
 
-  // Verificación directa con Steam.
   const body = new URLSearchParams();
   Object.keys(query).forEach((key) => {
     if (key.startsWith('openid.')) body.append(key, String(query[key]));
@@ -99,8 +101,6 @@ const verifyAssertion = async (query) => {
   return steamId;
 };
 
-// Perfil público (nombre, avatar, URL). Es "best effort": si falla o no hay
-// STEAM_API_KEY, la vinculación igual se completa.
 const getPlayerSummary = async (steamId) => {
   if (!process.env.STEAM_API_KEY) return null;
   try {
@@ -121,11 +121,74 @@ const getPlayerSummary = async (steamId) => {
   }
 };
 
+// Obtener biblioteca completa de Steam.
+// Cuando los "Detalles de juegos" en Steam son privados, Steam devuelve `{ response: {} }`
+// sin `games` ni `game_count`.
+const getOwnedGames = async (steamId) => {
+  if (!process.env.STEAM_API_KEY) {
+    throw new Error('STEAM_API_KEY no está configurada en el servidor');
+  }
+
+  const response = await axios.get('https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/', {
+    params: {
+      key: process.env.STEAM_API_KEY,
+      steamid: steamId,
+      include_appinfo: 1,
+      include_played_free_games: 1,
+      format: 'json',
+    },
+    timeout: 15000,
+  });
+
+  const payload = response.data?.response;
+  if (!payload || (!Array.isArray(payload.games) && payload.game_count === undefined)) {
+    return { isPrivate: true, games: [] };
+  }
+
+  const games = (payload.games || []).map((g) => ({
+    steam_appid: Number(g.appid),
+    name: g.name || `App ${g.appid}`,
+    playtime_minutes: Number(g.playtime_forever || 0),
+    playtime_2weeks_min: Number(g.playtime_2weeks || 0),
+    last_played_at: g.rtime_last_played ? new Date(Number(g.rtime_last_played) * 1000) : null,
+    img_icon_url: g.img_icon_url || null,
+  }));
+
+  return { isPrivate: false, games };
+};
+
+// Obtener juegos jugados en las últimas 2 semanas (respaldo si playtime_2weeks no viene en GetOwnedGames)
+const getRecentlyPlayedGames = async (steamId) => {
+  if (!process.env.STEAM_API_KEY) return [];
+  try {
+    const response = await axios.get('https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/', {
+      params: {
+        key: process.env.STEAM_API_KEY,
+        steamid: steamId,
+        format: 'json',
+      },
+      timeout: 10000,
+    });
+    const games = response.data?.response?.games || [];
+    return games.map((g) => ({
+      steam_appid: Number(g.appid),
+      playtime_2weeks_min: Number(g.playtime_2weeks || 0),
+    }));
+  } catch (err) {
+    console.warn('⚠️ No se pudo obtener GetRecentlyPlayedGames:', err.message);
+    return [];
+  }
+};
+
 module.exports = {
   STEAM_OPENID_URL,
   signState,
   verifyState,
+  signSignupToken,
+  verifySignupToken,
   buildAuthUrl,
   verifyAssertion,
   getPlayerSummary,
+  getOwnedGames,
+  getRecentlyPlayedGames,
 };

@@ -4,6 +4,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
 import AuthLayout from '../../components/auth/AuthLayout';
+import { API_BASE_URL, ENDPOINTS } from '../../utils/constants';
+import SteamIcon from '../../assets/steam-icon.svg?react';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -29,6 +31,10 @@ const Register = () => {
       [name]: type === 'checkbox' ? checked : value,
     }));
     if (error) setError('');
+  };
+
+  const handleSteamSignup = () => {
+    window.location.href = `${API_BASE_URL}${ENDPOINTS.STEAM.LOGIN}`;
   };
 
   const handleStep1Submit = (e) => {
@@ -105,14 +111,12 @@ const Register = () => {
         <div className="flex items-center gap-3 mb-6">
           <div className="flex items-center gap-1.5">
             <span
-              className={`h-1 w-8 rounded-full transition-colors ${
-                step >= 1 ? 'bg-primary-yellow' : 'bg-gray-700'
-              }`}
+              className={`h-1 w-8 rounded-full transition-colors ${step >= 1 ? 'bg-primary-yellow' : 'bg-gray-700'
+                }`}
             />
             <span
-              className={`h-1 w-8 rounded-full transition-colors ${
-                step >= 2 ? 'bg-primary-yellow' : 'bg-gray-700'
-              }`}
+              className={`h-1 w-8 rounded-full transition-colors ${step >= 2 ? 'bg-primary-yellow' : 'bg-gray-700'
+                }`}
             />
           </div>
           <span className="text-xs text-gray-400 font-medium">
@@ -126,11 +130,28 @@ const Register = () => {
               Create your account
             </h1>
             <p className="text-gray-400 text-sm mb-8">
-              Start with your email and password.
+              Start with Steam or your email and password.
             </p>
 
+            <button
+              type="button"
+              onClick={handleSteamSignup}
+              className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm"
+            >
+              <SteamIcon className="w-5 h-5 fill-[#00adee]" />
+              Continue with Steam
+            </button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-primary-navy-ultra-dark px-3 text-gray-500">or</span>
+              </div>
+            </div>
+
             <form onSubmit={handleStep1Submit} className="space-y-5">
-              {/* Email Input */}
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
                   Email
@@ -146,7 +167,6 @@ const Register = () => {
                 />
               </div>
 
-              {/* Password Input */}
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
                   Password
@@ -172,14 +192,12 @@ const Register = () => {
                 </div>
               </div>
 
-              {/* Error Message */}
               {error && (
                 <div className="bg-red-500/15 border border-red-500/40 text-red-300 px-4 py-2.5 rounded-md text-xs">
                   {error}
                 </div>
               )}
 
-              {/* Continue button */}
               <button
                 type="submit"
                 className="w-full h-12 bg-primary-yellow hover:bg-yellow-400 text-primary-navy font-bold rounded-md transition-all shadow-md shadow-primary-yellow/10 text-sm mt-2"
@@ -198,7 +216,6 @@ const Register = () => {
             </p>
 
             <form onSubmit={handleStep2Submit} className="space-y-5">
-              {/* Username Input */}
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
                   Username
@@ -219,7 +236,6 @@ const Register = () => {
                 </p>
               </div>
 
-              {/* TOS Checkbox */}
               <div className="pt-1">
                 <label className="flex items-center gap-3 cursor-pointer select-none">
                   <input
@@ -242,14 +258,12 @@ const Register = () => {
                 </label>
               </div>
 
-              {/* Error Message */}
               {error && (
                 <div className="bg-red-500/15 border border-red-500/40 text-red-300 px-4 py-2.5 rounded-md text-xs">
                   {error}
                 </div>
               )}
 
-              {/* Create account button */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -258,7 +272,6 @@ const Register = () => {
                 {isLoading ? 'Creating account...' : 'Create account'}
               </button>
 
-              {/* Back to Step 1 */}
               <div className="text-center pt-2">
                 <button
                   type="button"
@@ -275,7 +288,6 @@ const Register = () => {
           </>
         )}
 
-        {/* Footer navigation */}
         <div className="mt-8 text-center space-y-4">
           <p className="text-sm text-gray-400">
             Already have an account?{' '}

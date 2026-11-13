@@ -96,11 +96,14 @@ const Settings = () => {
     setLoading(true);
 
     try {
-      await axios.put(ENDPOINTS.SETTINGS.CHANGE_PASSWORD, {
-        currentPassword: passwordData.currentPassword,
+      const res = await axios.put(ENDPOINTS.SETTINGS.CHANGE_PASSWORD, {
+        ...(user?.has_password ? { currentPassword: passwordData.currentPassword } : {}),
         newPassword: passwordData.newPassword,
       });
-      toast.success('Password changed successfully!');
+      toast.success(user?.has_password ? 'Password changed successfully!' : 'Password created successfully!');
+      if (res.data.has_password) {
+        updateUser({ has_password: true });
+      }
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) {
@@ -214,7 +217,7 @@ const Settings = () => {
             </div>
             <div>
               <span className="text-gray-400">Email</span>
-              <p className="text-white font-medium">{user?.email}</p>
+              <p className="text-white font-medium">{user?.email || 'Not set'}</p>
             </div>
           </div>
         </div>
@@ -310,12 +313,12 @@ const Settings = () => {
                 <p className="text-sm text-gray-400">Change your email</p>
               </div>
             </div>
-            <p className="text-gray-300 mb-4">{user?.email}</p>
+            <p className="text-gray-300 mb-4">{user?.email || 'No email linked'}</p>
             <button
               onClick={() => setShowEmailModal(true)}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              Change Email
+              {user?.email ? 'Change Email' : 'Add Email'}
             </button>
           </div>
 
@@ -382,16 +385,20 @@ const Settings = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white">Password</h3>
-                  <p className="text-sm text-gray-400">Update your password regularly</p>
+                  <p className="text-sm text-gray-400">
+                    {user?.has_password ? 'Update your password regularly' : 'Set a password to sign in without Steam'}
+                  </p>
                 </div>
               </div>
-              <p className="text-gray-400 text-sm mb-4 mt-auto">••••••••••••</p>
+              <p className="text-gray-400 text-sm mb-4 mt-auto">
+                {user?.has_password ? '••••••••••••' : 'No password set (Steam sign-in only)'}
+              </p>
             </div>
             <button
               onClick={() => setShowPasswordModal(true)}
               className="w-full bg-primary-yellow hover:opacity-90 text-primary-navy-dark px-6 py-2 rounded-lg font-semibold transition-all mt-auto"
             >
-              Change Password
+              {user?.has_password ? 'Change Password' : 'Set Password'}
             </button>
           </div>
         </div>
@@ -444,16 +451,18 @@ const Settings = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={emailData.password}
-                    onChange={(e) => setEmailData({ ...emailData, password: e.target.value })}
-                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
-                  />
-                </div>
+                {user?.has_password && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={emailData.password}
+                      onChange={(e) => setEmailData({ ...emailData, password: e.target.value })}
+                      className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -492,16 +501,18 @@ const Settings = () => {
                   <p className="text-xs text-gray-500 mt-1">Maximum 15 characters. Can only be changed once every 30 days.</p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={usernameData.password}
-                    onChange={(e) => setUsernameData({ ...usernameData, password: e.target.value })}
-                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
-                  />
-                </div>
+                {user?.has_password && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={usernameData.password}
+                      onChange={(e) => setUsernameData({ ...usernameData, password: e.target.value })}
+                      className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"
@@ -520,23 +531,27 @@ const Settings = () => {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-primary-navy-dark border border-gray-700 rounded-lg max-w-md w-full p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-white">Change Password</h3>
+                <h3 className="text-xl font-bold text-white">
+                  {user?.has_password ? 'Change Password' : 'Set Password'}
+                </h3>
                 <button onClick={() => setShowPasswordModal(false)} className="text-gray-400 hover:text-white">
                   <X size={24} />
                 </button>
               </div>
 
               <form onSubmit={handleChangePassword} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
-                  />
-                </div>
+                {user?.has_password && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Current Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                      className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-primary-yellow"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-400 mb-2">New Password</label>
@@ -604,16 +619,18 @@ const Settings = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={deleteData.password}
-                    onChange={(e) => setDeleteData({ ...deleteData, password: e.target.value })}
-                    className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-red-500"
-                  />
-                </div>
+                {user?.has_password && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-2">Confirm Password</label>
+                    <input
+                      type="password"
+                      required
+                      value={deleteData.password}
+                      onChange={(e) => setDeleteData({ ...deleteData, password: e.target.value })}
+                      className="w-full bg-primary-navy border border-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                )}
 
                 <button
                   type="submit"

@@ -1,5 +1,5 @@
 // URL del backend
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api').replace(/\/+$/, '');
 export const ASSETS_BASE_URL = import.meta.env.VITE_ASSETS_BASE_URL || 'http://localhost:3000';
 
 // Endpoints
@@ -50,9 +50,13 @@ export const ENDPOINTS = {
     GAME_COLLECTIONS: (id) => `/collections/game/${id}`,
   },
   STEAM: {
+    LOGIN: '/steam/login',
+    COMPLETE_SIGNUP: '/steam/complete-signup',
     LINK: '/steam/link',
     STATUS: '/steam/status',
     UNLINK: '/steam/unlink',
+    IMPORT_PREVIEW: '/steam/import/preview',
+    IMPORT_COMMIT: '/steam/import/commit',
   }
 };
 

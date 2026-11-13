@@ -8,6 +8,7 @@ import AdminRoute from '../components/routing/AdminRoute';
 
 const Login = lazy(() => import('../pages/auth/Login'));
 const Register = lazy(() => import('../pages/auth/Register'));
+const SteamRegister = lazy(() => import('../pages/auth/SteamRegister'));
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
 const Landing = lazy(() => import('../pages/Landing'));
@@ -88,6 +89,14 @@ const AppRoutes = () => {
             element={
               <PublicRoute>
                 <Register />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/register/steam"
+            element={
+              <PublicRoute>
+                <SteamRegister />
               </PublicRoute>
             }
           />
