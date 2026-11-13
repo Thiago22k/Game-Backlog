@@ -11,6 +11,7 @@ import SteamIcon from '../assets/steam-icon.svg?react';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import usePageTitle from '../hooks/usePageTitle';
+import SteamConnectionCard from '../components/settings/SteamConnectionCard';
 import { sanitizeSocialHandle, sanitizeBio } from '../utils/sanitize';
 
 const Settings = () => {
@@ -394,6 +395,9 @@ const Settings = () => {
             </button>
           </div>
         </div>
+
+        {/* Connected Accounts */}
+        <SteamConnectionCard />
 
         {/* Danger Zone */}
         <div className="bg-red-500/10 rounded-lg p-6">

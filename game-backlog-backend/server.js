@@ -12,7 +12,7 @@ const pool = require('./src/config/database');
 // Importar middlewares
 const requestLogger = require('./src/middlewares/requestLogger');
 const errorHandler = require('./src/middlewares/errorHandler');
-const { generalLimiter, authLimiter } = require('./src/middlewares/rateLimiter');
+const { generalLimiter, authLimiter, steamLimiter } = require('./src/middlewares/rateLimiter');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -87,6 +87,7 @@ const notificationsRoutes = require('./src/routes/notifications.routes');
 const reviewRoutes = require('./src/routes/review.routes');
 const followRoutes = require('./src/routes/follow.routes');
 const moderationRoutes = require('./src/routes/moderation.routes');
+const steamRoutes = require('./src/routes/steam.routes');
 
 // Usar rutas
 app.use('/api/auth', authLimiter, authRoutes); // Rate limit más estricto para auth
@@ -99,6 +100,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api', followRoutes); // Montado en /api porque tiene rutas tanto para /follows como para /users
 app.use('/api/moderation', moderationRoutes);
+app.use('/api/steam', steamLimiter, steamRoutes);
 
 // Debug: Ver rutas registradas
 console.log('📋 Rutas registradas:');

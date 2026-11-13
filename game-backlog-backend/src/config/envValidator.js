@@ -38,6 +38,14 @@ const validateEnv = () => {
     console.warn('⚠️  JWT_SECRET debería tener al menos 32 caracteres para mayor seguridad');
   }
 
+  // Steam (opcional: sin estas variables la integración con Steam queda limitada)
+  if (!process.env.STEAM_API_KEY) {
+    console.warn('⚠️  STEAM_API_KEY no está definida: se podrá vincular Steam, pero no se leerá el perfil ni la biblioteca.');
+  }
+  if (!process.env.BACKEND_URL) {
+    console.warn(`⚠️  BACKEND_URL no está definida: se usará http://localhost:${process.env.PORT}. Defínela en producción (es el realm/return_to de Steam).`);
+  }
+
   // Warning for missing SMTP in production
   if (process.env.NODE_ENV === 'production' && (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS)) {
     console.warn('⚠️  ADVERTENCIA: Faltan credenciales SMTP (SMTP_HOST, SMTP_USER, SMTP_PASS) en producción. El restablecimiento de contraseñas usará Ethereal (modo prueba).');

@@ -48,6 +48,11 @@ export const ENDPOINTS = {
   },
   COLLECTIONS: {
     GAME_COLLECTIONS: (id) => `/collections/game/${id}`,
+  },
+  STEAM: {
+    LINK: '/steam/link',
+    STATUS: '/steam/status',
+    UNLINK: '/steam/unlink',
   }
 };
 
