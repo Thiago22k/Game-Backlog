@@ -139,30 +139,6 @@ const Register = () => {
               Start with Steam or your email and password.
             </p>
 
-            <button
-              type="button"
-              onClick={handleSteamSignup}
-              disabled={isSteamWaiting}
-              className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm disabled:opacity-50"
-            >
-              <SteamIcon className="w-5 h-5 fill-[#00adee]" />
-              {isSteamWaiting ? 'Waiting for Steam...' : 'Continue with Steam'}
-            </button>
-            {isSteamWaiting && (
-              <p className="text-xs text-gray-400 mt-2 text-center">
-                Finish signing in on the Steam window.
-              </p>
-            )}
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-primary-navy-ultra-dark px-3 text-gray-500">or</span>
-              </div>
-            </div>
-
             <form onSubmit={handleStep1Submit} className="space-y-5">
               <div>
                 <label className="block text-white text-sm font-medium mb-2">
@@ -217,6 +193,30 @@ const Register = () => {
                 Continue
               </button>
             </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-primary-navy-ultra-dark px-3 text-gray-500">or</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSteamSignup}
+              disabled={isSteamWaiting}
+              className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm disabled:opacity-50"
+            >
+              <SteamIcon className="w-5 h-5 fill-[#00adee]" />
+              {isSteamWaiting ? 'Waiting for Steam...' : 'Continue with Steam'}
+            </button>
+            {isSteamWaiting && (
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                Finish signing in on the Steam window.
+              </p>
+            )}
           </>
         ) : (
           <>

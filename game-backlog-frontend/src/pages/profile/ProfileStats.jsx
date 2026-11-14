@@ -143,14 +143,14 @@ const ProfileStats = () => {
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <Link
                             to={`/profile/${username}/games?status=completed`}
-                            className="bg-primary-navy border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                            className="bg-primary-navy rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-green-400 leading-none">{completed}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
                         </Link>
                         <Link
                             to={`/profile/${username}/games?status=backlog`}
-                            className="bg-primary-navy border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
+                            className="bg-primary-navy rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 group"
                         >
                             <span className="text-3xl font-black text-indigo-400 leading-none">{backlog}</span>
                             <span className="text-xs font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>

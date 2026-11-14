@@ -7,13 +7,14 @@ import AnticipatedGameCard from '../../components/games/AnticipatedGameCard';
 import InteractiveGameCardSkeleton from '../../components/games/InteractiveGameCardSkeleton';
 import AnticipatedGameCardSkeleton from '../../components/games/AnticipatedGameCardSkeleton';
 import CustomSelect from '../../components/common/CustomSelect';
+import SteamEmptyPrompt from '../../components/profile/SteamEmptyPrompt';
 
 const ProfileGames = () => {
     const navigate = useNavigate();
     const gridRef = useRef(null);
     const wishlistGridRef = useRef(null);
     // Obtener el hook desde el Outlet
-    const { games, loading, updateGame, deleteGame, addGame, isOwner } = useOutletContext();
+    const { games, loading, updateGame, deleteGame, addGame, isOwner, steamPrompt } = useOutletContext();
 
     const [searchParams, setSearchParams] = useSearchParams();
 
@@ -283,16 +284,21 @@ const ProfileGames = () => {
                     </section>
                 </>
             ) : games.length === 0 ? (
-                <div className="text-center py-12 bg-primary-navy-dark rounded-lg">
+                <div className="text-center py-12 px-4 bg-primary-navy-dark rounded-lg">
                     <p className="text-gray-400 mb-4">
                         {isOwner ? "You don't have any games in your collection yet." : "This user doesn't have any games in their collection yet."}
                     </p>
+                    {isOwner && <SteamEmptyPrompt prompt={steamPrompt} />}
                     {isOwner && (
                         <button
                             onClick={() => navigate('/explore')}
-                            className="bg-primary-yellow text-primary-navy-dark px-6 py-2 rounded-lg hover:opacity-90 font-semibold transition-all"
+                            className={
+                                steamPrompt?.emptyMode
+                                    ? 'border border-white/15 text-white px-6 py-2 rounded-lg hover:bg-white/5 font-semibold transition-all'
+                                    : 'bg-primary-yellow text-primary-navy-dark px-6 py-2 rounded-lg hover:opacity-90 font-semibold transition-all'
+                            }
                         >
-                            Explore Games
+                            {steamPrompt?.emptyMode ? 'Or explore games' : 'Explore Games'}
                         </button>
                     )}
                 </div>

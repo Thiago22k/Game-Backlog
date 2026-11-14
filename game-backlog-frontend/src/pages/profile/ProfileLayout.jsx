@@ -9,6 +9,9 @@ import { useFollow } from '../../hooks/useFollow';
 import TwitchIcon from '../../assets/twitch-icon.svg?react';
 import DiscordIcon from '../../assets/discord-icon.svg?react';
 import SteamIcon from '../../assets/steam-icon.svg?react';
+import SteamLinkBanner from '../../components/profile/SteamLinkBanner';
+import SteamImportModal from '../../components/settings/SteamImportModal';
+import useSteamLinkPrompt from '../../hooks/useSteamLinkPrompt';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import NotFound from '../NotFound';
@@ -72,6 +75,19 @@ const ProfileLayout = () => {
 
     const isOwner = user?.username === username;
     const displayUsername = isOwner ? user?.username : username;
+
+    // Recomendación de vincular Steam (solo perfil propio). Un único estado compartido por el
+    // banner y por el estado vacío de la pestaña de juegos.
+    const steamPrompt = useSteamLinkPrompt({
+        enabled: isOwner,
+        onImported: () => getUserGames(username, null, false),
+    });
+    // En la pestaña de juegos vacía, la invitación ya aparece dentro del estado vacío:
+    // se oculta el banner para no mostrar dos avisos iguales.
+    const emptyGamesTabShowsPrompt =
+        isOwner &&
+        location.pathname.startsWith(`/profile/${username}/games`) &&
+        (gamesHook.loading || games.length === 0);
 
     // Bio and social links — from context for owner, from hook for visitors
     const profileBio = isOwner ? user?.bio : gamesHook.profileBio;
@@ -511,6 +527,11 @@ const ProfileLayout = () => {
                     </div>
                 ) : (
                     <>
+                        {/* Recomendación de vincular Steam (solo en el perfil propio) */}
+                        {isOwner && !emptyGamesTabShowsPrompt && (
+                            <SteamLinkBanner prompt={steamPrompt} />
+                        )}
+
                         {/* Tab Navigation */}
                         <div className="border-b border-gray-700 mb-8 overflow-x-auto lg:overflow-x-visible custom-scrollbar">
                             <nav className="-mb-px flex space-x-6 sm:space-x-8 px-1">
@@ -544,10 +565,19 @@ const ProfileLayout = () => {
                         </div>
 
                         {/* Pasamos el hook entero y el estado isOwner usando context */}
-                        <Outlet context={{ ...gamesHook, collections, isOwner }} />
+                        <Outlet context={{ ...gamesHook, collections, isOwner, steamPrompt }} />
                     </>
                 )}
             </main>
+
+            {/* Importación de Steam abierta desde el banner o el estado vacío */}
+            {isOwner && (
+                <SteamImportModal
+                    isOpen={steamPrompt.importModalOpen}
+                    onClose={steamPrompt.closeImport}
+                    onImported={steamPrompt.handleImported}
+                />
+            )}
 
             {/* Customization Options Modal */}
             {isCustomizationModalOpen && isOwner && (

@@ -1238,14 +1238,14 @@ const GameStatsPanel = ({ stats, game, igdbScore, myReview, onAddCollection, onS
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div
               onClick={() => navigate(`/game/${game.slug}/completed`)}
-              className="bg-primary-navy border-l-4 border-green-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+              className="bg-primary-navy rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
             >
               <span className="text-3xl font-black text-green-400 leading-none">{stats.completed || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-green-400 transition-colors">Completed</span>
             </div>
             <div
               onClick={() => navigate(`/game/${game.slug}/backlog`)}
-              className="bg-primary-navy border-l-4 border-indigo-500 rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
+              className="bg-primary-navy rounded-xl p-4 flex flex-col hover:-translate-y-1 hover:bg-white/5 transition-all duration-200 group cursor-pointer"
             >
               <span className="text-3xl font-black text-indigo-400 leading-none">{stats.backlog || 0}</span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 group-hover:text-indigo-400 transition-colors">Backlog</span>
