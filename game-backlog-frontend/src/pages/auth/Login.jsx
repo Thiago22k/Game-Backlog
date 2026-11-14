@@ -4,16 +4,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
 import AuthLayout from '../../components/auth/AuthLayout';
-import { API_BASE_URL, ENDPOINTS } from '../../utils/constants';
+import useSteamPopup, { STEAM_AUTH_ERRORS } from '../../hooks/useSteamPopup';
 import SteamIcon from '../../assets/steam-icon.svg?react';
-
-const STEAM_LOGIN_ERRORS = {
-  cancelled: 'Steam sign-in was cancelled.',
-  invalid_state: 'Your Steam login session expired. Please try again.',
-  verification_failed: 'We could not verify your Steam sign-in. Please try again.',
-  banned: 'Your account has been suspended for violating community guidelines.',
-  error: 'Something went wrong signing in with Steam.',
-};
 
 const Login = () => {
   const navigate = useNavigate();
@@ -31,12 +23,18 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Steam se abre en una ventana emergente para no salir de esta página
+  const { start: startSteamLogin, isWaiting: isSteamWaiting } = useSteamPopup({
+    onError: setError,
+  });
+
+  // Respaldo: si el popup fue bloqueado, Steam vuelve aquí con ?steam=<código>
   useEffect(() => {
     const steamResult = searchParams.get('steam');
     if (!steamResult || handledSteamError.current) return;
     handledSteamError.current = true;
 
-    setError(STEAM_LOGIN_ERRORS[steamResult] || STEAM_LOGIN_ERRORS.error);
+    setError(STEAM_AUTH_ERRORS[steamResult] || STEAM_AUTH_ERRORS.error);
 
     const next = new URLSearchParams(searchParams);
     next.delete('steam');
@@ -52,7 +50,8 @@ const Login = () => {
   };
 
   const handleSteamLogin = () => {
-    window.location.href = `${API_BASE_URL}${ENDPOINTS.STEAM.LOGIN}`;
+    setError('');
+    startSteamLogin();
   };
 
   const handleSubmit = async (e) => {
@@ -94,12 +93,17 @@ const Login = () => {
         <button
           type="button"
           onClick={handleSteamLogin}
-          disabled={isLoading}
+          disabled={isLoading || isSteamWaiting}
           className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm disabled:opacity-50"
         >
           <SteamIcon className="w-5 h-5 fill-[#00adee]" />
-          Continue with Steam
+          {isSteamWaiting ? 'Waiting for Steam...' : 'Continue with Steam'}
         </button>
+        {isSteamWaiting && (
+          <p className="text-xs text-gray-400 mt-2 text-center">
+            Finish signing in on the Steam window.
+          </p>
+        )}
 
         {/* Divider */}
         <div className="relative my-6">

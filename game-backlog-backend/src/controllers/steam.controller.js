@@ -11,6 +11,13 @@ const redirectToSettings = (res, result) =>
 const redirectToLogin = (res, result) =>
   res.redirect(`${frontendUrl()}/login?steam=${encodeURIComponent(result)}`);
 
+// Cuando el login/registro se abre en una ventana emergente, el resultado va a una página
+// de confirmación del frontend que avisa a la ventana original y se cierra sola.
+const redirectToPopupCallback = (res, params) => {
+  const query = new URLSearchParams(params).toString();
+  res.redirect(`${frontendUrl()}/auth/steam/callback?${query}`);
+};
+
 const issueSessionCookie = (res, user) => {
   const token = jwt.sign(
     { userId: user.id, username: user.username, role: user.role },
@@ -42,12 +49,16 @@ const publicAccount = (account) => ({
 });
 
 // GET /api/steam/login  (pública: inicia OpenID para login o registro)
+// ?popup=1 indica que se abrió en una ventana emergente (el resultado se entrega vía /auth/steam/callback)
 const startLogin = async (req, res) => {
+  const popup = req.query.popup === '1';
+
   try {
-    const state = steamService.signState({ action: 'login' });
+    const state = steamService.signState({ action: 'login', popup });
     res.redirect(steamService.buildAuthUrl(state));
   } catch (error) {
     console.error('Error en startLogin:', error);
+    if (popup) return redirectToPopupCallback(res, { status: 'error', code: 'error' });
     redirectToLogin(res, 'error');
   }
 };
@@ -60,7 +71,9 @@ const startLink = async (req, res) => {
       return res.status(409).json({ error: 'Tu cuenta ya tiene una cuenta de Steam vinculada' });
     }
 
-    const state = steamService.signState({ userId: req.user.userId, action: 'link' });
+    // popup: true -> el resultado se entrega vía /auth/steam/callback (ventana emergente)
+    const popup = req.body?.popup === true;
+    const state = steamService.signState({ userId: req.user.userId, action: 'link', popup });
     res.json({ url: steamService.buildAuthUrl(state) });
   } catch (error) {
     console.error('Error en startLink:', error);
@@ -71,18 +84,40 @@ const startLink = async (req, res) => {
 // GET /api/steam/callback  (pública: llega desde Steam vía el navegador)
 const callback = async (req, res) => {
   let action = 'link';
+  let popup = false;
+
+  // Resultado del flujo de VINCULACIÓN: en popup va a la página de confirmación (flow=link),
+  // si no, a Ajustes como siempre.
+  const settingsResult = (code) => {
+    if (popup) {
+      return redirectToPopupCallback(res, {
+        flow: 'link',
+        status: code === 'linked' ? 'linked' : 'error',
+        code,
+      });
+    }
+    return redirectToSettings(res, code);
+  };
+
+  const failRedirect = (code) => {
+    if (action === 'link') return settingsResult(code);
+    if (popup) return redirectToPopupCallback(res, { status: 'error', code });
+    return redirectToLogin(res, code);
+  };
 
   try {
     let state;
     try {
       state = steamService.verifyState(String(req.query.state || ''));
       action = state.action || 'link';
+      popup = state.popup === true;
     } catch {
-      return redirectToLogin(res, 'invalid_state');
+      // State inválido/expirado: solo se mira popup/action para elegir la página de destino
+      const peeked = steamService.peekState(req.query.state);
+      action = peeked.action || 'login';
+      popup = peeked.popup;
+      return action === 'link' ? settingsResult('invalid_state') : failRedirect('invalid_state');
     }
-
-    const failRedirect = (code) =>
-      action === 'login' ? redirectToLogin(res, code) : redirectToSettings(res, code);
 
     if (req.query['openid.mode'] === 'cancel') {
       return failRedirect('cancelled');
@@ -103,10 +138,11 @@ const callback = async (req, res) => {
       // Si el SteamID ya está vinculado a una cuenta Stackd -> iniciar sesión directo
       if (existingAccount) {
         const user = await User.findById(existingAccount.user_id);
-        if (!user) return redirectToLogin(res, 'error');
-        if (user.status === 'banned') return redirectToLogin(res, 'banned');
+        if (!user) return failRedirect('error');
+        if (user.status === 'banned') return failRedirect('banned');
 
         issueSessionCookie(res, user);
+        if (popup) return redirectToPopupCallback(res, { status: 'success' });
         return res.redirect(`${frontendUrl()}/`);
       }
 
@@ -119,26 +155,27 @@ const callback = async (req, res) => {
         profile_url: profile.profile_url || null,
       });
 
+      if (popup) return redirectToPopupCallback(res, { status: 'signup', token: signupToken });
       return res.redirect(`${frontendUrl()}/register/steam?token=${encodeURIComponent(signupToken)}`);
     }
 
     // --- FLUJO 2: VINCULAR A CUENTA EXISTENTE ---
     if (action !== 'link') {
-      return redirectToSettings(res, 'invalid_state');
+      return settingsResult('invalid_state');
     }
 
     const user = await User.findById(state.userId);
     if (!user || user.status === 'banned') {
-      return redirectToSettings(res, 'invalid_state');
+      return settingsResult('invalid_state');
     }
 
     if (await SteamAccount.findByUserId(user.id)) {
-      return redirectToSettings(res, 'already_has_account');
+      return settingsResult('already_has_account');
     }
 
     const owner = await SteamAccount.findBySteamId(steamId);
     if (owner) {
-      return redirectToSettings(res, owner.user_id === user.id ? 'already_has_account' : 'already_linked');
+      return settingsResult(owner.user_id === user.id ? 'already_has_account' : 'already_linked');
     }
 
     const profile = (await steamService.getPlayerSummary(steamId)) || {};
@@ -146,14 +183,14 @@ const callback = async (req, res) => {
     try {
       await SteamAccount.create(user.id, steamId, profile);
     } catch (err) {
-      if (err.code === '23505') return redirectToSettings(res, 'already_linked');
+      if (err.code === '23505') return settingsResult('already_linked');
       throw err;
     }
 
-    return redirectToSettings(res, 'linked');
+    return settingsResult('linked');
   } catch (error) {
     console.error('Error en callback de Steam:', error);
-    return action === 'login' ? redirectToLogin(res, 'error') : redirectToSettings(res, 'error');
+    return failRedirect('error');
   }
 };
 

@@ -26,6 +26,22 @@ const verifyState = (token) => {
   return decoded;
 };
 
+// Lee los flags `popup` y `action` del state SIN verificar la firma. Solo se usa para decidir
+// a cuál de las páginas fijas del frontend redirigir cuando el state ya es inválido o expiró;
+// nunca para tomar decisiones de autenticación.
+const peekState = (token) => {
+  try {
+    const decoded = jwt.decode(String(token || ''));
+    if (decoded?.purpose !== 'steam_openid') return { popup: false, action: null };
+    return {
+      popup: decoded.popup === true,
+      action: decoded.action === 'login' || decoded.action === 'link' ? decoded.action : null,
+    };
+  } catch {
+    return { popup: false, action: null };
+  }
+};
+
 const signSignupToken = (payload) =>
   jwt.sign({ ...payload, purpose: 'steam_signup' }, signupSecret(), { expiresIn: SIGNUP_TOKEN_TTL });
 
@@ -184,6 +200,7 @@ module.exports = {
   STEAM_OPENID_URL,
   signState,
   verifyState,
+  peekState,
   signSignupToken,
   verifySignupToken,
   buildAuthUrl,

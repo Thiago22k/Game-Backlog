@@ -78,6 +78,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Vuelve a consultar la sesión (p. ej. después de iniciar sesión con Steam en otra ventana)
+  const refreshUser = async () => {
+    try {
+      const response = await axios.get(ENDPOINTS.AUTH.ME);
+      setUser(response.data.user);
+      return { success: true, user: response.data.user };
+    } catch {
+      return { success: false };
+    }
+  };
+
   const logout = async () => {
     try {
       await axios.post(ENDPOINTS.AUTH.LOGOUT);
@@ -99,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     register,
     completeSteamSignup,
     login,
+    refreshUser,
     logout,
     updateUser,
   };

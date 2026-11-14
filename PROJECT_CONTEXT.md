@@ -102,7 +102,7 @@ game-backlog/
 6. **`game_likes`**: Likes dados a juegos por IGDB ID.
 7. **`activity_logs`**: Feed de actividad global/seguidores.
 
-### Tablas de Steam (Fase 1 implementada)
+### Tablas de Steam (Fases 1 y 2 implementadas)
 1. **`steam_accounts`**:
    - `user_id` (FK `users`), `steam_id64`, `persona_name`, `avatar_url`, `profile_url`, `auto_sync`, `last_sync_at`, `last_sync_status`.
 2. **`steam_igdb_map`**:
@@ -151,25 +151,41 @@ Los 5 estados canónicos en BD y backend son:
 
 ## 7. Estado Actual de la Integración con Steam
 
-### Lo que ya está implementado (Fase 1)
-- **Base de Datos:** Migración `001_steam_integration.sql` aplicada con `steam_accounts`, `steam_igdb_map`, `steam_library` y nuevas columnas en `user_games`.
-- **Backend:**
-  - `src/services/steam.service.js`: Conexión con Steam Web API (`GetPlayerSummaries`, `GetOwnedGames`, resolución de Vanity URLs e ID64).
-  - `src/controllers/steam.controller.js`:
-    - `POST /api/steam/link`: Vinculación de cuenta Steam mediante SteamID64 o Custom URL.
-    - `POST /api/steam/unlink`: Desvinculación de Steam.
-    - `GET /api/steam/status`: Estado de vinculación y datos de sincronización.
-    - `POST /api/steam/sync`: Sincronización manual de la biblioteca de Steam a `steam_library`.
-- **Frontend:**
-  - `src/components/settings/SteamConnectionCard.jsx`: Tarjeta en la pestaña de Ajustes/Configuración para vincular Steam ID / Vanity URL, sincronizar o desconectar la cuenta.
-  - Endpoints declarados en `src/utils/constants.js`.
+### Implementado hasta la fecha (Fases 1, 2 y 3)
+
+#### 1. Base de Datos
+- Migración `001_steam_integration.sql`: Tablas `steam_accounts`, `steam_igdb_map`, `steam_library`, y campos extendidos en `user_games` (`source`, `status_set_by`, `steam_appid`, `playtime_minutes`, `last_played_at`).
+- Migración `002_steam_auth.sql`: Soporte para usuarios creados exclusivamente vía Steam (contraseña opcional y flags asociados).
+
+#### 2. Backend
+- `src/services/steam.service.js`:
+  - Manejo de OpenID 2.0 (construcción de URLs de autenticación, verificación de assertions criptográficas).
+  - Consulta a Steam Web API (`GetPlayerSummaries`, `GetOwnedGames`, resolución de Vanity URLs).
+  - Firma y verificación de estados JWT (`signState`, `verifyState`) y tokens temporales de registro (`signSignupToken`, `verifySignupToken`).
+- `src/services/steamSync.service.js`:
+  - Algoritmo de mapeo e importación masiva de juegos de Steam contra IGDB (coincidencia por nombre, filtrado y resolución).
+- `src/controllers/steam.controller.js`:
+  - `GET /api/steam/login`: Inicia el flujo OpenID (soporta flujo popup mediante parámetros `popup` y `origin`).
+  - `POST /api/steam/link`: Inicia vinculación de Steam para usuarios autenticados.
+  - `GET /api/steam/callback`: Recibe la respuesta de Steam, autentica al usuario o redirige a registro / settings.
+  - `POST /api/steam/signup`: Finaliza el registro para nuevos usuarios que provienen de Steam.
+  - `GET /api/steam/status` y `DELETE /api/steam/unlink`: Consulta y desvinculación de cuenta Steam.
+  - `GET /api/steam/import/preview` y `POST /api/steam/import`: Previsualización y confirmación de importación masiva de biblioteca.
+
+#### 3. Frontend
+- **Autenticación con Popup (BroadcastChannel & postMessage fallback):**
+  - `useSteamPopup.js` y `useSteamLinkPopup.js`: Hooks que abren una ventana popup para autenticación o vinculación con Steam sin perder el estado de la página actual.
+  - `src/pages/auth/SteamCallback.jsx` y `src/utils/steamAuthChannel.js`: Página puente que procesa el callback en el popup y notifica a la ventana principal vía canal cruzado.
+  - Botón de "Continue with Steam" en `Login.jsx` y `Register.jsx`.
+  - Flujo de completar registro en `SteamRegister.jsx`.
+- **Gestión e Importación:**
+  - `SteamConnectionCard.jsx`: Estado de conexión, vinculación/desvinculación con confirmación segura y botón de importación.
+  - `SteamImportModal.jsx`: Modal completo para seleccionar qué juegos importar a la biblioteca de Stackd con asignación de estados.
 
 ### Siguientes Fases del Plan de Steam
-1. **Fase 2:** Autenticación directa / Login / Registro con Steam OpenID (opcional o complementario).
-2. **Fase 3:** Algoritmo de mapeo e importación masiva de juegos de Steam a IGDB (`steam_igdb_map` hacia `user_games`).
-3. **Fase 4:** Detección automática de estados basada en `playtime` (ej: juegos con 0 minutos -> `backlog`, juegos jugados recientemente -> `playing`).
-4. **Fase 5:** Sincronización automática periódica / webhooks o jobs.
-5. **Fase 6:** Logros y estadísticas avanzadas de Steam.
+1. **Fase 4:** Detección automática y sugerencia inteligente de estados basada en `playtime` (ej: 0 minutos -> `backlog`, jugados en las últimas 2 semanas -> `playing`).
+2. **Fase 5:** Sincronización automática periódica / background worker para refrescar bibliotecas activas.
+3. **Fase 6:** Sincronización de logros de Steam y visualización en el perfil / game details.
 
 ---
 

@@ -5,6 +5,7 @@ import { ExternalLink, Download } from 'lucide-react';
 import axios from '../../api/axios';
 import { ENDPOINTS } from '../../utils/constants';
 import { useAuth } from '../../context/AuthContext';
+import useSteamLinkPopup from '../../hooks/useSteamLinkPopup';
 import SteamIcon from '../../assets/steam-icon.svg?react';
 import SteamImportModal from './SteamImportModal';
 
@@ -56,16 +57,24 @@ const SteamConnectionCard = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const handleLink = async () => {
-    setBusy(true);
-    try {
-      const response = await axios.post(ENDPOINTS.STEAM.LINK);
-      window.location.href = response.data.url;
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Could not start Steam linking.');
-      setBusy(false);
-    }
-  };
+  // Steam se abre en una ventana emergente: Ajustes se queda abierta y solo se actualiza
+  const showResult = useCallback(
+    (code) => {
+      const info = STEAM_RESULTS[code] || STEAM_RESULTS.error;
+      if (info.type === 'success') {
+        toast.success(info.message);
+        loadStatus();
+      } else {
+        toast.error(info.message);
+      }
+    },
+    [loadStatus]
+  );
+
+  const { start: handleLink, isWaiting: isLinking } = useSteamLinkPopup({
+    onResult: showResult,
+    onError: (message) => toast.error(message),
+  });
 
   const handleUnlink = async () => {
     setBusy(true);
@@ -102,10 +111,10 @@ const SteamConnectionCard = () => {
       {status && !status.linked && (
         <button
           onClick={handleLink}
-          disabled={busy}
+          disabled={busy || isLinking}
           className="w-full sm:w-auto bg-[#00adee] hover:opacity-90 disabled:opacity-60 text-white px-6 py-2 rounded-lg font-semibold transition-all"
         >
-          {busy ? 'Redirecting to Steam...' : 'Link Steam Account'}
+          {isLinking ? 'Waiting for Steam...' : 'Link Steam Account'}
         </button>
       )}
 

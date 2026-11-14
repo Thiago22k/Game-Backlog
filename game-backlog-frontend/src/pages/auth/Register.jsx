@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import usePageTitle from '../../hooks/usePageTitle';
 import AuthLayout from '../../components/auth/AuthLayout';
-import { API_BASE_URL, ENDPOINTS } from '../../utils/constants';
+import useSteamPopup from '../../hooks/useSteamPopup';
 import SteamIcon from '../../assets/steam-icon.svg?react';
 
 const Register = () => {
@@ -24,6 +24,11 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Steam se abre en una ventana emergente para no salir de esta página
+  const { start: startSteamSignup, isWaiting: isSteamWaiting } = useSteamPopup({
+    onError: setError,
+  });
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
@@ -34,7 +39,8 @@ const Register = () => {
   };
 
   const handleSteamSignup = () => {
-    window.location.href = `${API_BASE_URL}${ENDPOINTS.STEAM.LOGIN}`;
+    setError('');
+    startSteamSignup();
   };
 
   const handleStep1Submit = (e) => {
@@ -136,11 +142,17 @@ const Register = () => {
             <button
               type="button"
               onClick={handleSteamSignup}
-              className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm"
+              disabled={isSteamWaiting}
+              className="w-full h-12 bg-[#171a21] hover:bg-[#1f242e] border border-white/15 text-white font-semibold rounded-md transition-all flex items-center justify-center gap-2.5 text-sm disabled:opacity-50"
             >
               <SteamIcon className="w-5 h-5 fill-[#00adee]" />
-              Continue with Steam
+              {isSteamWaiting ? 'Waiting for Steam...' : 'Continue with Steam'}
             </button>
+            {isSteamWaiting && (
+              <p className="text-xs text-gray-400 mt-2 text-center">
+                Finish signing in on the Steam window.
+              </p>
+            )}
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">

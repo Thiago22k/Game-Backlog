@@ -9,6 +9,7 @@ import AdminRoute from '../components/routing/AdminRoute';
 const Login = lazy(() => import('../pages/auth/Login'));
 const Register = lazy(() => import('../pages/auth/Register'));
 const SteamRegister = lazy(() => import('../pages/auth/SteamRegister'));
+const SteamCallback = lazy(() => import('../pages/auth/SteamCallback'));
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
 const Landing = lazy(() => import('../pages/Landing'));
@@ -100,6 +101,9 @@ const AppRoutes = () => {
               </PublicRoute>
             }
           />
+          {/* Confirmación de la ventana emergente de Steam: sin PublicRoute, porque en este
+              punto la sesión ya está iniciada y la página debe poder avisar y cerrarse sola */}
+          <Route path="/auth/steam/callback" element={<SteamCallback />} />
           <Route
             path="/forgot-password"
             element={
