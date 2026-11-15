@@ -40,6 +40,31 @@ const SteamAccount = {
     return result.rows[0];
   },
 
+  async updateAutoSync(userId, autoSync) {
+    const query = `
+      UPDATE steam_accounts
+      SET auto_sync = $2
+      WHERE user_id = $1
+      RETURNING *
+    `;
+    const result = await pool.query(query, [userId, Boolean(autoSync)]);
+    return result.rows[0];
+  },
+
+  async getAccountsDueForAutoSync(limit = 20) {
+    const query = `
+      SELECT *
+      FROM steam_accounts
+      WHERE auto_sync = true
+        AND library_visible = true
+        AND (last_sync_at IS NULL OR last_sync_at < NOW() - INTERVAL '20 hours')
+      ORDER BY last_sync_at ASC NULLS FIRST
+      LIMIT $1
+    `;
+    const result = await pool.query(query, [limit]);
+    return result.rows;
+  },
+
   async unlink(userId) {
     const client = await pool.connect();
     try {

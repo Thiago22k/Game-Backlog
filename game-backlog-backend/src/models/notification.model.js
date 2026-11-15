@@ -14,6 +14,7 @@ const pool = require('../config/database');
                 is_read      BOOLEAN DEFAULT false,
                 created_at   TIMESTAMPTZ DEFAULT NOW()
             );
+            ALTER TABLE notifications ALTER COLUMN actor_id DROP NOT NULL;
             CREATE INDEX IF NOT EXISTS idx_notifications_recipient
                 ON notifications(recipient_id, is_read, created_at DESC);
         `);
@@ -85,6 +86,35 @@ const Notification = {
             'UPDATE notifications SET is_read = true WHERE id = $1 AND recipient_id = $2',
             [notificationId, userId]
         );
+    },
+
+    // Insert a new notification (skip if actor === recipient when actorId is a user)
+    async createNotification({ recipientId, actorId = null, type, entityId, metadata = {} }) {
+        if (actorId !== null && recipientId === actorId) return null;
+        const query = `
+            INSERT INTO notifications (recipient_id, actor_id, type, entity_id, metadata)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+        `;
+        const result = await pool.query(query, [recipientId, actorId, type, entityId, metadata]);
+        return result.rows[0];
+    },
+
+    // Get recent notifications for a user, enriched with actor info (LEFT JOIN supports system alerts)
+    async getRecentForUser(userId, limit = 30, offset = 0) {
+        const query = `
+            SELECT n.*,
+                   u.username   AS actor_username,
+                   u.avatar_url AS actor_avatar_url,
+                   u.avatar_static_url AS actor_avatar_static_url
+            FROM notifications n
+            LEFT JOIN users u ON n.actor_id = u.id
+            WHERE n.recipient_id = $1
+            ORDER BY n.created_at DESC
+            LIMIT $2 OFFSET $3
+        `;
+        const result = await pool.query(query, [userId, limit, offset]);
+        return result.rows;
     },
 };
 

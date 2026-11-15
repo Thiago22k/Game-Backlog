@@ -57,6 +57,11 @@ export const ENDPOINTS = {
     UNLINK: '/steam/unlink',
     IMPORT_PREVIEW: '/steam/import/preview',
     IMPORT_COMMIT: '/steam/import/commit',
+    SYNC: '/steam/sync',
+    PREFERENCES: '/steam/preferences',
+    GAME_ACHIEVEMENTS: (igdbGameId) => `/steam/games/${igdbGameId}/achievements`,
+    GAME_PRICE: (igdbGameId) => `/steam/games/${igdbGameId}/price`,
+    USER_ACHIEVEMENTS_SUMMARY: (username) => `/steam/users/${username}/achievements-summary`,
   }
 };
 

@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useOutletContext, useParams, Link } from 'react-router-dom';
-import { Gamepad2, Trophy, Star, Clock, XCircle, Archive, Library, Heart, MessageSquare, ChevronRight } from 'lucide-react';
+import { Gamepad2, Trophy, Star, Clock, XCircle, Archive, Library, Heart, MessageSquare, ChevronRight, Sparkles } from 'lucide-react';
+import { ENDPOINTS } from '../../utils/constants';
+import SteamIcon from '../../assets/steam-icon.svg?react';
 import axios from '../../api/axios';
 import { getGameCover } from '../../utils/formatters';
 
@@ -28,17 +30,20 @@ const ProfileStats = () => {
     const { username } = useParams();
     const [likesCount, setLikesCount] = useState(0);
     const [reviewsCount, setReviewsCount] = useState(0);
+    const [steamAchievements, setSteamAchievements] = useState(null);
 
     useEffect(() => {
         if (!username) return;
         const fetchLikesAndReviews = async () => {
             try {
-                const [likesRes, reviewsRes] = await Promise.all([
+                const [likesRes, reviewsRes, steamAchRes] = await Promise.all([
                     axios.get(`/games/likes/by-username/${username}`),
-                    axios.get(`/reviews/user/${username}/count`)
+                    axios.get(`/reviews/user/${username}/count`),
+                    axios.get(ENDPOINTS.STEAM.USER_ACHIEVEMENTS_SUMMARY(username)).catch(() => ({ data: null })),
                 ]);
                 setLikesCount(likesRes.data.games?.length || 0);
                 setReviewsCount(reviewsRes.data.count || 0);
+                setSteamAchievements(steamAchRes.data);
             } catch (err) {
                 console.error('Error fetching stats:', err);
             }
@@ -331,6 +336,70 @@ const ProfileStats = () => {
                         );
                     })}
                 </div>
+                {/* ── ROW 4: Steam Achievements Showcase (si tiene logros cacheados) ── */}
+                {steamAchievements?.linked && steamAchievements.total_unlocked > 0 && (
+                    <div className="col-span-2 lg:col-span-4 bg-primary-navy-dark rounded-2xl p-6 border border-white/5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 rounded-xl bg-[#00adee]/15">
+                                    <SteamIcon className="w-5 h-5 fill-[#00adee]" />
+                                </div>
+                                <div>
+                                    <h4 className="text-base font-bold text-white">Steam Achievements</h4>
+                                    <p className="text-xs text-gray-400">
+                                        {steamAchievements.total_unlocked} unlocked across {steamAchievements.games_with_achievements} game{steamAchievements.games_with_achievements === 1 ? '' : 's'}
+                                        {steamAchievements.rare_unlocked > 0 && (
+                                            <span className="text-amber-400 font-semibold ml-2">
+                                                • {steamAchievements.rare_unlocked} rare (≤10%)
+                                            </span>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {steamAchievements.rarest_achievements?.length > 0 && (
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-3">
+                                    Rarest Unlocked
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    {steamAchievements.rarest_achievements.map((ach) => (
+                                        <Link
+                                            key={`${ach.steam_appid}-${ach.api_name}`}
+                                            to={ach.igdb_game_id ? `/game/${ach.game_slug || ach.igdb_game_id}` : '#'}
+                                            className="flex items-center gap-3 p-3 rounded-xl bg-primary-navy hover:bg-primary-navy-light border border-white/5 transition-colors min-w-0"
+                                        >
+                                            {ach.icon_url ? (
+                                                <img
+                                                    src={ach.icon_url}
+                                                    alt={ach.display_name}
+                                                    className="w-11 h-11 rounded-lg object-cover shrink-0 ring-1 ring-amber-400/40"
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="w-11 h-11 rounded-lg bg-primary-navy-dark flex items-center justify-center shrink-0">
+                                                    <Trophy size={18} className="text-amber-400" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs font-bold text-white truncate" title={ach.display_name}>
+                                                    {ach.display_name}
+                                                </p>
+                                                <p className="text-[11px] text-gray-400 truncate" title={ach.game_name}>
+                                                    {ach.game_name || 'Steam Game'}
+                                                </p>
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 mt-0.5">
+                                                    <Sparkles size={10} /> {ach.global_percent}% of players
+                                                </span>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

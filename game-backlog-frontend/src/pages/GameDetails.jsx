@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, ArrowLeft, Building2, Calendar, Check, Plus, ShoppingCart, Info, Play, Trash2, Archive, Heart, Compass, MessageSquare, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil, Globe, Share2, Swords, Gem, Crown } from 'lucide-react';
+import { Clock, ArrowLeft, Building2, Calendar, Check, Plus, ShoppingCart, Info, Play, Trash2, Archive, Heart, Compass, MessageSquare, FolderPlus, LayoutDashboard, Image as ImageIcon, Layers, Pencil, Globe, Share2, Swords, Gem, Crown, Trophy } from 'lucide-react';
+import SteamAchievementsTab from '../components/games/SteamAchievementsTab';
+import SteamStoreCard from '../components/games/SteamStoreCard';
+import SteamIcon from '../assets/steam-icon.svg?react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { useGames } from '../hooks/useGames';
@@ -57,6 +60,7 @@ const GAME_CATEGORIES = {
 
 const TABS = [
   { id: 'stats', label: 'Stats', icon: LayoutDashboard },
+  { id: 'achievements', label: 'Achievements', icon: Trophy },
   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
   { id: 'details', label: 'Details', icon: Info },
   { id: 'similar', label: 'Similar', icon: Compass },
@@ -607,7 +611,9 @@ const GameDetails = () => {
                 </div>
               )}
 
-
+              {activeTab === 'achievements' && (
+                <SteamAchievementsTab gameId={game.id} />
+              )}
 
               {activeTab === 'gallery' && (
                 <div className="animate-in fade-in duration-300">
@@ -843,7 +849,18 @@ const GameDetails = () => {
             {/* My Library — Status + Rating (sidebar edition, compact) */}
             <div className="bg-primary-navy-dark rounded-2xl overflow-hidden">
               <div className="px-4 pt-4 pb-3">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-3">My Status</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold">My Status</p>
+                  {userGame?.source === 'steam' && (
+                    <span
+                      title="Imported from your Steam library"
+                      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#00adee]/10 border border-[#00adee]/25 text-[11px] font-semibold text-[#00adee]"
+                    >
+                      <SteamIcon className="w-3 h-3 fill-[#00adee]" />
+                      Steam
+                    </span>
+                  )}
+                </div>
 
                 {isAuthenticated ? (
                   <div className={saving ? 'opacity-60 pointer-events-none' : ''}>
@@ -937,6 +954,7 @@ const GameDetails = () => {
                   </div>
                 )}
               </div>
+              <SteamStoreCard game={game} userGame={userGame} />
             </div>
 
             {/* ── HOW LONG TO BEAT (IGDB) ── */}

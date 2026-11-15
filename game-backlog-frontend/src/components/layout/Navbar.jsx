@@ -6,6 +6,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import Logo from '../../assets/isotipo.svg?react';
 import SearchModal from './SearchModal';
 import { getAvatarUrl } from '../../utils/avatar';
+import SteamIcon from '../../assets/steam-icon.svg?react';
 
 // ─── Helper: format relative time ────────────────────────────────────────────
 const relativeTime = (dateStr) => {
@@ -40,6 +41,21 @@ const notifMessage = (notif) => {
   if (notif.type === 'NEW_FOLLOWER') {
     return <><span className="font-semibold text-white">@{actor}</span>{' started following you'}</>;
   }
+  if (notif.type === 'STEAM_WISHLIST_SALE') {
+    const discount = notif.metadata?.discount_percent;
+    const finalPrice = notif.metadata?.final_formatted;
+    return (
+      <>
+        <span className="font-semibold text-white">{gameName}</span>
+        {' is '}
+        <span className="inline-flex items-center px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold text-[11px]">
+          -{discount}%
+        </span>
+        {' on Steam'}
+        {finalPrice ? <span className="text-emerald-400 font-semibold"> ({finalPrice})</span> : null}
+      </>
+    );
+  }
   return 'New notification';
 };
 
@@ -49,14 +65,20 @@ const NotifItem = ({ notif, onRead }) => (
     onClick={onRead}
     className={`w-full text-left flex items-start gap-3 px-4 py-3 hover:bg-primary-navy transition-colors border-b border-gray-800 last:border-0 ${!notif.is_read ? 'bg-primary-navy/40' : ''}`}
   >
-    <img
-      src={getAvatarUrl({
-        avatar_url: notif.actor_avatar_url,
-        avatar_static_url: notif.actor_avatar_static_url
-      }, { animated: false })}
-      alt={notif.actor_username}
-      className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
-    />
+    {notif.type === 'STEAM_WISHLIST_SALE' ? (
+      <div className="w-8 h-8 rounded-full bg-[#171a21] border border-[#00adee]/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <SteamIcon className="w-4 h-4 fill-[#00adee]" />
+      </div>
+    ) : (
+      <img
+        src={getAvatarUrl({
+          avatar_url: notif.actor_avatar_url,
+          avatar_static_url: notif.actor_avatar_static_url
+        }, { animated: false })}
+        alt={notif.actor_username}
+        className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-0.5"
+      />
+    )}
     <div className="flex-1 min-w-0">
       <p className="text-gray-300 text-xs leading-snug">{notifMessage(notif)}</p>
       <p className="text-gray-600 text-[11px] mt-1">{relativeTime(notif.created_at)}</p>
@@ -218,7 +240,7 @@ const Navbar = ({ transparentMode = true }) => {
                                       const isCollection = notif.type.includes('COLLECTION');
                                       const target = isCollection
                                         ? `/collections/${notif.entity_id}`
-                                        : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId}`;
+                                        : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId || notif.entity_id}`;
                                       navigate(target);
                                     }
                                     setNotifPanelOpen(false);

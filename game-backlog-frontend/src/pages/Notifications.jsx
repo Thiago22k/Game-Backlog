@@ -7,6 +7,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { Bell, Check, Loader2 } from 'lucide-react';
 import usePageTitle from '../hooks/usePageTitle';
+import SteamIcon from '../assets/steam-icon.svg?react';
 
 const relativeTime = (dateStr) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -38,6 +39,31 @@ const notifMessage = (notif) => {
     }
     if (notif.type === 'NEW_FOLLOWER') {
         return <><span className="font-semibold text-white">@{actor}</span>{' started following you'}</>;
+    }
+    if (notif.type === 'STEAM_WISHLIST_SALE') {
+        const discount = notif.metadata?.discount_percent;
+        const finalPrice = notif.metadata?.final_formatted;
+        const initialPrice = notif.metadata?.initial_formatted;
+        return (
+            <>
+                <span className="font-semibold text-white">{gameName}</span>
+                {' from your wishlist is '}
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">
+                    -{discount}% off
+                </span>
+                {' on Steam'}
+                {finalPrice ? (
+                    <span className="text-gray-300">
+                        {' ('}
+                        {initialPrice && (
+                            <span className="line-through text-gray-500 mr-1">{initialPrice}</span>
+                        )}
+                        <span className="font-semibold text-emerald-400">{finalPrice}</span>
+                        {')'}
+                    </span>
+                ) : null}
+            </>
+        );
     }
     return 'New notification';
 };
@@ -129,7 +155,7 @@ const Notifications = () => {
         const isCollection = notif.type.includes('COLLECTION');
         const target = isCollection
             ? `/collections/${notif.entity_id}`
-            : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId}`;
+            : `/game/${notif.metadata?.game_slug || notif.metadata?.gameId || notif.entity_id}`;
 
         navigate(target);
     };
@@ -199,15 +225,26 @@ const Notifications = () => {
                                             }`}
                                     >
                                         <div className="relative flex-shrink-0">
-                                            <img
-                                                src={getAvatarUrl({
-                                                    avatar_url: notif.actor_avatar_url,
-                                                    avatar_static_url: notif.actor_avatar_static_url
-                                                }, { animated: false })}
-                                                alt={notif.actor_username}
-                                                className={`w-12 h-12 rounded-full object-cover transition-colors ${!notif.is_read ? 'ring-2 ring-primary-yellow ring-offset-2 ring-offset-primary-navy-dark' : 'border border-gray-700'}`}
-                                                onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=' + notif.actor_username + '&background=random' }}
-                                            />
+                                            {notif.type === 'STEAM_WISHLIST_SALE' ? (
+                                                <div
+                                                    className={`w-12 h-12 rounded-full bg-[#171a21] flex items-center justify-center transition-colors ${!notif.is_read
+                                                            ? 'ring-2 ring-primary-yellow ring-offset-2 ring-offset-primary-navy-dark'
+                                                            : 'border border-[#00adee]/40'
+                                                        }`}
+                                                >
+                                                    <SteamIcon className="w-6 h-6 fill-[#00adee]" />
+                                                </div>
+                                            ) : (
+                                                <img
+                                                    src={getAvatarUrl({
+                                                        avatar_url: notif.actor_avatar_url,
+                                                        avatar_static_url: notif.actor_avatar_static_url
+                                                    }, { animated: false })}
+                                                    alt={notif.actor_username}
+                                                    className={`w-12 h-12 rounded-full object-cover transition-colors ${!notif.is_read ? 'ring-2 ring-primary-yellow ring-offset-2 ring-offset-primary-navy-dark' : 'border border-gray-700'}`}
+                                                    onError={(e) => { e.target.src = 'https://ui-avatars.com/api/?name=' + notif.actor_username + '&background=random' }}
+                                                />
+                                            )}
                                             {!notif.is_read && (
                                                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-primary-yellow border-2 border-primary-navy-dark rounded-full"></span>
                                             )}

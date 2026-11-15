@@ -387,6 +387,19 @@ const commitImport = async (userId, { items = [], ignoredAppIds = [], manualOver
             }
         }
 
+        // Persistir overrides manuales en steam_igdb_map como 'matched'
+        for (const [appId, igdbId] of overrideMap.entries()) {
+            await client.query(
+                `INSERT INTO steam_igdb_map (steam_appid, igdb_game_id, match_status, resolved_at)
+                 VALUES ($1, $2, 'matched', CURRENT_TIMESTAMP)
+                 ON CONFLICT (steam_appid) DO UPDATE SET
+                   igdb_game_id = EXCLUDED.igdb_game_id,
+                   match_status = 'matched',
+                   resolved_at = CURRENT_TIMESTAMP`,
+                [appId, igdbId]
+            );
+        }
+
         await client.query('COMMIT');
     } catch (err) {
         await client.query('ROLLBACK');
@@ -412,9 +425,182 @@ const commitImport = async (userId, { items = [], ignoredAppIds = [], manualOver
 const validIgnoredCount = (ignoredAppIds, libraryByAppId, validAppIds) =>
     ignoredAppIds.map(Number).filter((id) => libraryByAppId.has(id) && !validAppIds.includes(id)).length;
 
+const MANUAL_SYNC_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutos
+
+// Sincronización incremental de horas, última sesión y juegos nuevos
+const syncUserSteamLibrary = async (userId, { enforceCooldown = false, importNewGames = true } = {}) => {
+    const account = await SteamAccount.findByUserId(userId);
+    if (!account) {
+        const err = new Error('No tienes una cuenta de Steam vinculada');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    if (enforceCooldown && account.last_sync_at) {
+        const elapsed = Date.now() - new Date(account.last_sync_at).getTime();
+        if (elapsed < MANUAL_SYNC_COOLDOWN_MS) {
+            const retryAfterSeconds = Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 1000);
+            const err = new Error(`Por favor espera ${Math.ceil(retryAfterSeconds / 60)} min antes de sincronizar de nuevo`);
+            err.statusCode = 429;
+            err.retryAfterSeconds = retryAfterSeconds;
+            throw err;
+        }
+    }
+
+    let refreshResult;
+    try {
+        const [libRes, summary] = await Promise.all([
+            refreshLibraryAndMappings(userId, account.steam_id64),
+            steamService.getPlayerSummary(account.steam_id64).catch(() => null),
+        ]);
+        refreshResult = libRes;
+
+        if (summary && (summary.persona_name || summary.avatar_url || summary.profile_url)) {
+            await pool.query(
+                `UPDATE steam_accounts
+                 SET persona_name = COALESCE($2, persona_name),
+                     avatar_url = COALESCE($3, avatar_url),
+                     profile_url = COALESCE($4, profile_url)
+                 WHERE user_id = $1`,
+                [userId, summary.persona_name, summary.avatar_url, summary.profile_url]
+            ).catch(() => { });
+        }
+    } catch (err) {
+        await SteamAccount.updateSyncState(userId, { libraryVisible: null, syncStatus: 'error' }).catch(() => { });
+        throw err;
+    }
+
+    const { isPrivate, library, mappings } = refreshResult;
+
+    if (isPrivate) {
+        return {
+            is_private: true,
+            updated_games: 0,
+            new_games_added: 0,
+            promoted_to_playing: 0,
+        };
+    }
+
+    // Agrupar filas válidas de steam_library por igdb_game_id (sumando minutos si hay 2 ediciones)
+    const aggregatedByIgdb = new Map();
+
+    for (const item of library) {
+        if (item.ignored) continue;
+
+        const appId = Number(item.steam_appid);
+        const mapping = mappings.get(appId);
+        if (!mapping || mapping.match_status !== 'matched' || !mapping.igdb_game_id) continue;
+
+        const igdbId = Number(mapping.igdb_game_id);
+        const suggestedStatus = inferDefaultStatus(item);
+        const existing = aggregatedByIgdb.get(igdbId);
+
+        if (!existing) {
+            aggregatedByIgdb.set(igdbId, {
+                igdb_game_id: igdbId,
+                steam_appid: appId,
+                playtime_minutes: Number(item.playtime_minutes || 0),
+                last_played_at: item.last_played_at || null,
+                suggested_status: suggestedStatus,
+            });
+        } else {
+            existing.playtime_minutes += Number(item.playtime_minutes || 0);
+            if (suggestedStatus === 'playing') existing.suggested_status = 'playing';
+            if (
+                item.last_played_at &&
+                (!existing.last_played_at || new Date(item.last_played_at) > new Date(existing.last_played_at))
+            ) {
+                existing.last_played_at = item.last_played_at;
+            }
+        }
+    }
+
+    const client = await pool.connect();
+    let updatedGames = 0;
+    let newGamesAdded = 0;
+    let promotedToPlaying = 0;
+
+    try {
+        await client.query('BEGIN');
+
+        const userGamesRes = await client.query(
+            'SELECT id, igdb_game_id, status, status_set_by, steam_appid, playtime_minutes FROM user_games WHERE user_id = $1',
+            [userId]
+        );
+        const existingByIgdb = new Map(userGamesRes.rows.map((r) => [Number(r.igdb_game_id), r]));
+
+        for (const entry of aggregatedByIgdb.values()) {
+            const owned = existingByIgdb.get(entry.igdb_game_id);
+
+            if (owned) {
+                // Actualizar minutos, enlace de steam_appid y last_played_at
+                // Solo promocionar backlog -> playing si el usuario NO fijó el estado manualmente
+                const shouldPromote =
+                    owned.status_set_by === 'steam' &&
+                    owned.status === 'backlog' &&
+                    entry.suggested_status === 'playing';
+
+                const nextStatus = shouldPromote ? 'playing' : owned.status;
+
+                await client.query(
+                    `UPDATE user_games
+           SET steam_appid = COALESCE(steam_appid, $3),
+               playtime_minutes = GREATEST(COALESCE(playtime_minutes, 0), $4),
+               last_played_at = COALESCE($5, last_played_at),
+               status = $6,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE user_id = $1 AND igdb_game_id = $2`,
+                    [
+                        userId,
+                        entry.igdb_game_id,
+                        entry.steam_appid,
+                        entry.playtime_minutes,
+                        entry.last_played_at,
+                        nextStatus,
+                    ]
+                );
+
+                updatedGames++;
+                if (shouldPromote) promotedToPlaying++;
+            } else if (importNewGames) {
+                await client.query(
+                    `INSERT INTO user_games (
+             user_id, igdb_game_id, status, source, status_set_by, steam_appid, playtime_minutes, last_played_at
+           )
+           VALUES ($1, $2, $3, 'steam', 'steam', $4, $5, $6)`,
+                    [
+                        userId,
+                        entry.igdb_game_id,
+                        entry.suggested_status,
+                        entry.steam_appid,
+                        entry.playtime_minutes,
+                        entry.last_played_at,
+                    ]
+                );
+                newGamesAdded++;
+            }
+        }
+
+        await client.query('COMMIT');
+    } catch (err) {
+        await client.query('ROLLBACK');
+        throw err;
+    } finally {
+        client.release();
+    }
+
+    return {
+        is_private: false,
+        updated_games: updatedGames,
+        new_games_added: newGamesAdded,
+        promoted_to_playing: promotedToPlaying,
+    };
+};
+
 module.exports = {
     resolveUnmappedAppIds,
     refreshLibraryAndMappings,
     buildImportPreview,
     commitImport,
+    syncUserSteamLibrary,
 };

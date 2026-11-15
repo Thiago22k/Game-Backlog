@@ -283,8 +283,8 @@ const SteamImportModal = ({ isOpen, onClose, onImported }) => {
                                             key={tab.id}
                                             onClick={() => setActiveTab(tab.id)}
                                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${active
-                                                    ? 'bg-primary-yellow text-primary-navy-dark'
-                                                    : 'bg-primary-navy text-gray-300 hover:text-white'
+                                                ? 'bg-primary-yellow text-primary-navy-dark'
+                                                : 'bg-primary-navy text-gray-300 hover:text-white'
                                                 }`}
                                         >
                                             {tab.label}
@@ -417,14 +417,31 @@ const SteamImportModal = ({ isOpen, onClose, onImported }) => {
                                                             <Search size={13} /> Match manually
                                                         </button>
                                                     ) : (
-                                                        <select
-                                                            value={statuses[item.steam_appid] || 'backlog'}
-                                                            onChange={(e) => setItemStatus(item.steam_appid, e.target.value)}
-                                                            className="bg-primary-navy-dark border border-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:border-primary-yellow"
-                                                        >
-                                                            <option value="backlog">Backlog</option>
-                                                            <option value="playing">Playing</option>
-                                                        </select>
+                                                        <>
+                                                            {(activeTab === 'needs_review' || manualMatches[item.steam_appid]) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setSearchingAppId(item.steam_appid);
+                                                                        setSearchQuery(item.steam_name);
+                                                                        setSearchResults([]);
+                                                                    }}
+                                                                    className="inline-flex items-center gap-1 text-xs bg-white/5 hover:bg-white/15 text-gray-300 px-2.5 py-1.5 rounded-md"
+                                                                    title="Change matched IGDB game"
+                                                                >
+                                                                    <Search size={12} />
+                                                                    {manualMatches[item.steam_appid] ? 'Matched' : 'Change'}
+                                                                </button>
+                                                            )}
+                                                            <select
+                                                                value={statuses[item.steam_appid] || 'backlog'}
+                                                                onChange={(e) => setItemStatus(item.steam_appid, e.target.value)}
+                                                                className="bg-primary-navy-dark border border-gray-700 text-white text-xs rounded-md px-2.5 py-1.5 focus:outline-none focus:border-primary-yellow"
+                                                            >
+                                                                <option value="backlog">Backlog</option>
+                                                                <option value="playing">Playing</option>
+                                                            </select>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>

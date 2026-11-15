@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ExternalLink, Download } from 'lucide-react';
+import { ExternalLink, Download, RefreshCw, CheckCircle2, AlertTriangle, Lock } from 'lucide-react';
 import axios from '../../api/axios';
 import { ENDPOINTS } from '../../utils/constants';
 import { useAuth } from '../../context/AuthContext';
@@ -19,11 +19,25 @@ const STEAM_RESULTS = {
   error: { type: 'error', message: 'Something went wrong linking your Steam account.' },
 };
 
+const formatRelativeSyncTime = (isoDate) => {
+  if (!isoDate) return 'Never synced';
+  const diffMs = Date.now() - new Date(isoDate).getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Synced just now';
+  if (diffMin < 60) return `Synced ${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `Synced ${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `Synced ${diffDays}d ago`;
+};
+
 const SteamConnectionCard = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const handledResult = useRef(false);
@@ -57,7 +71,6 @@ const SteamConnectionCard = () => {
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  // Steam se abre en una ventana emergente: Ajustes se queda abierta y solo se actualiza
   const showResult = useCallback(
     (code) => {
       const info = STEAM_RESULTS[code] || STEAM_RESULTS.error;
@@ -76,6 +89,55 @@ const SteamConnectionCard = () => {
     onError: (message) => toast.error(message),
   });
 
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const response = await axios.post(ENDPOINTS.STEAM.SYNC);
+      const { is_private, updated_games, new_games_added, account } = response.data;
+
+      if (account) setStatus(account);
+      else await loadStatus();
+
+      if (is_private) {
+        toast.error('Your Steam game details are set to Private.');
+      } else {
+        const parts = [];
+        if (new_games_added > 0) parts.push(`${new_games_added} new`);
+        if (updated_games > 0) parts.push(`${updated_games} updated`);
+        toast.success(parts.length > 0 ? `Steam synced (${parts.join(', ')})` : 'Steam library is up to date');
+      }
+    } catch (error) {
+      if (error.response?.status === 429) {
+        const mins = Math.ceil((error.response.data?.retry_after_seconds || 60) / 60);
+        toast.error(`Please wait ~${mins} min before syncing again.`);
+      } else {
+        toast.error(error.response?.data?.error || 'Could not sync Steam library.');
+      }
+      await loadStatus();
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleToggleAutoSync = async () => {
+    if (!status?.linked || savingPrefs) return;
+    const nextValue = !status.auto_sync;
+    setSavingPrefs(true);
+    try {
+      const response = await axios.patch(ENDPOINTS.STEAM.PREFERENCES, { auto_sync: nextValue });
+      if (response.data?.account) {
+        setStatus(response.data.account);
+      } else {
+        setStatus((prev) => ({ ...prev, auto_sync: nextValue }));
+      }
+      toast.success(nextValue ? 'Automatic Steam sync enabled' : 'Automatic Steam sync disabled');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not update sync preference.');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
   const handleUnlink = async () => {
     setBusy(true);
     try {
@@ -88,6 +150,35 @@ const SteamConnectionCard = () => {
     } finally {
       setBusy(false);
     }
+  };
+
+  const renderSyncBadge = () => {
+    if (status?.library_visible === false || status?.last_sync_status === 'private') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/25">
+          <Lock size={11} /> Private Library
+        </span>
+      );
+    }
+    if (status?.last_sync_status === 'error') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 border border-red-500/25">
+          <AlertTriangle size={11} /> Sync Error
+        </span>
+      );
+    }
+    if (status?.last_sync_status === 'ok') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+          <CheckCircle2 size={11} /> {formatRelativeSyncTime(status.last_sync_at)}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-gray-300">
+        Not synced yet
+      </span>
+    );
   };
 
   return (
@@ -119,7 +210,7 @@ const SteamConnectionCard = () => {
       )}
 
       {status?.linked && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
               {status.avatar_url ? (
@@ -127,8 +218,11 @@ const SteamConnectionCard = () => {
               ) : (
                 <div className="w-12 h-12 rounded-lg bg-gray-700 shrink-0" />
               )}
-              <div className="min-w-0">
-                <p className="text-white font-medium truncate">{status.persona_name || 'Steam account'}</p>
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-white font-medium truncate">{status.persona_name || 'Steam account'}</p>
+                  {renderSyncBadge()}
+                </div>
                 <p className="text-xs text-gray-400">SteamID: {status.steam_id64}</p>
                 {status.profile_url && (
                   <a
@@ -152,12 +246,21 @@ const SteamConnectionCard = () => {
                 Import Library
               </button>
 
+              <button
+                onClick={handleSyncNow}
+                disabled={syncing || busy}
+                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/15 disabled:opacity-50 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
+              >
+                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Syncing...' : 'Sync Now'}
+              </button>
+
               {!confirmUnlink ? (
                 <button
                   onClick={() => setConfirmUnlink(true)}
                   disabled={!canUnlink}
                   title={!canUnlink ? 'Set a password first before unlinking Steam' : undefined}
-                  className="bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                 >
                   Unlink
                 </button>
@@ -167,20 +270,44 @@ const SteamConnectionCard = () => {
                   <button
                     onClick={handleUnlink}
                     disabled={busy}
-                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    className="bg-red-500 hover:bg-red-600 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors"
                   >
                     {busy ? 'Unlinking...' : 'Confirm'}
                   </button>
                   <button
                     onClick={() => setConfirmUnlink(false)}
                     disabled={busy}
-                    className="text-gray-400 hover:text-white px-2 py-2 transition-colors"
+                    className="text-gray-400 hover:text-white px-2 py-2 text-sm transition-colors"
                   >
                     Cancel
                   </button>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Auto-Sync Preference Row */}
+          <div className="flex items-center justify-between pt-3 border-t border-white/10">
+            <div>
+              <p className="text-sm font-medium text-white">Automatic daily sync</p>
+              <p className="text-xs text-gray-400">
+                Keep your Steam playtime and new games updated in the background without overriding manual statuses
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(status.auto_sync)}
+              onClick={handleToggleAutoSync}
+              disabled={savingPrefs}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-50 ${status.auto_sync ? 'bg-[#00adee]' : 'bg-gray-700'
+                }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${status.auto_sync ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+              />
+            </button>
           </div>
 
           {!canUnlink && (

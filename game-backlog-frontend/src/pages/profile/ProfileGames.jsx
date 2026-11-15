@@ -21,6 +21,7 @@ const ProfileGames = () => {
     const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
     const [ratingFilter, setRatingFilter] = useState(searchParams.get('rating') || 'all');
+    const [sourceFilter, setSourceFilter] = useState(searchParams.get('source') || 'all');
     const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'recent');
     const [currentWishlistPage, setCurrentWishlistPage] = useState(1);
 
@@ -53,10 +54,11 @@ const ProfileGames = () => {
         if (searchQuery) newParams.set('search', searchQuery); else newParams.delete('search');
         if (statusFilter !== 'all') newParams.set('status', statusFilter); else newParams.delete('status');
         if (ratingFilter !== 'all') newParams.set('rating', ratingFilter); else newParams.delete('rating');
+        if (sourceFilter !== 'all') newParams.set('source', sourceFilter); else newParams.delete('source');
         if (sortBy !== 'recent') newParams.set('sort', sortBy); else newParams.delete('sort');
 
         setSearchParams(newParams, { replace: true });
-    }, [searchQuery, statusFilter, ratingFilter, sortBy]);
+    }, [searchQuery, statusFilter, ratingFilter, sourceFilter, sortBy]);
 
     const { wishlistComingSoon, myGames } = useMemo(() => {
         const now = new Date();
@@ -112,6 +114,12 @@ const ProfileGames = () => {
             result = result.filter(game => parseFloat(game.rating) === target);
         }
 
+        if (sourceFilter === 'steam') {
+            result = result.filter(game => game.source === 'steam');
+        } else if (sourceFilter === 'manual') {
+            result = result.filter(game => game.source !== 'steam');
+        }
+
         result = [...result];
         switch (sortBy) {
             case 'name':
@@ -136,7 +144,7 @@ const ProfileGames = () => {
         }
 
         return result;
-    }, [myGames, searchQuery, statusFilter, ratingFilter, sortBy]);
+    }, [myGames, searchQuery, statusFilter, ratingFilter, sourceFilter, sortBy]);
 
     const totalPages = Math.ceil(processedMyGames.length / itemsPerPage);
     const wishlistTotalPages = Math.ceil(filteredWishlist.length / itemsPerPage);
@@ -241,6 +249,7 @@ const ProfileGames = () => {
             rating: game.game_details?.rating,
             status: game.status,
             user_rating: game.rating,
+            source: game.source,
         };
     }, []);
 
@@ -424,7 +433,7 @@ const ProfileGames = () => {
                                     ))}
                                 </div>
 
-                                {/* Rating & Sort */}
+                                {/* Rating, Source & Sort */}
                                 <div className="flex flex-wrap gap-4">
                                     <div className="flex items-center gap-2 min-w-[120px] flex-1">
                                         <span className="text-gray-400 text-sm whitespace-nowrap">Rating:</span>
@@ -436,6 +445,22 @@ const ProfileGames = () => {
                                             />
                                         </div>
                                     </div>
+                                    {myGames.some(g => g.source === 'steam') && (
+                                        <div className="flex items-center gap-2 min-w-[130px] flex-1">
+                                            <span className="text-gray-400 text-sm whitespace-nowrap">Source:</span>
+                                            <div className="flex-1">
+                                                <CustomSelect
+                                                    options={[
+                                                        { value: 'all', label: 'All Sources' },
+                                                        { value: 'steam', label: 'Steam' },
+                                                        { value: 'manual', label: 'Manual' },
+                                                    ]}
+                                                    value={sourceFilter}
+                                                    onChange={setSourceFilter}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-2 min-w-[150px] flex-1">
                                         <span className="text-gray-400 text-sm whitespace-nowrap">Sort by:</span>
                                         <div className="flex-1">

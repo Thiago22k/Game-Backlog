@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const { startSteamSyncScheduler } = require('./src/jobs/steamSync.job');
+const { startWishlistSaleScheduler } = require('./src/jobs/steamWishlistSale.job');
 
 // Validar variables de entorno primero
 const validateEnv = require('./src/config/envValidator');
@@ -131,4 +133,6 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Ambiente: ${process.env.NODE_ENV}`);
+  startSteamSyncScheduler();
+  startWishlistSaleScheduler();
 });

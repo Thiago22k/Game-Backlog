@@ -196,6 +196,102 @@ const getRecentlyPlayedGames = async (steamId) => {
   }
 };
 
+// Esquema global de logros de un juego (títulos, descripciones, iconos e indicador hidden)
+const getSchemaForGame = async (appId) => {
+  if (!process.env.STEAM_API_KEY) {
+    throw new Error('STEAM_API_KEY no está configurada en el servidor');
+  }
+  try {
+    const response = await axios.get('https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/', {
+      params: {
+        key: process.env.STEAM_API_KEY,
+        appid: appId,
+        l: 'english',
+        format: 'json',
+      },
+      timeout: 12000,
+    });
+    const list = response.data?.game?.availableGameStats?.achievements || [];
+    return list.map((a) => ({
+      api_name: String(a.name),
+      display_name: a.displayName || String(a.name),
+      description: a.description || null,
+      icon_url: a.icon || null,
+      icon_gray_url: a.icongray || a.icon || null,
+      hidden: Number(a.hidden || 0) === 1,
+    }));
+  } catch (err) {
+    // Algunos juegos en Steam no tienen sistema de logros (devuelven 400/403)
+    if (err.response?.status === 400 || err.response?.status === 403) {
+      return [];
+    }
+    throw err;
+  }
+};
+
+// Porcentajes globales de desbloqueo por logro (pública, no requiere steamId)
+const getGlobalAchievementPercentages = async (appId) => {
+  try {
+    const response = await axios.get(
+      'https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/',
+      {
+        params: { gameid: appId, format: 'json' },
+        timeout: 10000,
+      }
+    );
+    const list = response.data?.achievementpercentages?.achievements || [];
+    const map = new Map();
+    for (const item of list) {
+      if (item.name != null) {
+        map.set(String(item.name), Number(Number(item.percent || 0).toFixed(2)));
+      }
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+};
+
+// Progreso de logros de un jugador concreto para un AppID
+const getPlayerAchievements = async (steamId, appId) => {
+  if (!process.env.STEAM_API_KEY) {
+    throw new Error('STEAM_API_KEY no está configurada en el servidor');
+  }
+  try {
+    const response = await axios.get('https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/', {
+      params: {
+        key: process.env.STEAM_API_KEY,
+        steamid: steamId,
+        appid: appId,
+        format: 'json',
+      },
+      timeout: 12000,
+    });
+    const playerStats = response.data?.playerstats;
+    if (!playerStats || playerStats.success === false) {
+      return { available: false, achievements: [] };
+    }
+    const list = playerStats.achievements || [];
+    return {
+      available: true,
+      achievements: list.map((a) => ({
+        api_name: String(a.apiname),
+        unlocked: Number(a.achieved || 0) === 1,
+        unlocked_at:
+          Number(a.achieved || 0) === 1 && Number(a.unlocktime || 0) > 0
+            ? new Date(Number(a.unlocktime) * 1000)
+            : null,
+      })),
+    };
+  } catch (err) {
+    // 400/403 suele significar perfil privado o juego sin estadísticas de usuario
+    if (err.response?.status === 400 || err.response?.status === 403) {
+      return { available: false, achievements: [] };
+    }
+    throw err;
+  }
+};
+
 module.exports = {
   STEAM_OPENID_URL,
   signState,
@@ -208,4 +304,7 @@ module.exports = {
   getPlayerSummary,
   getOwnedGames,
   getRecentlyPlayedGames,
+  getSchemaForGame,
+  getGlobalAchievementPercentages,
+  getPlayerAchievements,
 };

@@ -2,6 +2,7 @@ import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Play, ShoppingCart, Trash2, Plus, FolderPlus, MoreHorizontal, Archive, Heart } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
+import SteamIcon from '../../assets/steam-icon.svg?react';
 import StatusMenu from './StatusMenu';
 import StarRating from './StarRating';
 import AddToCollectionModal from '../collections/AddToCollectionModal';
@@ -217,7 +218,7 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
         </div>
 
         {/* Artwork Banner */}
-        <div className="mx-4 mb-8">
+        <div className="mx-4 mb-8 relative">
           <img
             src={artworkUrl}
             alt={game.name}
@@ -227,10 +228,19 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
               e.target.src = PLACEHOLDER_COVER;
             }}
           />
+          {game.source === 'steam' && (
+            <span
+              title="Imported from Steam"
+              className="absolute bottom-2 right-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#171a21]/90 backdrop-blur-sm border border-[#00adee]/30 text-[10px] font-semibold text-[#00adee] shadow-md"
+            >
+              <SteamIcon className="w-3 h-3 fill-[#00adee]" />
+              Steam
+            </span>
+          )}
         </div>
 
         {/* Cover Circular (mitad incrustado) */}
-        <div className="flex justify-center -mt-12 mb-3">
+        <div className="flex justify-center -mt-12 z-10 mb-3">
           <img
             src={coverUrl}
             alt={game.name}

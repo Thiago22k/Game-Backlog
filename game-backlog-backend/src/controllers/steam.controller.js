@@ -4,6 +4,8 @@ const User = require('../models/user.model');
 const steamService = require('../services/steam.service');
 const { isValidEmail, isValidUsername, sanitizeString, sanitizeUsernameAndPreserveCase } = require('../utils/validation');
 const steamSyncService = require('../services/steamSync.service');
+const steamAchievementsService = require('../services/steamAchievements.service');
+const steamPriceService = require('../services/steamPrice.service');
 
 const frontendUrl = () => (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const redirectToSettings = (res, result) =>
@@ -352,4 +354,146 @@ const commitImport = async (req, res) => {
   }
 };
 
-module.exports = { startLogin, startLink, callback, completeSignup, getStatus, unlink, getImportPreview, commitImport };
+// POST /api/steam/sync  (autenticado)
+const syncNow = async (req, res) => {
+  try {
+    const summary = await steamSyncService.syncUserSteamLibrary(req.user.userId, {
+      enforceCooldown: true,
+      importNewGames: true,
+    });
+
+    const updatedAccount = await SteamAccount.findByUserId(req.user.userId);
+
+    if (summary.is_private) {
+      return res.json({
+        message: 'Tu biblioteca de Steam es privada. Cambia la privacidad de detalles de juegos a Público en Steam.',
+        ...summary,
+        account: updatedAccount ? publicAccount(updatedAccount) : null,
+      });
+    }
+
+    res.json({
+      message: 'Biblioteca de Steam sincronizada exitosamente',
+      ...summary,
+      account: updatedAccount ? publicAccount(updatedAccount) : null,
+    });
+  } catch (error) {
+    if (error.statusCode === 429) {
+      return res.status(429).json({
+        error: error.message,
+        retry_after_seconds: error.retryAfterSeconds,
+      });
+    }
+    console.error('Error en syncNow de Steam:', error);
+    res.status(error.statusCode || 500).json({
+      error: error.message || 'Error al sincronizar la biblioteca de Steam',
+    });
+  }
+};
+
+// PATCH /api/steam/preferences  (autenticado)
+const updatePreferences = async (req, res) => {
+  try {
+    const { auto_sync } = req.body || {};
+    if (typeof auto_sync !== 'boolean') {
+      return res.status(400).json({ error: 'El campo auto_sync debe ser booleano' });
+    }
+
+    const updated = await SteamAccount.updateAutoSync(req.user.userId, auto_sync);
+    if (!updated) {
+      return res.status(404).json({ error: 'No tienes una cuenta de Steam vinculada' });
+    }
+
+    res.json({
+      message: 'Preferencias de Steam actualizadas',
+      account: publicAccount(updated),
+    });
+  } catch (error) {
+    console.error('Error en updatePreferences de Steam:', error);
+    res.status(500).json({ error: 'Error al actualizar preferencias de Steam' });
+  }
+};
+
+// GET /api/steam/games/:igdbGameId/achievements  (pública con sesión opcional)
+const getGameAchievements = async (req, res) => {
+  try {
+    const igdbGameId = Number(req.params.igdbGameId);
+    if (!igdbGameId) {
+      return res.status(400).json({ error: 'igdbGameId inválido' });
+    }
+
+    const forceRefresh = req.query.refresh === '1';
+    const userId = req.user?.userId || null;
+
+    const data = await steamAchievementsService.getGameAchievements(igdbGameId, {
+      userId,
+      forceRefresh: Boolean(forceRefresh && userId),
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error en getGameAchievements:', error);
+    res.status(500).json({ error: 'Error al obtener los logros de Steam' });
+  }
+};
+
+// GET /api/steam/games/:igdbGameId/price  (pública)
+const getGamePrice = async (req, res) => {
+  try {
+    const igdbGameId = Number(req.params.igdbGameId);
+    if (!igdbGameId) {
+      return res.status(400).json({ error: 'igdbGameId inválido' });
+    }
+
+    const rawCc =
+      req.query.cc ||
+      req.headers['cf-ipcountry'] ||
+      req.headers['x-vercel-ip-country'] ||
+      '';
+    const countryCode = /^[a-zA-Z]{2}$/.test(String(rawCc))
+      ? String(rawCc).toUpperCase()
+      : undefined;
+
+    const fallbackAppId = req.query.appid ? Number(req.query.appid) : null;
+    const priceData = await steamPriceService.getPriceForIgdbGame(igdbGameId, {
+      countryCode,
+      fallbackAppId,
+    });
+
+    res.json(priceData);
+  } catch (error) {
+    console.error('Error en getGamePrice:', error);
+    res.status(500).json({ error: 'Error al obtener precio de Steam' });
+  }
+};
+
+// GET /api/steam/users/:username/achievements-summary  (pública)
+const getUserAchievementsSummary = async (req, res) => {
+  try {
+    const { username } = req.params;
+    if (!username) {
+      return res.status(400).json({ error: 'username requerido' });
+    }
+    const summary = await steamAchievementsService.getUserAchievementsSummaryByUsername(username);
+    res.json(summary);
+  } catch (error) {
+    console.error('Error en getUserAchievementsSummary:', error);
+    res.status(500).json({ error: 'Error al obtener resumen de logros' });
+  }
+};
+
+module.exports = {
+  startLogin,
+  startLink,
+  callback,
+  completeSignup,
+  getStatus,
+  unlink,
+  getImportPreview,
+  commitImport,
+  syncNow,
+  updatePreferences,
+  getGameAchievements,
+  getGamePrice,
+  getUserAchievementsSummary
+};
