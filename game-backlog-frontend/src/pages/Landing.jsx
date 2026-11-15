@@ -340,6 +340,14 @@ const Landing = () => {
                   <h2 className="text-2xl font-bold flex items-center text-white">
                     {isAuthenticated ? 'Recommended for You' : 'Recommended Games'}
                   </h2>
+                  {isAuthenticated && (
+                    <Link
+                      to="/recommendations"
+                      className="text-sm text-gray-400 hover:text-primary-yellow transition-colors"
+                    >
+                      Explore & filter
+                    </Link>
+                  )}
                 </div>
                 {recommendedGames.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

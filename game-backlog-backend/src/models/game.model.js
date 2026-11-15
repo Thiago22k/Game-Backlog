@@ -89,55 +89,64 @@ const Game = {
     return result.rows.length > 0;
   },
 
-  // Aggregate community stats for a game (used in GameDetails page)
+  /// Aggregate community stats for a game (1 single round-trip via CTEs)
   async getGameStats(igdbGameId) {
-    const statsQuery = `
+    const query = `
+      WITH ug_stats AS (
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'playing')                       AS playing_count,
+          COUNT(*) FILTER (WHERE status = 'completed')                     AS completed_count,
+          COUNT(*) FILTER (WHERE status = 'backlog')                       AS backlog_count,
+          COUNT(*) FILTER (WHERE status = 'wishlist')                      AS wishlist_count,
+          COUNT(*) FILTER (WHERE status = 'dropped')                       AS dropped_count,
+          COUNT(*) FILTER (WHERE rating IS NOT NULL)                       AS ratings_count,
+          ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL)::numeric, 1) AS avg_rating,
+          COUNT(*) FILTER (WHERE rating = 0.5) AS r05,
+          COUNT(*) FILTER (WHERE rating = 1.0) AS r10,
+          COUNT(*) FILTER (WHERE rating = 1.5) AS r15,
+          COUNT(*) FILTER (WHERE rating = 2.0) AS r20,
+          COUNT(*) FILTER (WHERE rating = 2.5) AS r25,
+          COUNT(*) FILTER (WHERE rating = 3.0) AS r30,
+          COUNT(*) FILTER (WHERE rating = 3.5) AS r35,
+          COUNT(*) FILTER (WHERE rating = 4.0) AS r40,
+          COUNT(*) FILTER (WHERE rating = 4.5) AS r45,
+          COUNT(*) FILTER (WHERE rating = 5.0) AS r50
+        FROM user_games
+        WHERE igdb_game_id = $1
+      ),
+      likes_stat AS (
+        SELECT COUNT(*) AS likes_count FROM game_likes WHERE igdb_game_id = $1
+      ),
+      colls_stat AS (
+        SELECT
+          COUNT(DISTINCT cg.collection_id) AS total,
+          COUNT(DISTINCT CASE WHEN c.is_public = true THEN cg.collection_id END) AS public_count,
+          COUNT(DISTINCT CASE WHEN c.is_public = false THEN cg.collection_id END) AS private_count
+        FROM collection_games cg
+        JOIN collections c ON cg.collection_id = c.id
+        WHERE cg.igdb_game_id = $1
+      ),
+      reviews_stat AS (
+        SELECT COUNT(*) AS reviews_count FROM reviews WHERE igdb_game_id = $1
+      )
       SELECT
-        COUNT(*) FILTER (WHERE status = 'playing')                       AS playing_count,
-        COUNT(*) FILTER (WHERE status = 'completed')                     AS completed_count,
-        COUNT(*) FILTER (WHERE status = 'backlog')                       AS backlog_count,
-        COUNT(*) FILTER (WHERE status = 'wishlist')                      AS wishlist_count,
-        COUNT(*) FILTER (WHERE status = 'dropped')                       AS dropped_count,
-        COUNT(*) FILTER (WHERE rating IS NOT NULL)                       AS ratings_count,
-        ROUND(AVG(rating) FILTER (WHERE rating IS NOT NULL)::numeric, 1) AS avg_rating,
-        -- Distribution buckets
-        COUNT(*) FILTER (WHERE rating = 0.5) AS r05,
-        COUNT(*) FILTER (WHERE rating = 1.0) AS r10,
-        COUNT(*) FILTER (WHERE rating = 1.5) AS r15,
-        COUNT(*) FILTER (WHERE rating = 2.0) AS r20,
-        COUNT(*) FILTER (WHERE rating = 2.5) AS r25,
-        COUNT(*) FILTER (WHERE rating = 3.0) AS r30,
-        COUNT(*) FILTER (WHERE rating = 3.5) AS r35,
-        COUNT(*) FILTER (WHERE rating = 4.0) AS r40,
-        COUNT(*) FILTER (WHERE rating = 4.5) AS r45,
-        COUNT(*) FILTER (WHERE rating = 5.0) AS r50
-      FROM user_games
-      WHERE igdb_game_id = $1
+        ug.*,
+        ls.likes_count,
+        cs.total AS collections_total,
+        cs.public_count AS collections_public,
+        cs.private_count AS collections_private,
+        rs.reviews_count
+      FROM ug_stats ug
+      CROSS JOIN likes_stat ls
+      CROSS JOIN colls_stat cs
+      CROSS JOIN reviews_stat rs
     `;
-    const likesQuery = 'SELECT COUNT(*) FROM game_likes WHERE igdb_game_id = $1';
-    const collsQuery = `
-      SELECT 
-        COUNT(DISTINCT cg.collection_id) as total,
-        COUNT(DISTINCT CASE WHEN c.is_public = true THEN cg.collection_id END) as public_count,
-        COUNT(DISTINCT CASE WHEN c.is_public = false THEN cg.collection_id END) as private_count
-      FROM collection_games cg
-      JOIN collections c ON cg.collection_id = c.id
-      WHERE cg.igdb_game_id = $1
-    `;
-    const reviewsQuery = 'SELECT COUNT(*) FROM reviews WHERE igdb_game_id = $1';
 
-    const [statsRes, likesRes, collsRes, reviewsRes] = await Promise.all([
-      pool.query(statsQuery, [igdbGameId]),
-      pool.query(likesQuery, [igdbGameId]),
-      pool.query(collsQuery, [igdbGameId]),
-      pool.query(reviewsQuery, [igdbGameId]),
-    ]);
-
-    const s = statsRes.rows[0];
-    const cStats = collsRes.rows[0];
+    const { rows } = await pool.query(query, [igdbGameId]);
+    const s = rows[0];
 
     return {
-      likes: parseInt(likesRes.rows[0].count, 10),
+      likes: parseInt(s.likes_count, 10),
       playing: parseInt(s.playing_count, 10),
       completed: parseInt(s.completed_count, 10),
       backlog: parseInt(s.backlog_count, 10),
@@ -145,10 +154,10 @@ const Game = {
       dropped: parseInt(s.dropped_count, 10),
       ratingsCount: parseInt(s.ratings_count, 10),
       avgRating: s.avg_rating ? parseFloat(s.avg_rating) : 0,
-      collectionsCount: parseInt(cStats.total, 10),
-      collectionsPublic: parseInt(cStats.public_count, 10),
-      collectionsPrivate: parseInt(cStats.private_count, 10),
-      reviewsCount: parseInt(reviewsRes.rows[0].count, 10),
+      collectionsCount: parseInt(s.collections_total, 10),
+      collectionsPublic: parseInt(s.collections_public, 10),
+      collectionsPrivate: parseInt(s.collections_private, 10),
+      reviewsCount: parseInt(s.reviews_count, 10),
       ratingDistribution: [
         parseInt(s.r05, 10),
         parseInt(s.r10, 10),
@@ -159,8 +168,8 @@ const Game = {
         parseInt(s.r35, 10),
         parseInt(s.r40, 10),
         parseInt(s.r45, 10),
-        parseInt(s.r50, 10)
-      ]
+        parseInt(s.r50, 10),
+      ],
     };
   },
 

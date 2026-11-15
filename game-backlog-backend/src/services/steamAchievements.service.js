@@ -171,6 +171,12 @@ const getOrFetchUserProgress = async (userId, steamId64, appId, forceRefresh = f
         }
 
         await client.query('COMMIT');
+        if (recentAchievementFetches.size > 500) {
+            const cutoff = Date.now() - USER_PROGRESS_TTL_MS;
+            for (const [k, ts] of recentAchievementFetches.entries()) {
+                if (ts < cutoff) recentAchievementFetches.delete(k);
+            }
+        }
         recentAchievementFetches.set(cacheKey, Date.now());
     } catch (err) {
         await client.query('ROLLBACK');

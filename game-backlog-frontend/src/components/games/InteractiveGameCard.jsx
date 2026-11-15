@@ -1,6 +1,6 @@
 import { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Play, ShoppingCart, Trash2, Plus, FolderPlus, MoreHorizontal, Archive, Heart } from 'lucide-react';
+import { Check, Play, ShoppingCart, Trash2, Plus, FolderPlus, MoreHorizontal, Archive, Heart, Sparkles } from 'lucide-react';
 import { getGameCover, formatIGDBImage, PLACEHOLDER_COVER } from '../../utils/formatters';
 import SteamIcon from '../../assets/steam-icon.svg?react';
 import StatusMenu from './StatusMenu';
@@ -11,7 +11,7 @@ import { useCardMenu } from '../../hooks/useCardMenu';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
-const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true, showAddButton = true }) => {
+const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRatingChange, showStatus = true, showAddButton = true, showMatchBadge = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -235,6 +235,15 @@ const InteractiveGameCard = ({ game, interactive = false, onStatusChange, onRati
             >
               <SteamIcon className="w-3 h-3 fill-[#00adee]" />
               Steam
+            </span>
+          )}
+          {showMatchBadge && game.match_percent && (
+            <span
+              title={`${game.match_percent}% affinity match`}
+              className="absolute bottom-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-sm border border-primary-yellow/40 text-[10px] font-extrabold text-primary-yellow shadow-md"
+            >
+              <Sparkles className="w-3 h-3" />
+              {game.match_percent}%
             </span>
           )}
         </div>

@@ -102,21 +102,21 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
         className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer group h-full flex flex-col"
       >
         {/* Header con Countdown */}
-        <div className="h-12 flex items-center px-4 relative w-full">
+        <div className="h-16 px-4 relative flex items-center justify-between w-full">
           {/* Countdown Badge */}
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold ${countdown.color}`}>
+          <div className={`absolute left-4 top-4 flex items-center gap-2 px-3 py-1 rounded-md text-sm font-semibold ${countdown.color}`}>
             <Clock size={14} />
             {countdown.text}
           </div>
 
           {/* IGDB Rating (si existe) */}
           {game.rating && (
-            <div className="ml-auto mr-8">
+            <div className="ml-auto mr-12">
               <RatingBadge rating={game.rating} size="sm" />
             </div>
           )}
 
-          <div className="absolute right-2 z-30" data-card-menu={cardId}>
+          <div className="absolute right-4 top-4 z-30" data-card-menu={cardId}>
             <button
               type="button"
               onClick={(e) => {
@@ -124,7 +124,7 @@ const AnticipatedGameCard = ({ game, interactive = false, onWishlistToggle, show
                 e.stopPropagation();
                 toggleOptionsMenu();
               }}
-              className="p-2 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
             >
               <MoreHorizontal size={20} />
             </button>

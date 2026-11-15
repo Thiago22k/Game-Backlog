@@ -13,6 +13,7 @@ const SteamCallback = lazy(() => import('../pages/auth/SteamCallback'));
 const ForgotPassword = lazy(() => import('../pages/auth/ForgotPassword'));
 const ResetPassword = lazy(() => import('../pages/auth/ResetPassword'));
 const Landing = lazy(() => import('../pages/Landing'));
+const Recommendations = lazy(() => import('../pages/Recommendations'));
 const ProfileLayout = lazy(() => import('../pages/profile/ProfileLayout'));
 const ProfileStats = lazy(() => import('../pages/profile/ProfileStats'));
 const ProfileGames = lazy(() => import('../pages/profile/ProfileGames'));
@@ -123,6 +124,14 @@ const AppRoutes = () => {
 
           {/* Explore públicos */}
           <Route path="/explore" element={<Explore />} />
+          <Route
+            path="/recommendations"
+            element={
+              <PrivateRoute>
+                <Recommendations />
+              </PrivateRoute>
+            }
+          />
           <Route path="/collections" element={<ExploreCollections />} />
 
           {/* Game details público */}

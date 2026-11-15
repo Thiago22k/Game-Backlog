@@ -6,6 +6,22 @@ const recommendationService = require('../services/recommendation.service');
 const { isValidRating } = require('../utils/validation');
 const SteamAccount = require('../models/steam.model');
 
+const slimGameDetails = (g) => {
+  if (!g) return null;
+  return {
+    id: g.id,
+    slug: g.slug,
+    name: g.name,
+    cover: g.cover || null,
+    artworks: Array.isArray(g.artworks) ? g.artworks.slice(0, 1) : undefined,
+    screenshots: Array.isArray(g.screenshots) ? g.screenshots.slice(0, 1) : undefined,
+    genres: g.genres || [],
+    first_release_date: g.first_release_date || null,
+    rating: g.rating ?? null,
+    game_type: g.game_type ?? 0,
+  };
+};
+
 // Buscar juegos en IGDB
 const searchGames = async (req, res) => {
   try {
@@ -201,9 +217,11 @@ const getUserGames = async (req, res) => {
 
     const gamesDetails = await igdbService.getGamesByIds(igdbGameIds);
 
+    const gamesById = new Map(gamesDetails.map(g => [g.id, slimGameDetails(g)]));
+
     const gamesWithDetails = userGames.map(userGame => ({
       ...userGame,
-      game_details: gamesDetails.find(g => g.id === userGame.igdb_game_id) || null
+      game_details: gamesById.get(userGame.igdb_game_id) || null
     }));
 
     res.json({
@@ -449,16 +467,35 @@ const getGameStats = async (req, res) => {
   }
 };
 
-// Obtener recomendaciones personalizadas
+// Obtener recomendaciones personalizadas con modos y filtros
 const getRecommendations = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const limit = parseInt(req.query.limit) || 10;
-    const games = await recommendationService.getRecommendations(userId, limit);
+    const userId = req.user?.userId || null;
+    const seedGameId = req.query.seedGameId ? Number(req.query.seedGameId) : null;
+
+    if (!userId && !seedGameId) {
+      return res.status(401).json({ error: 'Autenticación requerida' });
+    }
+
+    const result = await recommendationService.getRecommendations(userId, {
+      limit: req.query.limit,
+      mode: req.query.mode || (seedGameId ? 'because_you_played' : 'for_you'),
+      seedGameId,
+      genres: req.query.genres,
+      excludeGenres: req.query.excludeGenres,
+      themes: req.query.themes,
+      platforms: req.query.platforms,
+      gameModes: req.query.gameModes,
+      minYear: req.query.minYear,
+      maxYear: req.query.maxYear,
+      minRating: req.query.minRating,
+    });
 
     res.json({
-      total: games.length,
-      games
+      total: result.games.length,
+      mode: result.mode,
+      profile_summary: result.profile_summary,
+      games: result.games,
     });
   } catch (error) {
     console.error('Error en getRecommendations:', error);

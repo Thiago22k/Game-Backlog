@@ -58,21 +58,22 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                 className="bg-primary-navy-dark rounded-2xl overflow-hidden hover:-translate-y-1 hover:bg-primary-navy-light transition-all duration-200 cursor-pointer group h-full flex flex-col"
             >
                 {/* Header con Botón Like, Rating (hover) y Options Menu */}
-                <div className="h-12 px-4 relative flex items-center justify-between w-full">
+                <div className="h-16 px-4 relative flex items-center justify-center w-full">
                     {/* Like Button (Izquierda) */}
-                    <div onClick={(e) => e.stopPropagation()} className="mt-1 z-20">
+                    <div onClick={(e) => e.stopPropagation()} className="absolute left-4 top-4 z-20">
                         <GameLikeButton
                             igdbGameId={gameId}
                             gameName={game.name}
                             coverUrl={game.cover?.image_id || game.cover?.url}
                             size="sm"
                             showCount={true}
+                            rounded="rounded-md"
                         />
                     </div>
 
                     {/* Star Rating (Centro, on hover) */}
                     {currentRating > 0 && (
-                        <div className="absolute left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                             <StarRating
                                 rating={currentRating}
                                 interactive={false}
@@ -80,7 +81,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                         </div>
                     )}
 
-                    <div className="z-30 mt-1" data-card-menu={cardId}>
+                    <div className="absolute right-4 top-4 z-30" data-card-menu={cardId}>
                         <button
                             type="button"
                             onClick={(e) => {
@@ -88,7 +89,7 @@ const LikedGameCard = ({ game, showAddButton = true }) => {
                                 e.stopPropagation();
                                 toggleOptionsMenu();
                             }}
-                            className="p-1.5 rounded-full text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                            className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
                         >
                             <MoreHorizontal size={20} />
                         </button>

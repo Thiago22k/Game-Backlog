@@ -130,7 +130,8 @@ const GameDetails = () => {
   const [isCollectionModalOpen, setIsCollectionModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [myReview, setMyReview] = useState(null);
-
+  const [smartSimilarGames, setSmartSimilarGames] = useState([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const [banner, setBanner] = useState(null);
   const [activeTab, setActiveTab] = useState('stats');
   const [lightboxState, setLightboxState] = useState({ isOpen: false, index: 0 });
@@ -209,6 +210,37 @@ const GameDetails = () => {
       setBanner(null);
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (activeTab !== 'similar' || !game?.id) return;
+
+    let cancelled = false;
+    const fetchSmartSimilar = async () => {
+      setLoadingSimilar(true);
+      try {
+        const res = await axios.get(ENDPOINTS.GAMES.RECOMMENDATIONS, {
+          params: {
+            mode: 'because_you_played',
+            seedGameId: game.id,
+            limit: 10,
+          },
+        });
+        if (!cancelled) {
+          const recs = res.data?.games || [];
+          setSmartSimilarGames(recs.length > 0 ? recs : (game.similar_games || []));
+        }
+      } catch {
+        if (!cancelled) {
+          setSmartSimilarGames(game.similar_games || []);
+        }
+      } finally {
+        if (!cancelled) setLoadingSimilar(false);
+      }
+    };
+
+    fetchSmartSimilar();
+    return () => { cancelled = true; };
+  }, [activeTab, game?.id, isAuthenticated]);
 
   // ── Fetch User Game ──────────────────────────────────────────────────────
   const fetchUserGame = useCallback(async () => {
@@ -571,7 +603,7 @@ const GameDetails = () => {
 
             {/* Tab Navigation */}
             <div className="border-b border-gray-700 overflow-x-auto lg:overflow-x-visible custom-scrollbar mb-6">
-              <nav className="-mb-px flex space-x-6 sm:space-x-8 px-1 pb-1">
+              <nav className="-mb-px flex space-x-6 sm:space-x-8 px-1">
                 {TABS.map((tab) => {
                   const isActive = activeTab === tab.id;
                   const Icon = tab.icon;
@@ -810,28 +842,66 @@ const GameDetails = () => {
 
               {activeTab === 'similar' && (
                 <div className="animate-in fade-in duration-300">
-                  {similarGames.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                      {similarGames.map((sg) => (
-                        <div
-                          key={sg.id}
-                          onClick={() => navigate(`/game/${sg.slug || sg.id}`)}
-                          className="cursor-pointer group"
-                        >
-                          <div className="aspect-[3/4] overflow-hidden rounded-xl ring-1 ring-white/10 group-hover:ring-primary-yellow transition-all duration-300">
-                            <img
-                              src={getGameCover(sg)}
-                              alt={sg.name}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                              onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
-                            />
-                          </div>
-                          <p className="mt-2 text-xs font-medium text-gray-400 group-hover:text-white truncate transition-colors">
-                            {sg.name}
-                          </p>
+                  {loadingSimilar ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                      {Array.from({ length: 10 }).map((_, idx) => (
+                        <div key={`sim-skel-${idx}`} className="animate-pulse">
+                          <div className="aspect-[3/4] rounded-xl bg-primary-navy-dark" />
+                          <div className="h-3 bg-primary-navy-dark rounded mt-2 w-3/4" />
                         </div>
                       ))}
                     </div>
+                  ) : smartSimilarGames.length > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-xs text-gray-400">
+                          {isAuthenticated
+                            ? 'Ranked by your library tastes & game similarity (excluding owned games)'
+                            : 'Ranked by gameplay, themes & community similarity'}
+                        </span>
+                        {isAuthenticated && (
+                          <Link
+                            to={`/recommendations?mode=because_you_played&seedGameId=${game.id}`}
+                            className="text-xs text-primary-yellow hover:underline font-medium"
+                          >
+                            Filter similar games →
+                          </Link>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                        {smartSimilarGames.map((sg) => (
+                          <div
+                            key={sg.id}
+                            onClick={() => navigate(`/game/${sg.slug || sg.id}`)}
+                            className="cursor-pointer group"
+                          >
+                            <div className="relative aspect-[3/4] overflow-hidden rounded-xl ring-1 ring-white/10 group-hover:ring-primary-yellow transition-all duration-300">
+                              <img
+                                src={getGameCover(sg)}
+                                alt={sg.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                loading="lazy"
+                                onError={(e) => { e.target.src = 'https://via.placeholder.com/264x374?text=No+Cover'; }}
+                              />
+                              {isAuthenticated && sg.match_percent && (
+                                <span className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/85 border border-primary-yellow/40 text-primary-yellow text-[10px] font-extrabold">
+                                  {sg.match_percent}%
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-2 text-xs font-medium text-gray-300 group-hover:text-white truncate transition-colors" title={sg.name}>
+                              {sg.name}
+                            </p>
+                            {sg.reasons?.[0] && (
+                              <p className="text-[10px] text-gray-500 truncate" title={sg.reasons[0]}>
+                                {sg.reasons[0]}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   ) : (
                     <div className="bg-primary-navy-dark rounded-2xl p-12 text-center border border-dashed border-gray-700">
                       <Layers size={48} className="mx-auto text-gray-600 mb-4" />

@@ -57,6 +57,8 @@ app.use(cors({
   },
   credentials: true
 }));
+const compression = require('compression');
+app.use(compression());
 app.use(express.json());
 app.use(cookieParser());
 app.use(requestLogger); // Log de todas las peticiones

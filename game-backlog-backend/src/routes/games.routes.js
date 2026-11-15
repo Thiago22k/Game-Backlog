@@ -3,17 +3,18 @@ const router = express.Router();
 const gamesController = require('../controllers/games.controller');
 const likesController = require('../controllers/likes.controller');
 const { authenticateToken, optionalAuth } = require('../middlewares/auth');
+const { memoryCache } = require('../middlewares/memoryCache');
 
 // Rutas públicas (búsqueda de juegos en IGDB)
 router.get('/search', gamesController.searchGames);
 router.get('/igdb/:id', gamesController.getGameDetails);
-router.get('/popular', gamesController.getPopularGames);
-router.get('/recent', gamesController.getRecentGames);
-router.get('/anticipated', gamesController.getMostAnticipated);
-router.get('/explore', gamesController.exploreGames);
-router.get('/genres', gamesController.getGenres);
-router.get('/platforms', gamesController.getPlatforms);
-router.get('/recommendations', authenticateToken, gamesController.getRecommendations);
+router.get('/popular', memoryCache(300), gamesController.getPopularGames);
+router.get('/recent', memoryCache(300), gamesController.getRecentGames);
+router.get('/anticipated', memoryCache(300), gamesController.getMostAnticipated);
+router.get('/genres', memoryCache(3600), gamesController.getGenres);
+router.get('/platforms', memoryCache(3600), gamesController.getPlatforms);
+router.get('/explore', memoryCache(180), gamesController.exploreGames);
+router.get('/recommendations', optionalAuth, gamesController.getRecommendations);
 router.get('/user/:username', optionalAuth, gamesController.getUserGames);
 
 router.get('/stats/:igdb_game_id', gamesController.getGameStats);

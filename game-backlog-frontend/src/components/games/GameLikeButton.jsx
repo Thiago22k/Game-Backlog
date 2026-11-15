@@ -19,6 +19,8 @@ const GameLikeButton = ({
     coverUrl,
     size = 'md',
     showCount = true,
+    rounded = 'rounded-md',
+    className = '',
 }) => {
     const { isAuthenticated } = useAuth();
     const { liked, likesCount, loading, toggling, toggleLike } = useGameLikes(igdbGameId);
@@ -48,12 +50,13 @@ const GameLikeButton = ({
             disabled={toggling}
             title={liked ? 'Unlike this game' : 'Like this game'}
             className={`
-                flex items-center gap-1.5 ${s.padding} rounded-full transition-all duration-200
+                flex items-center gap-1.5 ${s.padding} ${rounded} transition-all duration-200
                 ${liked
                     ? 'bg-pink-500/20 text-pink-400 hover:bg-pink-500/30 ring-1 ring-pink-500/40'
                     : 'bg-black/30 text-gray-400 hover:bg-pink-500/10 hover:text-pink-400 ring-1 ring-white/10'
                 }
                 ${toggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}
+                ${className}
             `}
         >
             <Heart

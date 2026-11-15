@@ -602,7 +602,10 @@ const getGamesByIds = async (gameIds) => {
                involved_companies.company.name, involved_companies.developer, involved_companies.publisher, 
                game_type, 
                similar_games.id, similar_games.name, similar_games.slug, 
-               similar_games.cover.url, similar_games.cover.image_id, similar_games.rating;
+               similar_games.cover.url, similar_games.cover.image_id, similar_games.rating, themes.id, 
+               themes.name, game_modes.id, game_modes.name, player_perspectives.id, 
+               player_perspectives.name, franchises.id, franchises.name, collection.id, collection.name,
+               keywords.id, keywords.name;
         where id = (${missingIds.join(',')});
         limit 500;
       `,
@@ -637,32 +640,91 @@ const getGamesByIds = async (gameIds) => {
   }
 };
 
-// Obtener candidatos para recomendaciones (datos básicos)
+// Obtener candidatos enriquecidos para recomendaciones con filtros combinables
 const getRecommendationsCandidates = async (options = {}) => {
-  const cacheKey = `rec_cand_${JSON.stringify(options)}`;
+  const cacheKey = `rec_cand_v2_${JSON.stringify(options)}`;
   const cached = getFromMemoryCache(cacheKey);
   if (cached) return cached;
 
   try {
-    const { genreIds = [], gameIds = [], limit = 10 } = options;
+    const {
+      genreIds = [],
+      excludeGenreIds = [],
+      themeIds = [],
+      platformIds = [],
+      gameModeIds = [],
+      gameIds = [],
+      minYear = null,
+      maxYear = null,
+      minRating = 70,
+      minRatingCount = 10,
+      maxRatingCount = null,
+      limit = 35,
+    } = options;
+
     const token = await getAccessToken();
 
-    let whereClause = 'cover != null';
-    if (genreIds.length > 0) {
-      whereClause += ` & genres = (${genreIds.join(',')}) & rating > 70 & rating_count > 10`;
-    } else if (gameIds.length > 0) {
-      whereClause += ` & id = (${gameIds.join(',')})`;
+    const conditions = [
+      'cover != null',
+      'version_parent = null',
+      'game_type = (0, 8, 9, 10, 11)',
+    ];
+
+    if (gameIds.length > 0) {
+      conditions.push(`id = (${gameIds.join(',')})`);
     } else {
+      if (genreIds.length > 0) {
+        conditions.push(`genres = (${genreIds.join(',')})`);
+      }
+      if (themeIds.length > 0) {
+        conditions.push(`themes = (${themeIds.join(',')})`);
+      }
+      if (minRating !== null && minRating !== undefined) {
+        conditions.push(`rating >= ${Number(minRating)}`);
+      }
+      if (minRatingCount !== null && minRatingCount !== undefined) {
+        conditions.push(`total_rating_count >= ${Number(minRatingCount)}`);
+      }
+      if (maxRatingCount !== null && maxRatingCount !== undefined) {
+        conditions.push(`total_rating_count <= ${Number(maxRatingCount)}`);
+      }
+    }
+
+    if (excludeGenreIds.length > 0) {
+      conditions.push(`genres != (${excludeGenreIds.join(',')})`);
+    }
+    if (platformIds.length > 0) {
+      conditions.push(`platforms = (${platformIds.join(',')})`);
+    }
+    if (gameModeIds.length > 0) {
+      conditions.push(`game_modes = (${gameModeIds.join(',')})`);
+    }
+    if (minYear) {
+      const startTs = Math.floor(new Date(`${Number(minYear)}-01-01T00:00:00Z`).getTime() / 1000);
+      conditions.push(`first_release_date >= ${startTs}`);
+    }
+    if (maxYear) {
+      const endTs = Math.floor(new Date(`${Number(maxYear)}-12-31T23:59:59Z`).getTime() / 1000);
+      conditions.push(`first_release_date <= ${endTs}`);
+    }
+
+    // Evitar consultas sin ningún criterio acotado
+    if (gameIds.length === 0 && genreIds.length === 0 && themeIds.length === 0) {
       return [];
     }
+
+    const sortField = maxRatingCount ? 'rating desc' : 'total_rating_count desc';
 
     const response = await axios.post(
       'https://api.igdb.com/v4/games',
       `
-        fields name, slug, cover.url, cover.image_id, rating, total_rating_count, first_release_date, genres.name;
-        where ${whereClause};
-        sort total_rating_count desc;
-        limit ${limit};
+        fields name, slug, summary, cover.url, cover.image_id, rating, total_rating_count, first_release_date,
+               genres.id, genres.name, themes.id, themes.name, game_modes.id, game_modes.name,
+               player_perspectives.id, player_perspectives.name, platforms.id, platforms.name,
+               franchises.id, franchises.name, collection.id, collection.name, keywords.id, keywords.name;
+        where ${conditions.join(' & ')};
+        sort ${sortField};
+        limit ${Math.min(Number(limit) || 35, 60)};
       `,
       {
         headers: {
@@ -672,8 +734,9 @@ const getRecommendationsCandidates = async (options = {}) => {
       }
     );
 
-    setToMemoryCache(cacheKey, response.data, 24); // Cache recommendations for 24h
-    return response.data;
+    const data = response.data || [];
+    setToMemoryCache(cacheKey, data, 12); // Cache 12h
+    return data;
   } catch (error) {
     console.error('❌ Error obteniendo candidatos de recomendación:', error.message);
     return [];

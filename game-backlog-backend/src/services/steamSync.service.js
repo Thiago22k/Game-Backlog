@@ -3,6 +3,7 @@ const SteamAccount = require('../models/steam.model');
 const steamService = require('./steam.service');
 const igdbService = require('./igdb.service');
 const Activity = require('../models/activity.model');
+const steamSpyService = require('./steamspy.service');
 
 const TWO_WEEKS_SECONDS = 14 * 24 * 60 * 60;
 
@@ -415,6 +416,19 @@ const commitImport = async (userId, { items = [], ignoredAppIds = [], manualOver
         }).catch((err) => console.error('Error registrando actividad de importación Steam:', err));
     }
 
+    // Pre-calentar etiquetas comunitarias de SteamSpy en segundo plano para los juegos más jugados
+    const topPlayedAppIds = [...library]
+        .filter((g) => !g.ignored && Number(g.playtime_minutes || 0) > 60)
+        .sort((a, b) => Number(b.playtime_minutes || 0) - Number(a.playtime_minutes || 0))
+        .slice(0, 15)
+        .map((g) => Number(g.steam_appid));
+
+    if (topPlayedAppIds.length > 0) {
+        Promise.all(
+            topPlayedAppIds.map((appId) => steamSpyService.fetchAndPersistAppTags(appId).catch(() => null))
+        ).catch(() => { });
+    }
+
     return {
         imported: importedCount,
         linked_existing: linkedExistingCount,
@@ -587,6 +601,19 @@ const syncUserSteamLibrary = async (userId, { enforceCooldown = false, importNew
         throw err;
     } finally {
         client.release();
+    }
+
+    // Pre-calentar etiquetas comunitarias de SteamSpy en segundo plano para los juegos más jugados
+    const topPlayedAppIds = [...library]
+        .filter((g) => !g.ignored && Number(g.playtime_minutes || 0) > 60)
+        .sort((a, b) => Number(b.playtime_minutes || 0) - Number(a.playtime_minutes || 0))
+        .slice(0, 15)
+        .map((g) => Number(g.steam_appid));
+
+    if (topPlayedAppIds.length > 0) {
+        Promise.all(
+            topPlayedAppIds.map((appId) => steamSpyService.fetchAndPersistAppTags(appId).catch(() => null))
+        ).catch(() => { });
     }
 
     return {
