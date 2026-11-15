@@ -13,17 +13,20 @@ El proyecto está dividido en dos partes principales:
 ### Backend
 - **Node.js & Express**: Framework web para la API.
 - **PostgreSQL**: Base de datos relacional. Configuración soportada por el paquete `pg`.
-- **Axios**: Cliente HTTP para conectarse a la API externa de IGDB.
-- **Bcrypt & JSONWebToken (JWT)**: Para el encriptado de contraseñas y la autenticación basada en tokens.
+- **Axios**: Cliente HTTP para conectarse a las APIs externas de IGDB y Steam Web API.
+- **Bcrypt & JSONWebToken (JWT)**: Para el encriptado de contraseñas y la autenticación basada en tokens / cookies HTTP-only.
+- **OpenID 2.0**: Para autenticación y vinculación directa con cuentas de Steam.
+- **Node-cron**: Planificador de tareas en segundo plano para sincronización automática de bibliotecas y monitoreo de precios/ofertas de Steam.
 - **Express Rate Limit & CORS**: Middlewares de seguridad.
 - **Dotenv**: Manejo de variables de entorno.
 
 ### Frontend
 - **React 19 & Vite 7**: Librería frontend y entorno de construcción rápido.
 - **Tailwind CSS & PostCSS**: Utilizado para el diseño y estilos en toda la interfaz.
-- **React Router DOM**: Para el enrutamiento y la navegación SPA.
-- **Lucide React**: Biblioteca de iconos SVG.
+- **React Router DOM**: Para el enrutamiento y la navegación SPA con carga perezosa (`React.lazy` + `Suspense`).
+- **Lucide React & React Icons**: Bibliotecas de iconos SVG.
 - **React Hot Toast**: Para notificaciones y alertas en pantalla.
+- **BroadcastChannel API**: Para sincronizar eventos de autenticación por ventana emergente (Steam popup auth).
 
 ---
 
@@ -113,4 +116,10 @@ El proyecto está dividido en dos partes principales:
 4. **Reseñas (Reviews):** Los usuarios escriben reseñas analíticas por título jugado. La comunidad puede interactuar a través de botones de Like a lo largo del flujo y creando árboles de comentarios.
 5. **Colecciones y Listas:** La plataforma permite organizar y exponer listas de títulos catalogados por el usuario para su fácil descubrimiento público en una grilla exploratoria abierta a Likes comunitarios.
 6. **Entorno Social (Follows y Activity):** A fin de conectar usuarios con visiones similares de gaming, es posible seguir perfiles. Las acciones que sus integrantes efectúen (como añadir juegos, seguir personas, o escribir reseñas) irán poblando un muro o "Activity Feed" global y generando alertas hacia la bandeja centralizada de notificaciones visual en tiempo real.
-7. **Panel de Moderación y Reportes (Admin Dashboard):** Aquellos administradores designados poseen interfaz privilegiada para moderar cualquier contenido inapropiado o violatorio reportado internamente en cualquier subnivel (ya sea perfiles, colecciones, reseñas puntuales o mismos comentarios menores). Tienen la potestad técnica de desestimar reportes o de aplicar baneos correctivos a usuarios.
+7. **Integración con Steam:**
+   - **Autenticación y Vinculación:** Inicio de sesión y registro directo mediante Steam OpenID en ventanas emergentes no invasivas, además de vinculación de cuentas existentes desde `Settings`.
+   - **Importación Masiva de Biblioteca:** Mapeo inteligente con IGDB considerando tiempo de juego, actividad reciente y asignación automática/manual de estados.
+   - **Logros en Tiempo Real:** Visualización del progreso y porcentaje de logros de Steam directamente en los detalles de cada juego.
+   - **Alertas de Descuentos en Wishlist:** Notificaciones automáticas cuando un título deseado entra en oferta en Steam Store.
+   - **Sincronización Automática:** Jobs periódicos de actualización de biblioteca y horas jugadas.
+8. **Panel de Moderación y Reportes (Admin Dashboard):** Aquellos administradores designados poseen interfaz privilegiada para moderar cualquier contenido inapropiado o violatorio reportado internamente en cualquier subnivel (ya sea perfiles, colecciones, reseñas puntuales o mismos comentarios menores). Tienen la potestad técnica de desestimar reportes o de aplicar baneos correctivos a usuarios.

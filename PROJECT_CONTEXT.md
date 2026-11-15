@@ -151,41 +151,53 @@ Los 5 estados canónicos en BD y backend son:
 
 ## 7. Estado Actual de la Integración con Steam
 
-### Implementado hasta la fecha (Fases 1, 2 y 3)
+### Implementado hasta la fecha (Fases 1 a 6 completas)
 
 #### 1. Base de Datos
 - Migración `001_steam_integration.sql`: Tablas `steam_accounts`, `steam_igdb_map`, `steam_library`, y campos extendidos en `user_games` (`source`, `status_set_by`, `steam_appid`, `playtime_minutes`, `last_played_at`).
 - Migración `002_steam_auth.sql`: Soporte para usuarios creados exclusivamente vía Steam (contraseña opcional y flags asociados).
+- Migración `003_steam_prices_and_alerts.sql`: Tablas `steam_prices` (caché de precios y descuentos de Steam Store) y `steam_price_alerts` (registro de notificaciones enviadas para evitar alertas repetidas de ofertas).
 
 #### 2. Backend
 - `src/services/steam.service.js`:
   - Manejo de OpenID 2.0 (construcción de URLs de autenticación, verificación de assertions criptográficas).
-  - Consulta a Steam Web API (`GetPlayerSummaries`, `GetOwnedGames`, resolución de Vanity URLs).
+  - Consulta a Steam Web API (`GetPlayerSummaries`, `GetOwnedGames`, resolución de Vanity URLs e ID64).
   - Firma y verificación de estados JWT (`signState`, `verifyState`) y tokens temporales de registro (`signSignupToken`, `verifySignupToken`).
 - `src/services/steamSync.service.js`:
-  - Algoritmo de mapeo e importación masiva de juegos de Steam contra IGDB (coincidencia por nombre, filtrado y resolución).
+  - Algoritmo de mapeo e importación masiva de juegos de Steam contra IGDB (coincidencia por nombre, filtrado y resolución con caché).
+  - Asignación inteligente de estados basada en `playtime` y actividad reciente.
+- `src/services/steamPrice.service.js`:
+  - Consulta y almacenamiento en caché de precios en Steam Store (`api.steampowered.com/api/appdetails`).
+  - Verificación de descuentos y detección de ofertas.
+- `src/services/steamAchievements.service.js`:
+  - Consulta y cálculo de logros desbloqueados vs totales del usuario vía `ISteamUserStats/GetPlayerAchievements`.
+- `src/jobs/steamSync.job.js`:
+  - Cron / job periódico de auto-sincronización de bibliotecas para usuarios con `auto_sync = true`.
+- `src/jobs/steamWishlistSale.job.js`:
+  - Cron periódico de escaneo de precios de juegos en la wishlist de los usuarios para generar notificaciones automáticas de ofertas (`STEAM_WISHLIST_SALE`).
 - `src/controllers/steam.controller.js`:
-  - `GET /api/steam/login`: Inicia el flujo OpenID (soporta flujo popup mediante parámetros `popup` y `origin`).
-  - `POST /api/steam/link`: Inicia vinculación de Steam para usuarios autenticados.
-  - `GET /api/steam/callback`: Recibe la respuesta de Steam, autentica al usuario o redirige a registro / settings.
-  - `POST /api/steam/signup`: Finaliza el registro para nuevos usuarios que provienen de Steam.
-  - `GET /api/steam/status` y `DELETE /api/steam/unlink`: Consulta y desvinculación de cuenta Steam.
-  - `GET /api/steam/import/preview` y `POST /api/steam/import`: Previsualización y confirmación de importación masiva de biblioteca.
+  - Flujo OpenID: `GET /api/steam/login`, `POST /api/steam/link`, `GET /api/steam/callback`, `POST /api/steam/signup`.
+  - Gestión: `GET /api/steam/status`, `DELETE /api/steam/unlink`, configuración de auto-sincronización.
+  - Importación: `GET /api/steam/import/preview`, `POST /api/steam/import`.
+  - Logros y Precios: `GET /api/steam/achievements/:gameId`, `GET /api/steam/price/:gameId`.
 
 #### 3. Frontend
 - **Autenticación con Popup (BroadcastChannel & postMessage fallback):**
-  - `useSteamPopup.js` y `useSteamLinkPopup.js`: Hooks que abren una ventana popup para autenticación o vinculación con Steam sin perder el estado de la página actual.
-  - `src/pages/auth/SteamCallback.jsx` y `src/utils/steamAuthChannel.js`: Página puente que procesa el callback en el popup y notifica a la ventana principal vía canal cruzado.
-  - Botón de "Continue with Steam" en `Login.jsx` y `Register.jsx`.
-  - Flujo de completar registro en `SteamRegister.jsx`.
+  - `useSteamPopup.js` y `useSteamLinkPopup.js`: Hooks que abren una ventana popup para autenticación o vinculación con Steam sin perder el contexto.
+  - `src/pages/auth/SteamCallback.jsx` y `src/utils/steamAuthChannel.js`: Procesamiento del callback en popup y comunicación con ventana padre.
+  - Botón de "Continue with Steam" en `Login.jsx` y `Register.jsx` (ubicado ordenadamente bajo el formulario).
+  - Flujo de registro en `SteamRegister.jsx`.
 - **Gestión e Importación:**
-  - `SteamConnectionCard.jsx`: Estado de conexión, vinculación/desvinculación con confirmación segura y botón de importación.
-  - `SteamImportModal.jsx`: Modal completo para seleccionar qué juegos importar a la biblioteca de Stackd con asignación de estados.
-
-### Siguientes Fases del Plan de Steam
-1. **Fase 4:** Detección automática y sugerencia inteligente de estados basada en `playtime` (ej: 0 minutos -> `backlog`, jugados en las últimas 2 semanas -> `playing`).
-2. **Fase 5:** Sincronización automática periódica / background worker para refrescar bibliotecas activas.
-3. **Fase 6:** Sincronización de logros de Steam y visualización en el perfil / game details.
+  - `SteamConnectionCard.jsx`: Estado de vinculación, botón de importación modal, toggle de auto-sincronización y sincronización manual.
+  - `SteamImportModal.jsx`: Modal interactivo categorizado (*Ready to Import*, *Needs Review*, *Already in Library*, *Unmatched*, *Ignored*).
+- **Logros y Tienda en Detalles del Juego:**
+  - `SteamStoreCard.jsx`: Tarjeta con precio actual de Steam, porcentaje de descuento y botón directo a Steam Store.
+  - `SteamAchievementsTab.jsx`: Pestaña dedicada a mostrar el porcentaje completado y lista de logros desbloqueados del usuario.
+- **Notificaciones de Ofertas:**
+  - Visualización y redirección de alertas de ofertas en `Navbar.jsx` (dropdown) y `Notifications.jsx`.
+- **Integración en Perfil:**
+  - Banners y prompts contextuales (`SteamLinkBanner.jsx`, `SteamEmptyPrompt.jsx`) para invitar a vincular Steam.
+  - Desglose de horas y estadísticas en `ProfileStats.jsx` y badge de Steam en `ProfileGames.jsx`.
 
 ---
 
