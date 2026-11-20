@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stackd — Diseño de Navbar & Sidebar UI</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Radio+Canada:wght@400;500;600;700&family=Ubuntu:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Radio Canada"', 'Ubuntu', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            primary: {
+              'navy-ultra-dark': '#08090d',
+              'navy-dark': '#12141d',
+              'navy': '#0f111a',
+              'navy-light': '#1b1d26',
+              'navy-elevated': '#222533',
+              cyan: '#4dd4ac',
+              'cyan-hover': '#3bb994',
+              blue: '#4a7cff',
+              yellow: '#ffde59',
+              'yellow-hover': '#e6c84c',
+              violet: '#8b7cf6',
+            },
+            text: {
+              primary: '#ffffff',
+              secondary: '#9ca3af',
+              muted: '#6b7280',
+            }
+          },
+          boxShadow: {
+            'glow-cyan': '0 0 20px -3px rgba(77, 212, 172, 0.35)',
+            'glow-yellow': '0 0 20px -3px rgba(255, 222, 89, 0.35)',
+            'glow-violet': '0 0 20px -3px rgba(139, 124, 246, 0.35)',
+            'menu': '0 16px 40px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+          },
+          keyframes: {
+            pulseSubtle: {
+              '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+              '50%': { opacity: '0.6', transform: 'scale(0.96)' },
+            },
+            radarPulse: {
+              '0%': { transform: 'scale(0.95)', boxShadow: '0 0 0 0 rgba(77, 212, 172, 0.7)' },
+              '70%': { transform: 'scale(1)', boxShadow: '0 0 0 6px rgba(77, 212, 172, 0)' },
+              '100%': { transform: 'scale(0.95)', boxShadow: '0 0 0 0 rgba(77, 212, 172, 0)' },
+            }
+          },
+          animation: {
+            'pulse-subtle': 'pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'radar': 'radarPulse 2s infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Estilos de scrollbar y utilitarios */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #08090d;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1b1d26;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2a2e3d;
+    }
+  </style>
+</head>
+<body class="bg-primary-navy-ultra-dark text-white font-sans min-h-screen antialiased flex flex-col selection:bg-primary-cyan/20 selection:text-primary-cyan">
+
+  <!-- ======================================================== -->
+  <!-- BARRA DE CONTROL DEL PROTOTIPO (TOOLBAR SUPERIOR)         -->
+  <!-- ======================================================== -->
+  <aside class="bg-primary-navy-dark border-b border-white/[0.08] px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs z-50 shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary-yellow/10 text-primary-yellow font-semibold tracking-wide border border-primary-yellow/20">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        STACKD DESIGN SYSTEM
+      </span>
+      <span class="text-gray-400 hidden sm:inline">|</span>
+      <span class="text-gray-300 font-medium hidden sm:inline">Prototipo interactivo de Navbar & Sidebar</span>
+    </div>
+
+    <!-- Controles de vista interactivos -->
+    <div class="flex items-center gap-2">
+      <!-- Selector de Layout -->
+      <div class="inline-flex p-0.5 rounded-lg bg-primary-navy-ultra-dark border border-white/10">
+        <button id="btn-view-navbar" onclick="setViewMode('navbar')" class="px-2.5 py-1 rounded-md text-xs font-medium transition text-white bg-primary-navy-light shadow-sm flex items-center gap-1.5">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-primary-yellow"></i>
+          <span>Navbar Superior</span>
+        </button>
+        <button id="btn-view-sidebar" onclick="setViewMode('sidebar')" class="px-2.5 py-1 rounded-md text-xs font-medium transition text-gray-400 hover:text-white flex items-center gap-1.5">
+          <i data-lucide="panel-left" class="w-3.5 h-3.5 text-primary-cyan"></i>
+          <span>Sidebar Lateral</span>
+        </button>
+        <button id="btn-view-split" onclick="setViewMode('split')" class="px-2.5 py-1 rounded-md text-xs font-medium transition text-gray-400 hover:text-white flex items-center gap-1.5">
+          <i data-lucide="columns-2" class="w-3.5 h-3.5 text-primary-violet"></i>
+          <span class="hidden md:inline">Vista Combinada</span>
+        </button>
+      </div>
+
+      <!-- Toggle de Juego en Vivo (Simulación) -->
+      <button id="btn-toggle-game" onclick="toggleLiveGame()" class="px-2.5 py-1 rounded-lg bg-primary-cyan/10 hover:bg-primary-cyan/20 border border-primary-cyan/30 text-primary-cyan text-xs font-medium transition flex items-center gap-1.5 cursor-pointer">
+        <i data-lucide="gamepad-2" class="w-3.5 h-3.5"></i>
+        <span id="label-live-game">Juego activo: ON</span>
+      </button>
+
+      <!-- Contador de biblioteca interactivo -->
+      <button onclick="changeGameCount(1)" title="Incrementar juegos" class="px-2 py-1 rounded-lg bg-primary-navy-light hover:bg-primary-navy-elevated border border-white/10 text-gray-300 hover:text-white text-xs font-medium transition flex items-center gap-1">
+        <i data-lucide="plus" class="w-3 h-3 text-primary-yellow"></i>
+        <span>Juegos (<span id="btn-count-num">48</span>)</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ======================================================== -->
+  <!-- CONTENEDOR PRINCIPAL DE LAS VISTAS                       -->
+  <!-- ======================================================== -->
+  <main class="flex-1 flex flex-col overflow-hidden relative" id="main-container">
+
+    <!-- ======================================================== -->
+    <!-- OPCIÓN 1: NAVBAR HORIZONTAL (Top Header)                 -->
+    <!-- ======================================================== -->
+    <section id="section-navbar" class="w-full flex flex-col border-b border-white/[0.08] bg-primary-navy transition-all duration-300">
+      
+      <!-- Label descriptivo -->
+      <div class="px-6 py-1.5 bg-primary-navy-ultra-dark/60 border-b border-white/5 flex items-center justify-between text-[11px] text-gray-400 font-mono">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-primary-yellow"></span>
+          <span>COMPONENTE: NAVBAR HORIZONTAL (Para Aplicación Web y Desktop Top Bar)</span>
+        </div>
+        <span class="hidden md:inline">Altura: 60px | Sticky Top | Glassmorphism navy-dark/95</span>
+      </div>
+
+      <!-- Header Navbar Real -->
+      <header class="h-[60px] bg-primary-navy-dark/95 backdrop-blur-md px-4 lg:px-6 flex items-center justify-between gap-4 select-none relative z-40 border-b border-white/[0.06]">
+        
+        <!-- ======================= -->
+        <!-- IZQUIERDA: Marca + Nav  -->
+        <!-- ======================= -->
+        <div class="flex items-center gap-6 xl:gap-8 h-full">
+          
+          <!-- Logo / Marca: Isotipo + Logotipo -->
+          <a href="#home" class="flex items-center gap-2.5 group cursor-pointer shrink-0 transition-transform active:scale-95" title="Stackd Inicio">
+            <!-- Isotipo SVG -->
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-cyan/20 to-primary-yellow/20 p-1 flex items-center justify-center border border-white/10 group-hover:border-primary-yellow/40 transition shadow-sm">
+              <svg class="w-5 h-5 transition-transform group-hover:scale-105" viewBox="0 0 1139 1139" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M557.467 1.40132C546.533 4.46799 442.267 56.068 252 152.335C87.2 235.801 15.4667 272.868 9.06667 277.535C6.53334 279.535 4.26667 282.735 3.33334 285.801C1.86667 291.401 1.73334 349.135 3.2 361.268C4 367.668 4.93334 369.668 8.13334 372.335C11.7333 375.401 30.2667 384.735 113.333 425.401C131.733 434.335 200.4 468.201 266 500.735C467.867 600.468 520.933 626.068 526.4 626.068C529.733 626.068 555.2 614.735 594.133 596.068C646.8 570.735 661.867 564.201 667.333 564.335C674.667 564.468 682.933 567.801 719.333 585.268C758.133 603.801 782 616.335 782 618.201C782 619.535 726.8 647.535 688.667 665.401C675.867 671.401 648 684.601 626.8 694.601C581.2 716.201 549.867 730.068 546.933 730.068C542.4 730.068 473.467 697.935 384 654.068C361.333 642.868 336.133 630.601 328 626.735C312.8 619.401 288 607.401 177.333 553.135C119.733 524.868 91.8667 511.668 62.2667 498.735C50.2667 493.401 42.2667 494.335 24 503.268C9.06667 510.601 5.6 513.935 3.46667 523.535C1.73334 531.001 1.6 618.735 3.33334 629.401C4.4 636.335 5.33334 638.068 10.2667 642.601C16 647.801 60.8 670.335 238 757.401C277.2 776.601 346.267 810.601 391.333 832.735C514.133 893.135 551.867 910.735 561.333 912.335C566.533 913.135 595.467 900.335 671.333 863.401C698.8 850.068 733.067 833.535 747.333 826.735C774.133 814.068 821.733 791.135 886 760.068C923.6 741.935 969.2 720.068 1018.67 696.468C1060.4 676.601 1112.13 651.001 1122.53 645.268C1130.27 640.868 1132.13 639.135 1134.4 634.201C1137.73 626.735 1138 610.335 1134.93 603.135C1132.27 596.735 1127.07 593.401 1092 576.201C1035.87 548.468 845.733 456.201 821.333 444.735C815.467 442.068 770.533 419.935 721.333 395.801C633.067 352.335 584 329.268 573.067 325.935C568.4 324.601 566.267 324.601 561.733 326.068C553.867 328.335 516.667 344.735 496.667 354.735C487.467 359.268 471.733 366.735 461.6 371.401L443.2 379.801L432.933 375.401C414.4 367.401 347.333 333.935 347.333 332.735C347.333 330.335 534.667 239.401 556.533 231.135C561.2 229.401 565.467 228.601 568.8 229.135C575.333 229.935 598.267 240.468 665.333 273.001C694.667 287.268 733.2 305.935 750.8 314.468C768.533 323.001 807.467 342.068 837.467 356.868C935.867 405.268 979.067 425.135 986 425.268C991.867 425.268 1015.07 415.401 1053.33 396.868C1091.07 378.468 1097.47 374.468 1099.2 367.801C1100 365.001 1100.93 344.735 1101.47 322.868C1102.27 288.735 1102.13 283.135 1100.53 284.068C1099.47 284.735 1094 288.735 1088.4 292.868C1067.33 308.468 1055.33 313.401 1038.67 313.135C1025.73 313.001 1017.6 310.201 1005.47 301.535C989.067 289.801 900.267 202.735 887.6 185.935C884.533 181.801 880 173.401 877.6 167.268C875.067 161.135 872.267 154.335 871.067 152.201C868.267 147.001 842.267 132.868 732 77.5347C625.2 23.668 577.2 0.867991 569.6 0.0679906C566.533 -0.198676 561.067 0.334657 557.467 1.40132Z" fill="url(#cyan-yellow-grad)"/>
+                <path d="M1030.27 52.4679C1006.13 70.4679 942.8 134.201 937.733 145.535C936.4 148.335 937.2 149.668 944.133 158.335C960.133 177.935 1026.4 243.668 1037.47 251.001C1040 252.601 1041.07 252.601 1043.6 251.268C1048 248.868 1092.93 204.335 1111.07 184.335C1133.07 160.068 1139.87 150.868 1138.8 147.001C1137.2 140.601 1096.8 97.2679 1064.8 67.6679C1048.67 52.8679 1041.6 47.4012 1038.53 47.4012C1037.6 47.4012 1033.87 49.6679 1030.27 52.4679Z" fill="#4dd4ac"/>
+                <path d="M38.1333 747.401C30.4 751.001 17.4667 758.735 9.73333 764.601C0.266667 771.535 0 773.268 0 813.401C0.133333 853.668 1.33333 862.335 7.2 867.401C12.9333 872.335 73.4667 903.135 206 968.735C450.133 1089.53 535.733 1131 552.267 1136.6C559.467 1139 561.6 1139.27 566.933 1137.93C574.933 1136.2 594.533 1127.67 620.933 1114.6C644.267 1103 693.867 1079 765.333 1044.73C792.533 1031.8 856.133 1001.13 906.667 976.868C957.333 952.468 1012.53 925.935 1029.33 917.801C1082.93 892.068 1126.13 869.801 1130.67 865.535C1134.8 861.535 1135.07 860.868 1136 848.201C1137.47 829.401 1136.13 775.401 1134.27 771.935C1130.93 765.668 1092 744.735 1083.73 744.735C1076.67 744.735 1012.93 774.735 832.667 862.735C708 923.668 609.6 970.468 574.8 985.535C562.4 990.868 561.467 991.135 556.8 989.401C540.8 983.668 497.333 962.735 320 875.401C107.6 770.868 53.2 744.735 47.6 744.735C45.6 744.735 41.3333 745.935 38.1333 747.401Z" fill="#ffde59"/>
+                <defs>
+                  <linearGradient id="cyan-yellow-grad" x1="0" y1="0" x2="1139" y2="1139" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#4dd4ac"/>
+                    <stop offset="1" stop-color="#ffde59"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <!-- Logotipo SVG Stackd -->
+            <svg class="h-4.5 w-auto" viewBox="0 0 964 225" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M810.373 141.3C810.373 123.5 813.273 108.6 819.073 96.6C824.873 84.4 832.773 75.2 842.773 69C852.773 62.6 864.073 59.4 876.673 59.4C884.273 59.4 891.273 61 897.673 64.2C904.273 67.4 909.873 71.9 914.473 77.7V6L959.473 0V183C959.473 187.2 959.573 191 959.773 194.4C960.173 197.6 960.773 201.4 961.573 205.8L963.973 220.5H920.173L916.273 199.2C910.473 206.6 903.673 212.6 895.873 217.2C888.073 221.8 879.273 224.1 869.473 224.1C858.873 224.1 849.073 220.7 840.073 213.9C831.073 207.1 823.873 197.5 818.473 185.1C813.073 172.7 810.373 158.1 810.373 141.3ZM855.373 138.9C855.373 148.9 856.573 157.2 858.973 163.8C861.373 170.4 864.773 175.3 869.173 178.5C873.573 181.7 878.673 183.3 884.473 183.3C889.673 183.3 894.873 182.2 900.073 180C905.273 177.8 910.073 174.7 914.473 170.7V123.9C913.873 117.3 912.473 111.9 910.273 107.7C908.073 103.3 905.073 100.1 901.273 98.1C897.673 95.9 893.473 94.8 888.673 94.8C879.073 94.8 871.073 98.6 864.673 106.2C858.473 113.8 855.373 124.7 855.373 138.9Z" fill="#FFDE59"/>
+              <path d="M648.914 220.5V6L693.914 0V118.2L739.214 63H795.014L736.814 125.7L798.914 220.5H747.614L708.914 156L693.914 172.2V220.5H648.914Z" fill="white"/>
+              <path d="M488.693 144.9C488.693 127.5 492.193 112.4 499.193 99.6C506.193 86.8 515.793 76.9 527.993 69.9C540.393 62.9 554.593 59.4 570.593 59.4C579.793 59.4 588.293 60.6 596.093 63C603.893 65.4 611.093 68.4 617.693 72L601.493 107.7C597.693 104.9 593.193 102.7 587.993 101.1C582.793 99.3 577.393 98.4 571.793 98.4C564.793 98.4 558.393 100 552.593 103.2C546.993 106.4 542.493 111.3 539.093 117.9C535.893 124.5 534.293 133 534.293 143.4C534.293 152.4 535.993 160 539.393 166.2C542.793 172.2 547.393 176.8 553.193 180C559.193 183 565.993 184.5 573.593 184.5C578.793 184.5 583.993 183.7 589.193 182.1C594.393 180.5 598.893 178.4 602.693 175.8L618.893 211.5C612.293 215.1 604.593 218.1 595.793 220.5C587.193 222.9 577.593 224.1 566.993 224.1C551.393 224.1 537.693 220.9 525.893 214.5C514.093 207.9 504.893 198.7 498.293 186.9C491.893 174.9 488.693 160.9 488.693 144.9Z" fill="white"/>
+              <path d="M320.801 179.1C320.801 169.3 323.401 160.6 328.601 153C334.001 145.4 342.101 139.3 352.901 134.7C363.901 130.1 377.701 127.5 394.301 126.9L411.401 126.3V125.1C411.401 116.3 408.901 109.4 403.901 104.4C399.101 99.4 391.501 96.9 381.101 96.9C372.701 96.9 364.801 98.1 357.401 100.5C350.201 102.7 343.701 105.2 337.901 108L325.901 72.6C333.501 69.2 342.701 66.2 353.501 63.6C364.301 60.8 375.801 59.4 388.001 59.4C401.601 59.4 413.501 61.8 423.701 66.6C433.901 71.4 441.901 78.5 447.701 87.9C453.501 97.3 456.401 108.9 456.401 122.7V183C456.401 187.2 456.501 191 456.701 194.4C457.101 197.6 457.701 201.4 458.501 205.8L460.901 220.5H417.101L413.501 201C408.501 207.8 401.901 213.4 393.701 217.8C385.701 222 376.901 224.1 367.301 224.1C358.901 224.1 351.201 222.2 344.201 218.4C337.201 214.6 331.501 209.4 327.101 202.8C322.901 196 320.801 188.1 320.801 179.1ZM361.301 174C361.301 179.2 363.001 183.3 366.401 186.3C369.801 189.1 374.101 190.5 379.301 190.5C385.101 190.5 390.801 189.3 396.401 186.9C402.001 184.3 407.001 180.8 411.401 176.4V152.1L397.301 152.7C388.301 153.1 381.201 154.4 376.001 156.6C370.801 158.6 367.001 161.1 364.601 164.1C362.401 167.1 361.301 170.4 361.301 174Z" fill="white"/>
+              <path d="M185.309 97.5V63H212.309V28.2L257.309 22.2V63H299.009V97.5H257.309V160.2C257.309 168.8 259.009 174.8 262.409 178.2C265.809 181.6 270.809 183.3 277.409 183.3C280.209 183.3 283.209 183 286.409 182.4C289.809 181.6 293.209 180.6 296.609 179.4L301.409 218.1C296.409 219.9 291.009 221.3 285.209 222.3C279.409 223.5 273.609 224.1 267.809 224.1C256.409 224.1 246.509 222 238.109 217.8C229.909 213.4 223.509 206.9 218.909 198.3C214.509 189.7 212.309 178.9 212.309 165.9V97.5H185.309Z" fill="white"/>
+              <path d="M0 198.3L22.8 158.4C31.6 165.6 41.8 171.5 53.4 176.1C65 180.5 76.3 182.7 87.3 182.7C93.9 182.7 99.4 181.9 103.8 180.3C108.4 178.7 111.9 176.6 114.3 174C116.7 171.4 117.9 168.5 117.9 165.3C117.9 162.5 116.8 159.6 114.6 156.6C112.6 153.6 108.8 150.5 103.2 147.3C97.8 144.1 89.8 140.8 79.2 137.4C62.8 132 49.5 125.9 39.3 119.1C29.3 112.1 22 104.5 17.4 96.3C12.8 88.1 10.5 79.5 10.5 70.5C10.5 59.5 13.4 49.4 19.2 40.2C25.2 31 34 23.7 45.6 18.3C57.2 12.7 71.5 9.90002 88.5 9.90002C102.1 9.90002 115.6 12.1 129 16.5C142.6 20.7 154 26 163.2 32.4L141.9 70.5C133.7 64.7 124.7 60 114.9 56.4C105.1 52.6 95 50.7 84.6 50.7C76.2 50.7 69.8 52.3 65.4 55.5C61 58.7 58.8 62.4 58.8 66.6C58.8 69.6 59.9 72.5 62.1 75.3C64.5 78.1 68.4 80.9 73.8 83.7C79.4 86.5 86.9 89.5 96.3 92.7C113.3 98.3 127 104.6 137.4 111.6C147.8 118.4 155.4 126 160.2 134.4C165 142.6 167.4 151.8 167.4 162C167.4 173 164.3 183.2 158.1 192.6C151.9 202 142.5 209.6 129.9 215.4C117.3 221.2 101.4 224.1 82.2 224.1C72.8 224.1 63.4 223 54 220.8C44.6 218.8 35.4 215.9 26.4 212.1C17.4 208.3 8.6 203.7 0 198.3Z" fill="white"/>
+            </svg>
+          </a>
+
+          <!-- Navegación Principal Horizontal -->
+          <nav class="hidden md:flex items-center gap-1 h-full">
+            
+            <!-- 1. Biblioteca (con contador de juegos) -->
+            <a href="#biblioteca" class="relative h-full px-3.5 flex items-center gap-2 text-xs font-semibold tracking-wide transition text-primary-yellow hover:text-white group">
+              <i data-lucide="library" class="w-4 h-4 text-primary-yellow group-hover:scale-110 transition-transform"></i>
+              <span>Biblioteca</span>
+              <!-- Contador de juegos -->
+              <span id="nav-game-count" class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-primary-yellow/20 text-primary-yellow border border-primary-yellow/30 tabular-nums">
+                48
+              </span>
+              <!-- Indicador de pestaña activa -->
+              <span class="absolute bottom-0 left-2 right-2 h-0.5 bg-primary-yellow rounded-t-full shadow-[0_0_8px_rgba(255,222,89,0.8)]"></span>
+            </a>
+
+            <!-- 2. Explorar -->
+            <a href="#explorar" class="relative h-full px-3.5 flex items-center gap-2 text-xs font-semibold tracking-wide transition text-gray-400 hover:text-white group">
+              <i data-lucide="compass" class="w-4 h-4 text-gray-400 group-hover:text-primary-cyan group-hover:scale-110 transition"></i>
+              <span>Explorar</span>
+            </a>
+
+            <!-- 3. Recomendados -->
+            <a href="#recomendados" class="relative h-full px-3.5 flex items-center gap-2 text-xs font-semibold tracking-wide transition text-gray-400 hover:text-white group">
+              <i data-lucide="sparkles" class="w-4 h-4 text-gray-400 group-hover:text-primary-violet group-hover:scale-110 transition"></i>
+              <span>Recomendados</span>
+            </a>
+
+            <!-- 4. Colecciones -->
+            <a href="#colecciones" class="relative h-full px-3.5 flex items-center gap-2 text-xs font-semibold tracking-wide transition text-gray-400 hover:text-white group">
+              <i data-lucide="folder-kanban" class="w-4 h-4 text-gray-400 group-hover:text-primary-yellow group-hover:scale-110 transition"></i>
+              <span>Colecciones</span>
+            </a>
+          </nav>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- DERECHA: Juego en vivo + Search + Bell + User   -->
+        <!-- ============================================== -->
+        <div class="flex items-center gap-3">
+          
+          <!-- Indicador de juego en vivo (condicional) -->
+          <div id="nav-live-game" class="flex items-center">
+            <button onclick="openGameDetailsModal()" title="Ver detalles del juego en vivo" class="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-primary-cyan/15 to-primary-cyan/5 border border-primary-cyan/40 hover:border-primary-cyan text-primary-cyan text-xs font-semibold transition-all shadow-sm hover:shadow-glow-cyan cursor-pointer max-w-[210px]">
+              <!-- Icono de mando con radar pulsante -->
+              <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-cyan opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-primary-cyan"></span>
+              </span>
+              <i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-primary-cyan animate-pulse"></i>
+              <span class="truncate tracking-tight font-medium">Cyberpunk 2077</span>
+            </button>
+          </div>
+
+          <!-- Buscador Global Rápido: Lupa + Atajo Ctrl+K -->
+          <button onclick="openSearchModal()" class="flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg bg-primary-navy-light/90 hover:bg-primary-navy-light border border-white/10 hover:border-primary-yellow/40 text-xs text-gray-400 hover:text-gray-200 transition group shadow-sm cursor-pointer">
+            <span class="flex items-center gap-2">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-primary-yellow group-hover:scale-110 transition-transform"></i>
+              <span class="hidden sm:inline">Buscar en IGDB...</span>
+              <span class="sm:hidden">Buscar</span>
+            </span>
+            <kbd class="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary-navy-ultra-dark text-gray-400 border border-white/10 group-hover:text-white group-hover:border-primary-yellow/30">
+              Ctrl+K
+            </kbd>
+          </button>
+
+          <!-- Notificaciones: Campana con indicador de no leídas -->
+          <div class="relative">
+            <button id="btn-notifications-nav" onclick="toggleDropdown('dropdown-notifications-nav')" class="relative p-2 rounded-lg bg-primary-navy-light/80 hover:bg-primary-navy-light text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition cursor-pointer">
+              <i data-lucide="bell" class="w-4 h-4"></i>
+              <!-- Badge indicador de no leídas -->
+              <span id="badge-notif-nav" class="absolute -top-1 -right-1 flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-primary-navy-dark shadow-sm">
+                3
+              </span>
+            </button>
+
+            <!-- Dropdown Notificaciones -->
+            <div id="dropdown-notifications-nav" class="hidden absolute right-0 mt-2.5 w-80 rounded-xl bg-primary-navy-dark border border-white/10 shadow-menu py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div class="px-4 py-2 border-b border-white/5 flex items-center justify-between">
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Notificaciones</span>
+                <span class="text-[10px] text-primary-cyan cursor-pointer hover:underline font-semibold" onclick="clearNotifications()">Marcar leídas</span>
+              </div>
+              <div class="divide-y divide-white/5 max-h-72 overflow-y-auto">
+                <div class="p-3 hover:bg-white/[0.03] transition flex items-start gap-2.5 cursor-pointer">
+                  <div class="w-2 h-2 rounded-full bg-primary-cyan mt-1.5 shrink-0"></div>
+                  <div>
+                    <p class="text-xs text-gray-200"><span class="font-semibold text-primary-yellow">The Witcher 3</span> entró en 70% de descuento en Steam.</p>
+                    <span class="text-[10px] text-gray-500 font-mono">Hace 15 min</span>
+                  </div>
+                </div>
+                <div class="p-3 hover:bg-white/[0.03] transition flex items-start gap-2.5 cursor-pointer">
+                  <div class="w-2 h-2 rounded-full bg-primary-cyan mt-1.5 shrink-0"></div>
+                  <div>
+                    <p class="text-xs text-gray-200"><span class="font-semibold text-white">Alex_Gamer</span> le dio Like a tu reseña de Elden Ring.</p>
+                    <span class="text-[10px] text-gray-500 font-mono">Hace 2 horas</span>
+                  </div>
+                </div>
+                <div class="p-3 hover:bg-white/[0.03] transition flex items-start gap-2.5 cursor-pointer">
+                  <div class="w-2 h-2 rounded-full bg-primary-cyan mt-1.5 shrink-0"></div>
+                  <div>
+                    <p class="text-xs text-gray-200">Sincronización de logros de Steam completada con éxito.</p>
+                    <span class="text-[10px] text-gray-500 font-mono">Hace 1 día</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Menú de Usuario: Avatar + Nombre + Chevron + Desplegable -->
+          <div class="relative">
+            <button id="btn-user-menu-nav" onclick="toggleDropdown('dropdown-user-nav')" class="flex items-center gap-2.5 pl-1.5 pr-2.5 py-1 rounded-lg bg-primary-navy-light/80 hover:bg-primary-navy-light border border-white/10 hover:border-primary-yellow/30 transition cursor-pointer select-none">
+              <!-- Avatar con marco gamer -->
+              <div class="relative">
+                <img src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-7 h-7 rounded-md object-cover border border-white/15">
+                <!-- Status online dot -->
+                <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-primary-navy-dark"></span>
+              </div>
+              <!-- Nombre de usuario -->
+              <span class="text-xs font-semibold text-gray-200 max-w-[110px] truncate tracking-wide">ThiagoGamer</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 transition-transform"></i>
+            </button>
+
+            <!-- Desplegable Menú de Usuario -->
+            <div id="dropdown-user-nav" class="hidden absolute right-0 mt-2.5 w-56 rounded-xl bg-primary-navy-dark border border-white/10 shadow-menu py-1.5 z-50">
+              <!-- Header info en menú -->
+              <div class="px-3.5 py-2 border-b border-white/5 mb-1">
+                <p class="text-[11px] font-semibold text-white">ThiagoGamer</p>
+                <p class="text-[10px] text-gray-400 font-mono">thiago@stackd.gg</p>
+              </div>
+
+              <!-- 1. Mi Perfil -->
+              <a href="#perfil" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="user" class="w-4 h-4 text-primary-yellow group-hover:scale-110 transition-transform"></i>
+                <span>Mi Perfil</span>
+              </a>
+
+              <!-- 2. Estadísticas -->
+              <a href="#stats" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-primary-cyan group-hover:scale-110 transition-transform"></i>
+                <span>Estadísticas</span>
+              </a>
+
+              <!-- 3. Favoritos -->
+              <a href="#favoritos" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="heart" class="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform"></i>
+                <span>Favoritos</span>
+              </a>
+
+              <!-- 4. Ajustes -->
+              <a href="#ajustes" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3.5 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="settings" class="w-4 h-4 text-primary-violet group-hover:scale-110 transition-transform"></i>
+                <span>Ajustes</span>
+              </a>
+
+              <div class="my-1 border-t border-white/5"></div>
+
+              <!-- 5. Cerrar sesión -->
+              <button onclick="handleLogout()" class="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition group text-left cursor-pointer">
+                <i data-lucide="log-out" class="w-4 h-4 text-rose-400 group-hover:scale-110 transition-transform"></i>
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </header>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- OPCIÓN 2 & SPLIT: SIDEBAR VERTICAL (Launcher & App Layout)-->
+    <!-- ======================================================== -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- SIDEBAR COMPONENT -->
+      <aside id="section-sidebar" class="w-64 bg-primary-navy-dark border-r border-white/[0.08] flex flex-col justify-between shrink-0 select-none z-30 transition-all duration-300">
+        
+        <!-- ======================= -->
+        <!-- TOP: Marca + Search     -->
+        <!-- ======================= -->
+        <div class="p-4 flex flex-col gap-4">
+          
+          <!-- Logo & Isotipo -->
+          <div class="flex items-center justify-between">
+            <a href="#home" class="flex items-center gap-2.5 group cursor-pointer" title="Stackd Hub">
+              <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-cyan/20 to-primary-yellow/20 p-1 flex items-center justify-center border border-white/10 group-hover:border-primary-cyan/40 transition">
+                <svg class="w-5 h-5" viewBox="0 0 1139 1139" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M557.467 1.40132C546.533 4.46799 442.267 56.068 252 152.335C87.2 235.801 15.4667 272.868 9.06667 277.535C6.53334 279.535 4.26667 282.735 3.33334 285.801C1.86667 291.401 1.73334 349.135 3.2 361.268C4 367.668 4.93334 369.668 8.13334 372.335C11.7333 375.401 30.2667 384.735 113.333 425.401C131.733 434.335 200.4 468.201 266 500.735C467.867 600.468 520.933 626.068 526.4 626.068C529.733 626.068 555.2 614.735 594.133 596.068C646.8 570.735 661.867 564.201 667.333 564.335C674.667 564.468 682.933 567.801 719.333 585.268C758.133 603.801 782 616.335 782 618.201C782 619.535 726.8 647.535 688.667 665.401C675.867 671.401 648 684.601 626.8 694.601C581.2 716.201 549.867 730.068 546.933 730.068C542.4 730.068 473.467 697.935 384 654.068C361.333 642.868 336.133 630.601 328 626.735C312.8 619.401 288 607.401 177.333 553.135C119.733 524.868 91.8667 511.668 62.2667 498.735C50.2667 493.401 42.2667 494.335 24 503.268C9.06667 510.601 5.6 513.935 3.46667 523.535C1.73334 531.001 1.6 618.735 3.33334 629.401C4.4 636.335 5.33334 638.068 10.2667 642.601C16 647.801 60.8 670.335 238 757.401C277.2 776.601 346.267 810.601 391.333 832.735C514.133 893.135 551.867 910.735 561.333 912.335C566.533 913.135 595.467 900.335 671.333 863.401C698.8 850.068 733.067 833.535 747.333 826.735C774.133 814.068 821.733 791.135 886 760.068C923.6 741.935 969.2 720.068 1018.67 696.468C1060.4 676.601 1112.13 651.001 1122.53 645.268C1130.27 640.868 1132.13 639.135 1134.4 634.201C1137.73 626.735 1138 610.335 1134.93 603.135C1132.27 596.735 1127.07 593.401 1092 576.201C1035.87 548.468 845.733 456.201 821.333 444.735C815.467 442.068 770.533 419.935 721.333 395.801C633.067 352.335 584 329.268 573.067 325.935C568.4 324.601 566.267 324.601 561.733 326.068C553.867 328.335 516.667 344.735 496.667 354.735C487.467 359.268 471.733 366.735 461.6 371.401L443.2 379.801L432.933 375.401C414.4 367.401 347.333 333.935 347.333 332.735C347.333 330.335 534.667 239.401 556.533 231.135C561.2 229.401 565.467 228.601 568.8 229.135C575.333 229.935 598.267 240.468 665.333 273.001C694.667 287.268 733.2 305.935 750.8 314.468C768.533 323.001 807.467 342.068 837.467 356.868C935.867 405.268 979.067 425.135 986 425.268C991.867 425.268 1015.07 415.401 1053.33 396.868C1091.07 378.468 1097.47 374.468 1099.2 367.801C1100 365.001 1100.93 344.735 1101.47 322.868C1102.27 288.735 1102.13 283.135 1100.53 284.068C1099.47 284.735 1094 288.735 1088.4 292.868C1067.33 308.468 1055.33 313.401 1038.67 313.135C1025.73 313.001 1017.6 310.201 1005.47 301.535C989.067 289.801 900.267 202.735 887.6 185.935C884.533 181.801 880 173.401 877.6 167.268C875.067 161.135 872.267 154.335 871.067 152.201C868.267 147.001 842.267 132.868 732 77.5347C625.2 23.668 577.2 0.867991 569.6 0.0679906C566.533 -0.198676 561.067 0.334657 557.467 1.40132Z" fill="#ffde59"/>
+                  <path d="M1030.27 52.4679C1006.13 70.4679 942.8 134.201 937.733 145.535C936.4 148.335 937.2 149.668 944.133 158.335C960.133 177.935 1026.4 243.668 1037.47 251.001C1040 252.601 1041.07 252.601 1043.6 251.268C1048 248.868 1092.93 204.335 1111.07 184.335C1133.07 160.068 1139.87 150.868 1138.8 147.001C1137.2 140.601 1096.8 97.2679 1064.8 67.6679C1048.67 52.8679 1041.6 47.4012 1038.53 47.4012C1037.6 47.4012 1033.87 49.6679 1030.27 52.4679Z" fill="#4dd4ac"/>
+                </svg>
+              </div>
+              <span class="font-bold text-base tracking-wider text-white">STACK<span class="text-primary-yellow">D</span></span>
+            </a>
+            <!-- Botón collapse indicador -->
+            <button class="p-1 rounded text-gray-500 hover:text-gray-300 hover:bg-white/5 transition" title="Colapsar panel lateral">
+              <i data-lucide="chevrons-left" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Buscador Global en Sidebar -->
+          <button onclick="openSearchModal()" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-primary-navy-ultra-dark hover:bg-primary-navy-light/90 border border-white/10 hover:border-primary-yellow/40 text-xs text-gray-400 hover:text-white transition group cursor-pointer">
+            <span class="flex items-center gap-2.5">
+              <i data-lucide="search" class="w-4 h-4 text-primary-yellow group-hover:scale-110 transition-transform"></i>
+              <span>Buscar juegos...</span>
+            </span>
+            <kbd class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary-navy-dark text-gray-400 border border-white/10">Ctrl+K</kbd>
+          </button>
+
+          <!-- Indicador de Juego en Vivo (Sidebar Widget) -->
+          <div id="sidebar-live-game" class="p-2.5 rounded-xl bg-gradient-to-br from-primary-cyan/15 via-primary-navy-ultra-dark to-primary-navy-dark border border-primary-cyan/30 flex items-center justify-between gap-2 shadow-sm">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-primary-cyan/20 border border-primary-cyan/30 flex items-center justify-center shrink-0">
+                <i data-lucide="gamepad-2" class="w-4 h-4 text-primary-cyan animate-pulse"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary-cyan animate-ping"></span>
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-primary-cyan">En Ejecución</p>
+                </div>
+                <p class="text-xs font-semibold text-white truncate">Cyberpunk 2077</p>
+              </div>
+            </div>
+            <button onclick="openGameDetailsModal()" title="Detalles" class="p-1 rounded text-primary-cyan/70 hover:text-primary-cyan hover:bg-primary-cyan/10 transition">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- ======================= -->
+        <!-- CENTRO: Navegación Nav  -->
+        <!-- ======================= -->
+        <div class="px-3 py-2 flex-1 overflow-y-auto space-y-5">
+          
+          <div>
+            <span class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Menú Principal</span>
+            <nav class="mt-2 space-y-1">
+              
+              <!-- 1. Biblioteca con contador -->
+              <a href="#biblioteca" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold bg-primary-yellow/10 text-primary-yellow border border-primary-yellow/20 transition group">
+                <span class="flex items-center gap-3">
+                  <i data-lucide="library" class="w-4 h-4 text-primary-yellow"></i>
+                  <span>Biblioteca</span>
+                </span>
+                <span id="sidebar-game-count" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-yellow text-primary-navy-ultra-dark tabular-nums font-mono">
+                  48
+                </span>
+              </a>
+
+              <!-- 2. Explorar -->
+              <a href="#explorar" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/[0.04] transition group">
+                <span class="flex items-center gap-3">
+                  <i data-lucide="compass" class="w-4 h-4 text-gray-400 group-hover:text-primary-cyan transition-colors"></i>
+                  <span>Explorar</span>
+                </span>
+                <span class="text-[10px] text-gray-600 font-mono">IGDB</span>
+              </a>
+
+              <!-- 3. Recomendados -->
+              <a href="#recomendados" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/[0.04] transition group">
+                <span class="flex items-center gap-3">
+                  <i data-lucide="sparkles" class="w-4 h-4 text-gray-400 group-hover:text-primary-violet transition-colors"></i>
+                  <span>Recomendados</span>
+                </span>
+                <span class="flex h-1.5 w-1.5 rounded-full bg-primary-violet"></span>
+              </a>
+
+              <!-- 4. Colecciones -->
+              <a href="#colecciones" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-white hover:bg-white/[0.04] transition group">
+                <span class="flex items-center gap-3">
+                  <i data-lucide="folder-kanban" class="w-4 h-4 text-gray-400 group-hover:text-primary-yellow transition-colors"></i>
+                  <span>Colecciones</span>
+                </span>
+              </a>
+            </nav>
+          </div>
+
+          <!-- Filtros de Biblioteca / Vistas rápidas del Backlog (Basado en README.md) -->
+          <div>
+            <span class="px-3 text-[10px] font-bold text-gray-500 uppercase tracking-wider">Estados de Backlog</span>
+            <div class="mt-2 space-y-0.5 text-xs">
+              <a href="#playing" class="flex items-center justify-between px-3 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.03] transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="w-2 h-2 rounded-full bg-primary-cyan"></span>
+                  <span>Jugando (Playing)</span>
+                </span>
+                <span class="text-[10px] text-gray-500 font-mono">4</span>
+              </a>
+              <a href="#completed" class="flex items-center justify-between px-3 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.03] transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Completados</span>
+                </span>
+                <span class="text-[10px] text-gray-500 font-mono">26</span>
+              </a>
+              <a href="#wishlist" class="flex items-center justify-between px-3 py-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/[0.03] transition">
+                <span class="flex items-center gap-2.5">
+                  <span class="w-2 h-2 rounded-full bg-primary-yellow"></span>
+                  <span>Lista de Deseos</span>
+                </span>
+                <span class="text-[10px] text-gray-500 font-mono">18</span>
+              </a>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ============================================== -->
+        <!-- BOTTOM: Notificaciones + User Profile Dock     -->
+        <!-- ============================================== -->
+        <div class="p-3 border-t border-white/[0.08] bg-primary-navy-ultra-dark/60 space-y-2">
+          
+          <!-- Fila Notificaciones Rápida en Sidebar -->
+          <div class="flex items-center justify-between px-2 py-1">
+            <span class="text-[11px] font-medium text-gray-400 flex items-center gap-2">
+              <i data-lucide="bell" class="w-3.5 h-3.5 text-gray-400"></i>
+              <span>Notificaciones</span>
+            </span>
+            <button onclick="toggleDropdown('dropdown-notifications-nav')" class="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold hover:bg-rose-500/30 transition">
+              3 nuevas
+            </button>
+          </div>
+
+          <!-- Perfil de Usuario con Menú Emergente -->
+          <div class="relative">
+            <div id="btn-user-sidebar" onclick="toggleDropdown('dropdown-user-sidebar')" class="flex items-center justify-between p-2 rounded-xl bg-primary-navy-light/70 hover:bg-primary-navy-light border border-white/10 hover:border-primary-yellow/30 transition cursor-pointer">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <img src="https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-8 h-8 rounded-lg object-cover border border-white/15">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-white truncate">ThiagoGamer</p>
+                  <p class="text-[10px] text-primary-cyan flex items-center gap-1 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>Conectado</span>
+                  </p>
+                </div>
+              </div>
+              <i data-lucide="more-vertical" class="w-4 h-4 text-gray-400"></i>
+            </div>
+
+            <!-- Desplegable Menú Usuario Sidebar -->
+            <div id="dropdown-user-sidebar" class="hidden absolute bottom-full left-0 mb-2 w-full rounded-xl bg-primary-navy-dark border border-white/10 shadow-menu py-1.5 z-50">
+              <div class="px-3.5 py-2 border-b border-white/5 mb-1">
+                <p class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Menú de Cuenta</p>
+              </div>
+
+              <a href="#perfil" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="user" class="w-4 h-4 text-primary-yellow"></i>
+                <span>Mi Perfil</span>
+              </a>
+
+              <a href="#stats" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-primary-cyan"></i>
+                <span>Estadísticas</span>
+              </a>
+
+              <a href="#favoritos" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="heart" class="w-4 h-4 text-rose-400"></i>
+                <span>Favoritos</span>
+              </a>
+
+              <a href="#ajustes" onclick="closeAllDropdowns()" class="flex items-center gap-2.5 px-3 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/[0.06] transition group">
+                <i data-lucide="settings" class="w-4 h-4 text-primary-violet"></i>
+                <span>Ajustes</span>
+              </a>
+
+              <div class="my-1 border-t border-white/5"></div>
+
+              <button onclick="handleLogout()" class="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 transition text-left cursor-pointer">
+                <i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i>
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </aside>
+
+      <!-- ============================================== -->
+      <!-- CONTENIDO CENTRAL DE EJEMPLO / DEMOSTRACIÓN    -->
+      <!-- ============================================== -->
+      <section class="flex-1 bg-primary-navy overflow-y-auto p-6 flex flex-col gap-6">
+        
+        <!-- Hero / Banner de Resumen -->
+        <div class="rounded-2xl bg-gradient-to-r from-primary-navy-dark via-primary-navy-light to-primary-navy-dark border border-white/10 p-6 relative overflow-hidden shadow-xl">
+          <div class="relative z-10 max-w-2xl">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-cyan/15 text-primary-cyan text-xs font-semibold border border-primary-cyan/30 mb-3">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              Diseño de Navegación Stackd v2.0
+            </span>
+            <h1 class="text-2xl lg:text-3xl font-bold tracking-tight text-white mb-2">
+              Arquitectura de Interfaz: <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-cyan via-primary-yellow to-primary-violet">Navbar & Sidebar</span>
+            </h1>
+            <p class="text-sm text-gray-300 leading-relaxed">
+              Basado en las directrices técnicas del <code class="text-xs font-mono text-primary-yellow bg-primary-navy-ultra-dark px-1.5 py-0.5 rounded">README.md</code> (IGDB, PostgreSQL, Steam integration y backlogs). Este mock-up implementa todos los elementos solicitados de forma responsive, accesible e interactiva.
+            </p>
+          </div>
+          <!-- Decoración visual de fondo -->
+          <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-primary-yellow/5 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute right-20 -top-10 w-48 h-48 bg-primary-cyan/5 rounded-full blur-2xl pointer-events-none"></div>
+        </div>
+
+        <!-- Matriz de Elementos Requeridos y Estado -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <!-- Elemento 1: Logo / Marca -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Identidad Visual</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">Implementado</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="sparkle" class="w-4 h-4 text-primary-yellow"></i>
+              Isotipo y Logotipo de Stackd
+            </h3>
+            <p class="text-xs text-gray-400">
+              Integración de los SVGs originales (<code class="text-[11px] text-gray-300">isotipo.svg</code> + <code class="text-[11px] text-gray-300">logotipo.svg</code>) con gradientes de marca y animación hover.
+            </p>
+          </div>
+
+          <!-- Elemento 2: Navegación Principal -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Navegación</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">4 Enlaces</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="compass" class="w-4 h-4 text-primary-cyan"></i>
+              Biblioteca, Explorar, Recomendados, Colecciones
+            </h3>
+            <p class="text-xs text-gray-400">
+              Incluye contador dinámico para la Biblioteca (<span class="text-primary-yellow font-bold">48 juegos</span>), estados activos y resaltado estético.
+            </p>
+          </div>
+
+          <!-- Elemento 3: Buscador Global -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Búsqueda Rápida</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">Ctrl + K</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="search" class="w-4 h-4 text-primary-yellow"></i>
+              Input con Atajo de Teclado
+            </h3>
+            <p class="text-xs text-gray-400">
+              Apertura instantánea mediante click o presionando <kbd class="px-1 py-0.5 rounded bg-primary-navy-ultra-dark border border-white/10 text-[10px] font-mono text-gray-300">Ctrl+K</kbd>. Conecta con IGDB.
+            </p>
+          </div>
+
+          <!-- Elemento 4: Juego en Vivo -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Steam / Tauri Sync</span>
+              <span class="px-2 py-0.5 rounded-full bg-primary-cyan/15 text-primary-cyan text-[10px] font-semibold border border-primary-cyan/30">Condicional</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="gamepad-2" class="w-4 h-4 text-primary-cyan"></i>
+              Píldora de Juego Activo
+            </h3>
+            <p class="text-xs text-gray-400">
+              Detecta el proceso local o estado Steam en ejecución con animación de pulso y acceso a ficha técnica.
+            </p>
+          </div>
+
+          <!-- Elemento 5: Notificaciones -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Social & Alertas</span>
+              <span class="px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 text-[10px] font-semibold border border-rose-500/20">3 Alertas</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="bell" class="w-4 h-4 text-rose-400"></i>
+              Campana + Indicador
+            </h3>
+            <p class="text-xs text-gray-400">
+              Bandeja desplegable para ofertas de Steam en Wishlist, likes de reseñas comunitarias y sincronización de logros.
+            </p>
+          </div>
+
+          <!-- Elemento 6: Menú de Usuario -->
+          <div class="p-4 rounded-xl bg-primary-navy-dark border border-white/[0.08] flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Cuenta & Config</span>
+              <span class="px-2 py-0.5 rounded-full bg-primary-violet/15 text-primary-violet text-[10px] font-semibold border border-primary-violet/30">5 Opciones</span>
+            </div>
+            <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+              <i data-lucide="user-check" class="w-4 h-4 text-primary-violet"></i>
+              Avatar + Menú Desplegable
+            </h3>
+            <p class="text-xs text-gray-400">
+              Incluye: Mi Perfil, Estadísticas, Favoritos, Ajustes y Cerrar sesión con confirmación interactiva.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Vista previa de tarjetas de juegos representativas -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="flame" class="w-4 h-4 text-primary-yellow"></i>
+              <span>Juegos Recientes en Biblioteca (<span id="preview-count">48</span> títulos)</span>
+            </h2>
+            <span class="text-xs text-gray-400 font-mono">Simulación de Grid</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+            <!-- Game 1 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co2l7z.webp" alt="Cyberpunk 2077" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-primary-cyan/90 text-primary-navy-ultra-dark text-[10px] font-bold">JUGANDO</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">Cyberpunk 2077</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 4.5</span>
+                  <span class="text-[10px] font-mono">112 hrs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game 2 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co49x5.webp" alt="Elden Ring" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-emerald-500/90 text-white text-[10px] font-bold">COMPLETADO</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">Elden Ring</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 5.0</span>
+                  <span class="text-[10px] font-mono">180 hrs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game 3 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co1r7f.webp" alt="The Witcher 3" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-emerald-500/90 text-white text-[10px] font-bold">COMPLETADO</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">The Witcher 3</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 5.0</span>
+                  <span class="text-[10px] font-mono">145 hrs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game 4 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co1wyy.webp" alt="Baldur's Gate 3" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-primary-yellow/90 text-primary-navy-ultra-dark text-[10px] font-bold">WISHLIST</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">Baldur's Gate 3</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 4.8</span>
+                  <span class="text-[10px] font-mono">-20% Steam</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game 5 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co28rw.webp" alt="Hollow Knight" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-emerald-500/90 text-white text-[10px] font-bold">COMPLETADO</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">Hollow Knight</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 4.9</span>
+                  <span class="text-[10px] font-mono">68 hrs</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Game 6 -->
+            <div class="group relative rounded-xl bg-primary-navy-dark border border-white/10 overflow-hidden hover:border-primary-yellow/40 transition-all duration-200 hover:-translate-y-1 shadow-md">
+              <div class="aspect-[3/4] w-full overflow-hidden relative">
+                <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co1x77.webp" alt="Hades" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <span class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-emerald-500/90 text-white text-[10px] font-bold">COMPLETADO</span>
+              </div>
+              <div class="p-2.5">
+                <h4 class="text-xs font-bold text-white truncate">Hades</h4>
+                <div class="flex items-center justify-between mt-1 text-[11px] text-gray-400">
+                  <span class="text-primary-yellow font-semibold flex items-center gap-0.5">★ 4.7</span>
+                  <span class="text-[10px] font-mono">84 hrs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL DE BÚSQUEDA GLOBAL RÁPIDA (Ctrl+K)                  -->
+  <!-- ======================================================== -->
+  <div id="modal-search" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-in fade-in duration-150">
+    <div class="w-full max-w-xl rounded-2xl bg-primary-navy-dark border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+      
+      <!-- Input de búsqueda -->
+      <div class="p-4 border-b border-white/10 flex items-center gap-3">
+        <i data-lucide="search" class="w-5 h-5 text-primary-yellow shrink-0"></i>
+        <input id="input-search-modal" type="text" placeholder="Buscar videojuegos en IGDB o en tu biblioteca..." class="w-full bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none font-medium">
+        <button onclick="closeSearchModal()" class="text-xs text-gray-400 hover:text-white px-2 py-1 rounded bg-white/5 border border-white/10">ESC</button>
+      </div>
+
+      <!-- Resultados simulados -->
+      <div class="p-3 divide-y divide-white/5 max-h-80 overflow-y-auto">
+        <div class="p-2.5 rounded-lg hover:bg-white/[0.04] transition flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-12 rounded bg-primary-navy-light overflow-hidden shrink-0">
+              <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co2l7z.webp" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Cyberpunk 2077</p>
+              <p class="text-[11px] text-gray-400">CD PROJEKT RED • 2020 • RPG</p>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-primary-cyan/15 text-primary-cyan text-[10px] font-bold">En Biblioteca</span>
+        </div>
+
+        <div class="p-2.5 rounded-lg hover:bg-white/[0.04] transition flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-12 rounded bg-primary-navy-light overflow-hidden shrink-0">
+              <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co49x5.webp" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Elden Ring</p>
+              <p class="text-[11px] text-gray-400">FromSoftware • 2022 • Action RPG</p>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">Completado</span>
+        </div>
+
+        <div class="p-2.5 rounded-lg hover:bg-white/[0.04] transition flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-12 rounded bg-primary-navy-light overflow-hidden shrink-0">
+              <img src="https://images.igdb.com/igdb/image/upload/t_cover_big/co1wyy.webp" class="w-full h-full object-cover">
+            </div>
+            <div>
+              <p class="text-xs font-bold text-white">Baldur's Gate 3</p>
+              <p class="text-[11px] text-gray-400">Larian Studios • 2023 • RPG</p>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded bg-primary-yellow/15 text-primary-yellow text-[10px] font-bold">Wishlist</span>
+        </div>
+      </div>
+
+      <div class="px-4 py-2.5 bg-primary-navy-ultra-dark/80 border-t border-white/5 flex items-center justify-between text-[11px] text-gray-400">
+        <span>Navega con <kbd class="px-1 py-0.5 rounded bg-primary-navy border border-white/10 font-mono text-[10px]">↑</kbd> <kbd class="px-1 py-0.5 rounded bg-primary-navy border border-white/10 font-mono text-[10px]">↓</kbd></span>
+        <span>Presiona <kbd class="px-1 py-0.5 rounded bg-primary-navy border border-white/10 font-mono text-[10px]">Enter</kbd> para abrir</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL DE DETALLES DE JUEGO EN VIVO                        -->
+  <!-- ======================================================== -->
+  <div id="modal-game-details" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-primary-navy-dark border border-primary-cyan/40 shadow-2xl p-6 relative">
+      <button onclick="closeGameDetailsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-xl bg-primary-cyan/20 border border-primary-cyan/40 flex items-center justify-center text-primary-cyan">
+          <i data-lucide="gamepad-2" class="w-6 h-6 animate-pulse"></i>
+        </div>
+        <div>
+          <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary-cyan">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary-cyan animate-ping"></span>
+            Detectado vía Steam / Proceso Activo
+          </span>
+          <h3 class="text-lg font-bold text-white">Cyberpunk 2077</h3>
+        </div>
+      </div>
+
+      <p class="text-xs text-gray-300 mb-4 leading-relaxed">
+        El juego está activo actualmente. Stackd sincronizará el tiempo jugado, los logros desbloqueados y actualizará tu estado automáticamente a <strong class="text-primary-cyan">Jugando (Playing)</strong>.
+      </p>
+
+      <div class="grid grid-cols-2 gap-3 mb-5 text-xs">
+        <div class="p-3 rounded-xl bg-primary-navy-ultra-dark border border-white/5">
+          <p class="text-[10px] text-gray-400 uppercase">Tiempo Jugado Total</p>
+          <p class="text-sm font-bold text-white font-mono mt-0.5">112.4 hrs</p>
+        </div>
+        <div class="p-3 rounded-xl bg-primary-navy-ultra-dark border border-white/5">
+          <p class="text-[10px] text-gray-400 uppercase">Logros Steam</p>
+          <p class="text-sm font-bold text-primary-yellow font-mono mt-0.5">38 / 44 (86%)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2">
+        <button onclick="closeGameDetailsModal()" class="px-4 py-2 rounded-xl bg-primary-navy-light hover:bg-primary-navy-elevated text-xs font-semibold text-gray-300 hover:text-white transition cursor-pointer">
+          Cerrar
+        </button>
+        <button onclick="closeGameDetailsModal()" class="px-4 py-2 rounded-xl bg-primary-cyan hover:bg-primary-cyan-hover text-xs font-bold text-primary-navy-ultra-dark transition cursor-pointer shadow-glow-cyan">
+          Ir a Ficha Técnica
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- LÓGICA JAVASCRIPT INTERACTIVA                             -->
+  <!-- ======================================================== -->
+  <script>
+    // Inicializar iconos de Lucide
+    lucide.createIcons();
+
+    // Estado del prototipo
+    let state = {
+      viewMode: 'split', // 'navbar' | 'sidebar' | 'split'
+      liveGameActive: true,
+      gameCount: 48,
+      unreadNotifications: 3,
+    };
+
+    // Cambio de vista
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      const sectionNavbar = document.getElementById('section-navbar');
+      const sectionSidebar = document.getElementById('section-sidebar');
+
+      // Botones styling
+      document.querySelectorAll('#btn-view-navbar, #btn-view-sidebar, #btn-view-split').forEach(btn => {
+        btn.classList.remove('bg-primary-navy-light', 'text-white', 'shadow-sm');
+        btn.classList.add('text-gray-400');
+      });
+
+      const activeBtn = document.getElementById(`btn-view-${mode}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-gray-400');
+        activeBtn.classList.add('bg-primary-navy-light', 'text-white', 'shadow-sm');
+      }
+
+      if (mode === 'navbar') {
+        sectionNavbar.classList.remove('hidden');
+        sectionSidebar.classList.add('hidden');
+      } else if (mode === 'sidebar') {
+        sectionNavbar.classList.add('hidden');
+        sectionSidebar.classList.remove('hidden');
+      } else { // split
+        sectionNavbar.classList.remove('hidden');
+        sectionSidebar.classList.remove('hidden');
+      }
+    }
+
+    // Toggle de juego en vivo
+    function toggleLiveGame() {
+      state.liveGameActive = !state.liveGameActive;
+      const navLive = document.getElementById('nav-live-game');
+      const sidebarLive = document.getElementById('sidebar-live-game');
+      const label = document.getElementById('label-live-game');
+
+      if (state.liveGameActive) {
+        navLive.classList.remove('hidden');
+        sidebarLive.classList.remove('hidden');
+        label.innerText = 'Juego activo: ON';
+      } else {
+        navLive.classList.add('hidden');
+        sidebarLive.classList.add('hidden');
+        label.innerText = 'Juego activo: OFF';
+      }
+    }
+
+    // Contador de juegos
+    function changeGameCount(delta) {
+      state.gameCount += delta;
+      document.getElementById('nav-game-count').innerText = state.gameCount;
+      document.getElementById('sidebar-game-count').innerText = state.gameCount;
+      document.getElementById('btn-count-num').innerText = state.gameCount;
+      document.getElementById('preview-count').innerText = state.gameCount;
+    }
+
+    // Dropdowns
+    function toggleDropdown(id) {
+      const el = document.getElementById(id);
+      const isHidden = el.classList.contains('hidden');
+      closeAllDropdowns();
+      if (isHidden) {
+        el.classList.remove('hidden');
+      }
+    }
+
+    function closeAllDropdowns() {
+      ['dropdown-notifications-nav', 'dropdown-user-nav', 'dropdown-user-sidebar'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+    }
+
+    // Cerrar dropdowns si se hace click afuera
+    window.addEventListener('click', (e) => {
+      if (!e.target.closest('#btn-notifications-nav') &&
+          !e.target.closest('#dropdown-notifications-nav') &&
+          !e.target.closest('#btn-user-menu-nav') &&
+          !e.target.closest('#dropdown-user-nav') &&
+          !e.target.closest('#btn-user-sidebar') &&
+          !e.target.closest('#dropdown-user-sidebar')) {
+        closeAllDropdowns();
+      }
+    });
+
+    // Limpiar notificaciones
+    function clearNotifications() {
+      const badge = document.getElementById('badge-notif-nav');
+      if (badge) badge.classList.add('hidden');
+      alert('Notificaciones marcadas como leídas.');
+      closeAllDropdowns();
+    }
+
+    // Logout
+    function handleLogout() {
+      closeAllDropdowns();
+      alert('Sesión cerrada con éxito en Stackd. Redirigiendo a /login...');
+    }
+
+    // Modal de Búsqueda Ctrl+K
+    function openSearchModal() {
+      closeAllDropdowns();
+      const modal = document.getElementById('modal-search');
+      modal.classList.remove('hidden');
+      setTimeout(() => document.getElementById('input-search-modal').focus(), 50);
+    }
+
+    function closeSearchModal() {
+      document.getElementById('modal-search').classList.add('hidden');
+    }
+
+    // Modal Detalles Juego
+    function openGameDetailsModal() {
+      document.getElementById('modal-game-details').classList.remove('hidden');
+    }
+
+    function closeGameDetailsModal() {
+      document.getElementById('modal-game-details').classList.add('hidden');
+    }
+
+    // Atajos de teclado globales (Ctrl+K y ESC)
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openSearchModal();
+      }
+      if (e.key === 'Escape') {
+        closeSearchModal();
+        closeGameDetailsModal();
+        closeAllDropdowns();
+      }
+    });
+
+    // Click outside modales
+    document.getElementById('modal-search').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('modal-search')) closeSearchModal();
+    });
+
+    document.getElementById('modal-game-details').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('modal-game-details')) closeGameDetailsModal();
+    });
+
+    // Iniciar con vista split para mostrar ambos simultáneamente
+    setViewMode('split');
+  </script>
+</body>
+</html>

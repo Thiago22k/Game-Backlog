@@ -73,35 +73,121 @@ const getAccessToken = async () => {
   }
 };
 
-// Buscar juegos en IGDB
-const searchGames = async (query, limit = 10) => {
+// Buscar juegos en IGDB (coincidencia literal ampliada + full-text en paralelo)
+const searchGames = async (query, limit = 15) => {
   try {
     const token = await getAccessToken();
 
-    // Mitigate APIScript injection by escaping double quotes and limiting length
-    const sanitizedQuery = typeof query === 'string'
-      ? query.replace(/"/g, '\\"').substring(0, 100)
+    const cleanQuery = typeof query === 'string'
+      ? query.trim().substring(0, 100)
       : '';
 
-    const response = await axios.post(
-      'https://api.igdb.com/v4/games',
-      `
-        fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type, version_parent, parent_game;
-        search "${sanitizedQuery}";
-        limit ${limit};
-      `,
-      {
-        headers: {
-          'Client-ID': process.env.IGDB_CLIENT_ID,
-          'Authorization': `Bearer ${token}`,
-        },
+    if (!cleanQuery) return [];
+
+    const escapedFullText = cleanQuery.replace(/["\\]/g, '\\$&');
+    const escapedPattern = cleanQuery.replace(/["\\*]/g, '\\$&');
+
+    const headers = {
+      'Client-ID': process.env.IGDB_CLIENT_ID,
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'text/plain',
+    };
+
+    const fields =
+      'fields name, slug, cover.url, cover.image_id, summary, first_release_date, rating, platforms.name, genres.name, game_type, version_parent, parent_game;';
+
+    // Pedimos hasta 50 en la búsqueda literal para evitar que IGDB corte por ID antes de ordenar
+    const internalLimit = Math.max(limit * 3, 50);
+
+    // POST a IGDB con reintento si hay rate limit (429)
+    const post = async (body, retries = 2) => {
+      try {
+        return await axios.post('https://api.igdb.com/v4/games', body, { headers });
+      } catch (err) {
+        if (err.response?.status === 429 && retries > 0) {
+          await sleep(350);
+          return post(body, retries - 1);
+        }
+        throw err;
       }
-    );
+    };
 
-    return response.data;
+    const [exactRes, fuzzyRes] = await Promise.allSettled([
+      post(`
+        ${fields}
+        where name ~ *"${escapedPattern}"*;
+        limit ${internalLimit};
+      `),
+      post(`
+        ${fields}
+        search "${escapedFullText}";
+        limit ${limit};
+      `),
+    ]);
 
+    // Log de fallos individuales para poder diagnosticar
+    for (const [label, res] of [['exacta', exactRes], ['full-text', fuzzyRes]]) {
+      if (res.status === 'rejected') {
+        console.error(
+          `❌ IGDB búsqueda ${label} ("${cleanQuery}"):`,
+          res.reason.response?.status,
+          res.reason.response?.data || res.reason.message
+        );
+      }
+    }
+
+    // Si ambas fallan, es un error real, no "sin resultados"
+    if (exactRes.status === 'rejected' && fuzzyRes.status === 'rejected') {
+      throw new Error('Ambas búsquedas en IGDB fallaron');
+    }
+
+    const exactResults =
+      exactRes.status === 'fulfilled' && Array.isArray(exactRes.value.data)
+        ? exactRes.value.data
+        : [];
+    const fuzzyResults =
+      fuzzyRes.status === 'fulfilled' && Array.isArray(fuzzyRes.value.data)
+        ? fuzzyRes.value.data
+        : [];
+
+    const normalize = (str) =>
+      (str || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const qNorm = normalize(cleanQuery);
+
+    const rankGame = (g) => {
+      const nameNorm = normalize(g.name);
+      if (nameNorm === qNorm) return 0; // Coincidencia exacta (ignora signos como "!" o ":")
+      if (nameNorm.startsWith(qNorm)) return 1; // Empieza por el texto buscado
+      if (nameNorm.includes(qNorm)) return 2; // Contiene la frase completa
+      return 3;
+    };
+
+    const sortedExact = [...exactResults].sort((a, b) => {
+      const diff = rankGame(a) - rankGame(b);
+      if (diff !== 0) return diff;
+      // A igual relevancia, priorizar títulos más cortos y luego mejor rating
+      const lenDiff = (a.name?.length || 999) - (b.name?.length || 999);
+      if (lenDiff !== 0) return lenDiff;
+      return (b.rating || 0) - (a.rating || 0);
+    });
+
+    const seen = new Set();
+    const merged = [];
+
+    for (const game of [...sortedExact, ...fuzzyResults]) {
+      if (!game?.id || seen.has(game.id)) continue;
+      seen.add(game.id);
+      merged.push(game);
+    }
+
+    return merged.slice(0, limit);
   } catch (error) {
-    console.error('❌ Error buscando juegos en IGDB:', error.message);
+    console.error('❌ Error buscando juegos en IGDB:', error.response?.data || error.message);
     throw new Error('Error al buscar juegos');
   }
 };

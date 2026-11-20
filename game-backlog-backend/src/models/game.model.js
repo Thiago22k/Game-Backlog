@@ -75,6 +75,20 @@ const Game = {
     return result.rows[0];
   },
 
+  // Agregar minutos de sesión
+  async addSessionMinutes(userId, igdbGameId, minutes) {
+    const query = `
+      UPDATE user_games
+      SET
+        playtime_minutes = COALESCE(playtime_minutes, 0) + $3,
+        updated_at = NOW()
+      WHERE user_id = $1 AND igdb_game_id = $2
+      RETURNING *
+    `;
+    const result = await pool.query(query, [userId, igdbGameId, minutes]);
+    return result.rows[0] || null;
+  },
+
   // Eliminar juego de la lista del usuario
   async deleteGame(userId, igdbGameId) {
     const query = 'DELETE FROM user_games WHERE user_id = $1 AND igdb_game_id = $2 RETURNING *';

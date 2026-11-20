@@ -7,17 +7,34 @@ const steamSyncService = require('../services/steamSync.service');
 const steamAchievementsService = require('../services/steamAchievements.service');
 const steamPriceService = require('../services/steamPrice.service');
 
-const frontendUrl = () => (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, '');
-const redirectToSettings = (res, result) =>
-  res.redirect(`${frontendUrl()}/settings?steam=${encodeURIComponent(result)}`);
-const redirectToLogin = (res, result) =>
-  res.redirect(`${frontendUrl()}/login?steam=${encodeURIComponent(result)}`);
+const ALLOWED_ORIGINS = [
+  (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/+$/, ''),
+  'http://localhost:1420',
+  'http://127.0.0.1:1420',
+  'tauri://localhost',
+  'http://tauri.localhost',
+];
 
-// Cuando el login/registro se abre en una ventana emergente, el resultado va a una página
-// de confirmación del frontend que avisa a la ventana original y se cierra sola.
-const redirectToPopupCallback = (res, params) => {
+const resolveFrontendOrigin = (rawOrigin) => {
+  if (!rawOrigin || typeof rawOrigin !== 'string') return ALLOWED_ORIGINS[0];
+  try {
+    const parsed = new URL(rawOrigin);
+    const clean = `${parsed.protocol}//${parsed.host}`;
+    if (ALLOWED_ORIGINS.includes(clean)) return clean;
+  } catch {
+    // Fallback
+  }
+  return ALLOWED_ORIGINS[0];
+};
+
+const redirectToSettings = (res, result, origin = ALLOWED_ORIGINS[0]) =>
+  res.redirect(`${origin}/settings?steam=${encodeURIComponent(result)}`);
+const redirectToLogin = (res, result, origin = ALLOWED_ORIGINS[0]) =>
+  res.redirect(`${origin}/login?steam=${encodeURIComponent(result)}`);
+
+const redirectToPopupCallback = (res, params, origin = ALLOWED_ORIGINS[0]) => {
   const query = new URLSearchParams(params).toString();
-  res.redirect(`${frontendUrl()}/auth/steam/callback?${query}`);
+  res.redirect(`${origin}/auth/steam/callback?${query}`);
 };
 
 const issueSessionCookie = (res, user) => {
@@ -31,7 +48,7 @@ const issueSessionCookie = (res, user) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   return token;
@@ -50,22 +67,22 @@ const publicAccount = (account) => ({
   linked_at: account.linked_at,
 });
 
-// GET /api/steam/login  (pública: inicia OpenID para login o registro)
-// ?popup=1 indica que se abrió en una ventana emergente (el resultado se entrega vía /auth/steam/callback)
+// GET /api/steam/login
 const startLogin = async (req, res) => {
   const popup = req.query.popup === '1';
+  const origin = resolveFrontendOrigin(req.query.origin || req.get('origin') || req.get('referer'));
 
   try {
-    const state = steamService.signState({ action: 'login', popup });
+    const state = steamService.signState({ action: 'login', popup, origin });
     res.redirect(steamService.buildAuthUrl(state));
   } catch (error) {
     console.error('Error en startLogin:', error);
-    if (popup) return redirectToPopupCallback(res, { status: 'error', code: 'error' });
-    redirectToLogin(res, 'error');
+    if (popup) return redirectToPopupCallback(res, { status: 'error', code: 'error' }, origin);
+    redirectToLogin(res, 'error', origin);
   }
 };
 
-// POST /api/steam/link  (autenticado)
+// POST /api/steam/link
 const startLink = async (req, res) => {
   try {
     const existing = await SteamAccount.findByUserId(req.user.userId);
@@ -73,9 +90,9 @@ const startLink = async (req, res) => {
       return res.status(409).json({ error: 'Tu cuenta ya tiene una cuenta de Steam vinculada' });
     }
 
-    // popup: true -> el resultado se entrega vía /auth/steam/callback (ventana emergente)
     const popup = req.body?.popup === true;
-    const state = steamService.signState({ userId: req.user.userId, action: 'link', popup });
+    const origin = resolveFrontendOrigin(req.body?.origin || req.get('origin') || req.get('referer'));
+    const state = steamService.signState({ userId: req.user.userId, action: 'link', popup, origin });
     res.json({ url: steamService.buildAuthUrl(state) });
   } catch (error) {
     console.error('Error en startLink:', error);
@@ -83,28 +100,31 @@ const startLink = async (req, res) => {
   }
 };
 
-// GET /api/steam/callback  (pública: llega desde Steam vía el navegador)
+// GET /api/steam/callback
 const callback = async (req, res) => {
   let action = 'link';
   let popup = false;
+  let origin = ALLOWED_ORIGINS[0];
 
-  // Resultado del flujo de VINCULACIÓN: en popup va a la página de confirmación (flow=link),
-  // si no, a Ajustes como siempre.
   const settingsResult = (code) => {
     if (popup) {
-      return redirectToPopupCallback(res, {
-        flow: 'link',
-        status: code === 'linked' ? 'linked' : 'error',
-        code,
-      });
+      return redirectToPopupCallback(
+        res,
+        {
+          flow: 'link',
+          status: code === 'linked' ? 'linked' : 'error',
+          code,
+        },
+        origin
+      );
     }
-    return redirectToSettings(res, code);
+    return redirectToSettings(res, code, origin);
   };
 
   const failRedirect = (code) => {
     if (action === 'link') return settingsResult(code);
-    if (popup) return redirectToPopupCallback(res, { status: 'error', code });
-    return redirectToLogin(res, code);
+    if (popup) return redirectToPopupCallback(res, { status: 'error', code }, origin);
+    return redirectToLogin(res, code, origin);
   };
 
   try {
@@ -113,11 +133,12 @@ const callback = async (req, res) => {
       state = steamService.verifyState(String(req.query.state || ''));
       action = state.action || 'link';
       popup = state.popup === true;
+      origin = resolveFrontendOrigin(state.origin);
     } catch {
-      // State inválido/expirado: solo se mira popup/action para elegir la página de destino
       const peeked = steamService.peekState(req.query.state);
       action = peeked.action || 'login';
       popup = peeked.popup;
+      origin = resolveFrontendOrigin(peeked.origin);
       return action === 'link' ? settingsResult('invalid_state') : failRedirect('invalid_state');
     }
 
@@ -137,18 +158,22 @@ const callback = async (req, res) => {
     if (action === 'login') {
       const existingAccount = await SteamAccount.findBySteamId(steamId);
 
-      // Si el SteamID ya está vinculado a una cuenta Stackd -> iniciar sesión directo
       if (existingAccount) {
         const user = await User.findById(existingAccount.user_id);
         if (!user) return failRedirect('error');
         if (user.status === 'banned') return failRedirect('banned');
 
-        issueSessionCookie(res, user);
-        if (popup) return redirectToPopupCallback(res, { status: 'success' });
-        return res.redirect(`${frontendUrl()}/`);
+        const sessionToken = issueSessionCookie(res, user);
+        if (popup) {
+          return redirectToPopupCallback(
+            res,
+            { status: 'success', sessionToken },
+            origin
+          );
+        }
+        return res.redirect(`${origin}/`);
       }
 
-      // Si es nuevo -> obtener datos públicos de Steam y mandar a /register/steam
       const profile = (await steamService.getPlayerSummary(steamId)) || {};
       const signupToken = steamService.signSignupToken({
         steamId,
@@ -157,8 +182,10 @@ const callback = async (req, res) => {
         profile_url: profile.profile_url || null,
       });
 
-      if (popup) return redirectToPopupCallback(res, { status: 'signup', token: signupToken });
-      return res.redirect(`${frontendUrl()}/register/steam?token=${encodeURIComponent(signupToken)}`);
+      if (popup) {
+        return redirectToPopupCallback(res, { status: 'signup', token: signupToken }, origin);
+      }
+      return res.redirect(`${origin}/register/steam?token=${encodeURIComponent(signupToken)}`);
     }
 
     // --- FLUJO 2: VINCULAR A CUENTA EXISTENTE ---

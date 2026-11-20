@@ -4,10 +4,27 @@
  * @param {string} handle - El handle a sanitizar.
  * @returns {string|null} - El handle sanitizado o null si está vacío.
  */
-export const sanitizeSocialHandle = (handle) => {
-    if (!handle) return null;
-    // Solo permitir alfanuméricos, guiones, guiones bajos y puntos
-    return handle.replace(/[^a-zA-Z0-9_\-\.]/g, '');
+
+export const SOCIAL_LIMITS = {
+    twitch: 25,
+    discord: 32,
+    steam: 32,
+};
+
+export const sanitizeSocialHandle = (value, maxLength = 32) => {
+    if (!value || typeof value !== 'string') return '';
+
+    let cleaned = value.trim();
+
+    // Si pegan una URL completa (ej. https://www.twitch.tv/usuario/), quedarse solo con el último segmento
+    cleaned = cleaned
+        .replace(/^https?:\/\/(www\.)?(twitch\.tv|discord\.com\/users|steamcommunity\.com\/(id|profiles))\//i, '')
+        .replace(/\/+$/, '');
+
+    // Quitar @ inicial y espacios/caracteres de control
+    cleaned = cleaned.replace(/^@+/, '').replace(/[^a-zA-Z0-9_.-]/g, '');
+
+    return cleaned.slice(0, maxLength);
 };
 
 /**

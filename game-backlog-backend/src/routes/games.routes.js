@@ -32,5 +32,6 @@ router.post('/user', authenticateToken, gamesController.addGameToUser);
 router.get('/user', authenticateToken, gamesController.getUserGames);
 router.put('/user/:igdb_game_id', authenticateToken, gamesController.updateUserGame);
 router.delete('/user/:igdb_game_id', authenticateToken, gamesController.deleteUserGame);
+router.post('/user/:igdb_game_id/session', authenticateToken, gamesController.logGameSession);
 
 module.exports = router;

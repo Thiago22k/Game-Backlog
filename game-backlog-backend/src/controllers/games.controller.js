@@ -473,10 +473,6 @@ const getRecommendations = async (req, res) => {
     const userId = req.user?.userId || null;
     const seedGameId = req.query.seedGameId ? Number(req.query.seedGameId) : null;
 
-    if (!userId && !seedGameId) {
-      return res.status(401).json({ error: 'Autenticación requerida' });
-    }
-
     const result = await recommendationService.getRecommendations(userId, {
       limit: req.query.limit,
       mode: req.query.mode || (seedGameId ? 'because_you_played' : 'for_you'),
@@ -521,6 +517,41 @@ const getGameStatUsers = async (req, res) => {
   }
 };
 
+// Registrar minutos jugados desde el cliente desktop (ejecutables locales verificados)
+const logGameSession = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { igdb_game_id } = req.params;
+    const minutes = Math.floor(Number(req.body?.minutes) || 0);
+
+    if (minutes < 1 || minutes > 1440) {
+      return res.status(400).json({
+        error: 'La duración de la sesión debe estar entre 1 y 1440 minutos'
+      });
+    }
+
+    const existing = await Game.getUserGame(userId, igdb_game_id);
+    if (!existing) {
+      return res.status(404).json({
+        error: 'Juego no encontrado en tu lista'
+      });
+    }
+
+    const updatedGame = await Game.addSessionMinutes(userId, igdb_game_id, minutes);
+
+    res.json({
+      message: 'Sesión registrada correctamente',
+      added_minutes: minutes,
+      game: updatedGame
+    });
+  } catch (error) {
+    console.error('Error en logGameSession:', error);
+    res.status(500).json({
+      error: 'Error al registrar la sesión de juego'
+    });
+  }
+};
+
 module.exports = {
   searchGames,
   getGameDetails,
@@ -536,5 +567,6 @@ module.exports = {
   getPlatforms,
   getGameStats,
   getGameStatUsers,
-  getRecommendations, // ← Nuevo
+  getRecommendations,
+  logGameSession,
 };

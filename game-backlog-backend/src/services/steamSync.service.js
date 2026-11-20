@@ -538,7 +538,7 @@ const syncUserSteamLibrary = async (userId, { enforceCooldown = false, importNew
         await client.query('BEGIN');
 
         const userGamesRes = await client.query(
-            'SELECT id, igdb_game_id, status, status_set_by, steam_appid, playtime_minutes FROM user_games WHERE user_id = $1',
+            'SELECT id, igdb_game_id, status, status_set_by, steam_appid, playtime_minutes, last_played_at FROM user_games WHERE user_id = $1',
             [userId]
         );
         const existingByIgdb = new Map(userGamesRes.rows.map((r) => [Number(r.igdb_game_id), r]));
@@ -547,35 +547,51 @@ const syncUserSteamLibrary = async (userId, { enforceCooldown = false, importNew
             const owned = existingByIgdb.get(entry.igdb_game_id);
 
             if (owned) {
-                // Actualizar minutos, enlace de steam_appid y last_played_at
-                // Solo promocionar backlog -> playing si el usuario NO fijó el estado manualmente
                 const shouldPromote =
                     owned.status_set_by === 'steam' &&
                     owned.status === 'backlog' &&
                     entry.suggested_status === 'playing';
 
                 const nextStatus = shouldPromote ? 'playing' : owned.status;
+                const currentMinutes = Number(owned.playtime_minutes || 0);
+                const nextMinutes = Math.max(currentMinutes, entry.playtime_minutes);
 
-                await client.query(
-                    `UPDATE user_games
-           SET steam_appid = COALESCE(steam_appid, $3),
-               playtime_minutes = GREATEST(COALESCE(playtime_minutes, 0), $4),
-               last_played_at = COALESCE($5, last_played_at),
-               status = $6,
-               updated_at = CURRENT_TIMESTAMP
-           WHERE user_id = $1 AND igdb_game_id = $2`,
-                    [
-                        userId,
-                        entry.igdb_game_id,
-                        entry.steam_appid,
-                        entry.playtime_minutes,
-                        entry.last_played_at,
-                        nextStatus,
-                    ]
-                );
+                const prevPlayedMs = owned.last_played_at ? new Date(owned.last_played_at).getTime() : 0;
+                const incomingPlayedMs = entry.last_played_at ? new Date(entry.last_played_at).getTime() : 0;
+                const hasNewerPlayedAt = incomingPlayedMs > prevPlayedMs;
+                const nextLastPlayedAt = hasNewerPlayedAt
+                    ? entry.last_played_at
+                    : owned.last_played_at;
 
-                updatedGames++;
-                if (shouldPromote) promotedToPlaying++;
+                const needsSteamAppId = !owned.steam_appid && Boolean(entry.steam_appid);
+                const hasChanged =
+                    needsSteamAppId ||
+                    nextMinutes > currentMinutes ||
+                    hasNewerPlayedAt ||
+                    nextStatus !== owned.status;
+
+                if (hasChanged) {
+                    await client.query(
+                        `UPDATE user_games
+                         SET steam_appid = COALESCE(steam_appid, $3),
+                             playtime_minutes = $4,
+                             last_played_at = $5,
+                             status = $6,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE user_id = $1 AND igdb_game_id = $2`,
+                        [
+                            userId,
+                            entry.igdb_game_id,
+                            entry.steam_appid,
+                            nextMinutes,
+                            nextLastPlayedAt,
+                            nextStatus,
+                        ]
+                    );
+
+                    updatedGames++;
+                    if (shouldPromote) promotedToPlaying++;
+                }
             } else if (importNewGames) {
                 await client.query(
                     `INSERT INTO user_games (

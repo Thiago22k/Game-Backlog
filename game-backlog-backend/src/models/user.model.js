@@ -1,5 +1,39 @@
 const pool = require('../config/database');
 
+const HANDLE_REGEX = /^[a-zA-Z0-9_.#-]*$/;
+
+const sanitizeAndValidateHandle = (val, maxLen, fieldLabel) => {
+  if (val === undefined || val === null) return null;
+  if (typeof val !== 'string') {
+    const err = new Error(`Formato inválido para ${fieldLabel}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let cleaned = val.trim();
+  if (!cleaned) return null;
+
+  // Si enviaron una URL completa, extraer solo el usuario final
+  cleaned = cleaned
+    .replace(/^https?:\/\/(www\.)?(twitch\.tv|discord\.com\/users|steamcommunity\.com\/(id|profiles))\//i, '')
+    .replace(/\/+$/, '')
+    .replace(/^@+/, '');
+
+  if (cleaned.length > maxLen) {
+    const err = new Error(`${fieldLabel} no puede superar los ${maxLen} caracteres`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!HANDLE_REGEX.test(cleaned)) {
+    const err = new Error(`${fieldLabel} contiene caracteres no permitidos`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return cleaned;
+};
+
 const User = {
   // Crear un nuevo usuario tradicional
   async create(username, email, hashedPassword) {
@@ -187,15 +221,35 @@ const User = {
     return result.rows[0];
   },
 
-  // Actualizar bio y redes sociales
+  // Actualizar bio y redes sociales (con validación estricta de longitud y caracteres)
   async updateProfile(userId, { bio, social_twitch, social_discord, social_steam }) {
+    let cleanBio = null;
+    if (bio !== undefined && bio !== null) {
+      if (typeof bio !== 'string') {
+        const err = new Error('Formato inválido para la biografía');
+        err.statusCode = 400;
+        throw err;
+      }
+      const trimmedBio = bio.trim();
+      if (trimmedBio.length > 40) {
+        const err = new Error('La biografía no puede superar los 40 caracteres');
+        err.statusCode = 400;
+        throw err;
+      }
+      cleanBio = trimmedBio || null;
+    }
+
+    const cleanTwitch = sanitizeAndValidateHandle(social_twitch, 25, 'Twitch');
+    const cleanDiscord = sanitizeAndValidateHandle(social_discord, 32, 'Discord');
+    const cleanSteam = sanitizeAndValidateHandle(social_steam, 32, 'Steam');
+
     const query = `
       UPDATE users
       SET bio = $1, social_twitch = $2, social_discord = $3, social_steam = $4, updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
       RETURNING id, username, email, avatar_url, avatar_static_url, banner_url, bio, social_twitch, social_discord, social_steam
     `;
-    const result = await pool.query(query, [bio || null, social_twitch || null, social_discord || null, social_steam || null, userId]);
+    const result = await pool.query(query, [cleanBio, cleanTwitch, cleanDiscord, cleanSteam, userId]);
     return result.rows[0];
   },
 

@@ -8,7 +8,7 @@ export default {
     extend: {
 
       fontFamily: {
-        sans: ['Radio Canada', 'Ubuntu', 'sans-serif'], // ← Agregar aquí 1a2332 121823
+        sans: ['Radio Canada', 'Ubuntu', 'sans-serif'],
       },
 
       colors: {
